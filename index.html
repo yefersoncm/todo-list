@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Todo List</title>
+    <!-- font-awesome -->
+    <link 
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css" 
+      rel="stylesheet" 
+      integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6" 
+      crossorigin="anonymous"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.14.0/css/all.min.css"
+    />
+    <!-- styles -->
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <section class="section-center">
+      <!-- form -->
+      <form class="grocery-form">
+        <p class="alert1"></p>
+        <h3>Todo List</h3>
+        <div class="form-control1">
+          <input type="text" id="grocery" placeholder="ejemplo: Ir al Gym">
+          <button type="submit" class="submit-btn">Agregar</button>
+        </div>
+      </form>
+
+      <!-- list -->
+
+      <div class="grocery-container">
+        <div class="grocery-list">
+  
+        </div>
+        <!-- button -->
+        <button type="button" class="clear-btn">Limpiar lista</button>
+      </div>
+      <!-- list -->
+    </section>
+    <!-- javascript -->
+    <script src="app.js"></script>
+  </body>
+</html>
