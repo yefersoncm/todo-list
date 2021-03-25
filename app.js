@@ -196,17 +196,17 @@ function createListItem(id, value, done){
     element.classList.add('grocery-item');
     // add id
     const attr = document.createAttribute('data-id');
-    const attr1 = document.createAttribute('data-done');
+    const attrDone = document.createAttribute('data-done');
     attr.value = id;
-    attr1.value = done; 
+    attrDone.value = done; 
     element.setAttributeNode(attr);
-    element.setAttributeNode(attr1);
+    element.setAttributeNode(attrDone);
     
     
     
     element.innerHTML = `<p class="title">${value}</p>
     <div class="btn-container form-check form-switch">
-      <input class="form-check-input" type="checkbox"}>
+      <input class="form-check-input" type="checkbox">
       <button type="button" class="edit-btn">
         <i class="fas fa-edit"></i>
       </button>
@@ -216,9 +216,15 @@ function createListItem(id, value, done){
     </div>`;
     if(element.dataset.done === "true"){
       element.classList.add('done');
+      let elements = element.lastChild.children;
+      elements[0].checked = true;
     }else{
       element.classList.remove('done');
+      let elements = element.lastChild.children;
+      elements[0].checked = false;
+
     }
+
     const deleteBtn = element.querySelector('.delete-btn');
     const editBtn = element.querySelector('.edit-btn');
     const checkboxBtn = element.querySelector('.form-check-input');
@@ -227,6 +233,7 @@ function createListItem(id, value, done){
     checkboxBtn.addEventListener('change', markTaskAsDone);
     //append child
     list.appendChild(element);
+    
 }
 
 function editLocalStorageDone(id, done){
