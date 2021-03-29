@@ -336,7 +336,6 @@ Grocery List
 
 .done{
   background-color: var(--clr-primary-5);
-  text-decoration:line-through;
   color: black;
 }
 
