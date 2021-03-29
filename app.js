@@ -30,17 +30,22 @@ function markTaskAsDone(e){
   element.classList.toggle("done");
   if(element.dataset.done === "false"){
     element.dataset.done = "true";
+    displayAlert('tarea marcada como hecha', 'success')
   }else{
     element.dataset.done = "false";
+    displayAlert('tarea pendiente', 'warning')
   }
-  
+
   let items = getLocalStorage();
+
   items = items.map(function(item){
     if (item.id == element.dataset.id){
       item.done = element.dataset.done;
     }
     return item;
   });
+
+  items.sort(sortLocalStorage('done'));
   localStorage.setItem("list", JSON.stringify(items));
 
 }
@@ -50,7 +55,7 @@ function addItem(e){
   e.preventDefault();
   const value = grocery.value;
   const id = new Date().getTime().toString();
-  const done = false;
+  const done = "false";
   if (value && !editFlag) {
     createListItem(id,value,done);
     // display alert
@@ -59,7 +64,7 @@ function addItem(e){
     container.classList.add("show-container");
     // add to localstorage
     addToLocalStorage(id,value,done);
-    // set back to default 
+    // set back to default
     setBackToDefault();
   }else if (value && editFlag) {
     editElement.innerHTML = value;
@@ -96,7 +101,7 @@ function clearItems(){
   displayAlert("lista vacia", "danger");
   localStorage.removeItem('list');
   setBackToDefault();
-  // 
+  //
 }
 
 // delete function
@@ -136,26 +141,32 @@ function addToLocalStorage(id,value,done){
   const grocery = {id,value,done};
   let items = getLocalStorage();
     items.push(grocery);
+    items.sort(sortLocalStorage('done'));
     localStorage.setItem('list', JSON.stringify(items));
-  
+    console.log(items);
+
 }
 function removeFromLocalStorage(id){
   let items = getLocalStorage();
+  items.sort(sortLocalStorage('done'));
   items = items.filter(function(item){
     if(item.id !== id){
       return item
     }
   });
+  items.sort(sortLocalStorage('done'));
   localStorage.setItem("list", JSON.stringify(items));
 }
 function editLocalStorage(id, value){
   let items = getLocalStorage();
+  items.sort(sortLocalStorage('done'));
   items = items.map(function(item){
     if (item.id == id){
       item.value = value;
     }
     return item;
   });
+  items.sort(sortLocalStorage('done'));
   localStorage.setItem("list", JSON.stringify(items));
 }
 function getLocalStorage(){
@@ -181,12 +192,13 @@ function getLocalStorage(){
 // ****** SETUP ITEMS **********
 function setUpItems(){
   let items = getLocalStorage();
+  items.sort(sortLocalStorage('done'));
   if(items.length > 0){
     items.forEach(function(item){
       createListItem(item.id, item.value, item.done);
     });
     container.classList.add('show-container');
-    
+
   }
 }
 
@@ -198,12 +210,12 @@ function createListItem(id, value, done){
     const attr = document.createAttribute('data-id');
     const attrDone = document.createAttribute('data-done');
     attr.value = id;
-    attrDone.value = done; 
+    attrDone.value = done;
     element.setAttributeNode(attr);
     element.setAttributeNode(attrDone);
-    
-    
-    
+
+
+
     element.innerHTML = `<p class="title">${value}</p>
     <div class="btn-container form-check form-switch">
       <input class="form-check-input" type="checkbox">
@@ -216,13 +228,10 @@ function createListItem(id, value, done){
     </div>`;
     if(element.dataset.done === "true"){
       element.classList.add('done');
-      let elements = element.lastChild.children;
-      elements[0].checked = true;
+      element.lastChild.children[0].checked = true;
     }else{
       element.classList.remove('done');
-      let elements = element.lastChild.children;
-      elements[0].checked = false;
-
+      element.lastChild.children[0].checked = false;
     }
 
     const deleteBtn = element.querySelector('.delete-btn');
@@ -233,11 +242,12 @@ function createListItem(id, value, done){
     checkboxBtn.addEventListener('change', markTaskAsDone);
     //append child
     list.appendChild(element);
-    
+
 }
 
 function editLocalStorageDone(id, done){
   let items = getLocalStorage();
+  items.sort(sortLocalStorage('done'));
   items = items.map(function(item){
     if (item.id === id){
       item.done = done;
@@ -245,4 +255,15 @@ function editLocalStorageDone(id, done){
     return item;
   });
   localStorage.setItem("list", JSON.stringify(items));
+}
+
+function sortLocalStorage(atributo) {
+    return function(a, b) {
+        if (a[atributo] > b[atributo]) {
+            return 1;
+        } else if (a[atributo] < b[atributo]) {
+            return -1;
+        }
+        return 0;
+    }
 }
