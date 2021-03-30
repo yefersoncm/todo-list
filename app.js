@@ -45,7 +45,7 @@ function markTaskAsDone(e){
     return item;
   });
 
-  items.sort(sortLocalStorage('done'));
+  items = sortLocalStorage(items)
   localStorage.setItem("list", JSON.stringify(items));
 
 }
@@ -141,32 +141,32 @@ function addToLocalStorage(id,value,done){
   const grocery = {id,value,done};
   let items = getLocalStorage();
     items.push(grocery);
-    items.sort(sortLocalStorage('done'));
+    items = sortLocalStorage(items)
     localStorage.setItem('list', JSON.stringify(items));
     console.log(items);
 
 }
 function removeFromLocalStorage(id){
   let items = getLocalStorage();
-  items.sort(sortLocalStorage('done'));
+  items = sortLocalStorage(items)
   items = items.filter(function(item){
     if(item.id !== id){
       return item
     }
   });
-  items.sort(sortLocalStorage('done'));
+  items = sortLocalStorage(items)
   localStorage.setItem("list", JSON.stringify(items));
 }
 function editLocalStorage(id, value){
   let items = getLocalStorage();
-  items.sort(sortLocalStorage('done'));
+  items = sortLocalStorage(items)
   items = items.map(function(item){
     if (item.id == id){
       item.value = value;
     }
     return item;
   });
-  items.sort(sortLocalStorage('done'));
+  items = sortLocalStorage(items)
   localStorage.setItem("list", JSON.stringify(items));
 }
 function getLocalStorage(){
@@ -192,7 +192,7 @@ function getLocalStorage(){
 // ****** SETUP ITEMS **********
 function setUpItems(){
   let items = getLocalStorage();
-  items.sort(sortLocalStorage('done'));
+  items = sortLocalStorage(items)
   if(items.length > 0){
     items.forEach(function(item){
       createListItem(item.id, item.value, item.done);
@@ -241,13 +241,13 @@ function createListItem(id, value, done){
     editBtn.addEventListener('click', editItem);
     checkboxBtn.addEventListener('change', markTaskAsDone);
     //append child
-    list.appendChild(element);
+    list.insertBefore(element, list.firstChild);
 
 }
 
 function editLocalStorageDone(id, done){
   let items = getLocalStorage();
-  items.sort(sortLocalStorage('done'));
+  items = sortLocalStorage(items)
   items = items.map(function(item){
     if (item.id === id){
       item.done = done;
@@ -257,11 +257,29 @@ function editLocalStorageDone(id, done){
   localStorage.setItem("list", JSON.stringify(items));
 }
 
-function sortLocalStorage(atributo) {
+function sortLocalStorage(items) {
+    let falso = [];
+    let verdadero = [];
+    items.forEach(item => {
+      if(item.done === "false"){
+        falso.push(item);
+      }else{
+        verdadero.push(item);
+      }
+    })
+    // ahora ordenar cada lista por id
+    falso.sort(GetSortOrder('id'))
+    verdadero.sort(GetSortOrder('id'))
+
+    return verdadero.concat(falso)
+}
+
+
+function GetSortOrder(prop) {
     return function(a, b) {
-        if (a[atributo] > b[atributo]) {
+        if (a[parseInt(prop)] > b[parseInt(prop)]) {
             return 1;
-        } else if (a[atributo] < b[atributo]) {
+        } else if (a[parseInt(prop)] < b[parseInt(prop)]) {
             return -1;
         }
         return 0;
