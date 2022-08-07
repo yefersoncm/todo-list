@@ -342,3 +342,8 @@ Grocery List
 .done:hover{
   background-color: #49a6e9;
 }
+
+.filters{
+  column-count: 2;
+  align-items: stretch;
+}
