@@ -164,7 +164,7 @@ border-radius: var(--radius);
   width: 90vw;
   margin: 0 auto;
   max-width: 100rem;
-  margin-top: 8rem;
+  margin-top: 2rem;
 }
 @media screen and (min-width: 992px) {
   .section-center {
