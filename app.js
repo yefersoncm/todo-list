@@ -6,6 +6,8 @@ const submitBtn = document.querySelector('.submit-btn');
 const container = document.querySelector('.grocery-container');
 const list = document.querySelector('.grocery-list');
 const clearBtn = document.querySelector('.clear-btn');
+const checkBoxCompletadas = document.querySelector('#checkBoxCompletadas');
+const checkBoxNoCompletadas = document.querySelector('#checkBoxNoCompletadas');
 
 // edit option
 
@@ -23,6 +25,21 @@ form.addEventListener('submit', addItem);
 //clear items
 clearBtn.addEventListener('click', clearItems);
 window.addEventListener('DOMContentLoaded', setUpItems);
+checkBoxCompletadas.addEventListener('change', function() {
+  if (this.checked) {
+    showDoneTasks();
+  } else {
+    setUpItems();
+  }
+});
+checkBoxNoCompletadas.addEventListener('change', function() {
+  if (this.checked) {
+    showUnDoneTasks();
+  } else {
+    console.log("no checked");
+    setUpItems()
+  }
+});
 
 // ****** FUNCTIONS **********
 function markTaskAsDone(e){
@@ -50,6 +67,55 @@ function markTaskAsDone(e){
 
 }
 
+
+function showDoneTasks(){
+  const items = document.querySelectorAll('.grocery-item');
+
+  if (items.length > 0) {
+    items.forEach(function(item){
+      list.removeChild(item);
+    });
+  }
+  container.classList.remove("show-container");
+  setBackToDefault();
+
+  let tasks = getLocalStorage();
+  tasks = sortLocalStorage(tasks)
+  if(tasks.length > 0){
+    tasks.forEach(function(task){
+      if(task.done == "true"){
+        createListItem(task.id, task.value, task.done);
+      }
+    });
+    container.classList.add('show-container');
+
+  }
+}
+
+
+function showUnDoneTasks(){
+  const items = document.querySelectorAll('.grocery-item');
+
+  if (items.length > 0) {
+    items.forEach(function(item){
+      list.removeChild(item);
+    });
+  }
+  container.classList.remove("show-container");
+  setBackToDefault();
+
+  let tasks = getLocalStorage();
+  tasks = sortLocalStorage(tasks)
+  if(tasks.length > 0){
+    tasks.forEach(function(task){
+      if(task.done === "false"){
+        createListItem(task.id, task.value, task.done);
+      }
+    });
+    container.classList.add('show-container');
+
+  }
+}
 
 function addItem(e){
   e.preventDefault();
@@ -191,6 +257,17 @@ function getLocalStorage(){
 
 // ****** SETUP ITEMS **********
 function setUpItems(){
+  const items1 = document.querySelectorAll('.grocery-item');
+
+  if (items1.length > 0) {
+    items1.forEach(function(item1){
+      list.removeChild(item1);
+    });
+  }
+  container.classList.remove("show-container");
+  setBackToDefault();
+
+
   let items = getLocalStorage();
   items = sortLocalStorage(items)
   if(items.length > 0){
