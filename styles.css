@@ -161,14 +161,14 @@ border-radius: var(--radius);
 }
 
 .section-center {
-  width: 100%;
+  width: 100vw;
   margin: 0 auto;
   max-width: 100rem;
   margin-top: 2rem;
 }
 @media screen and (min-width: 992px) {
   .section-center {
-    width: 30vw;
+    width: 100%;
   }
 }
 @media screen and (max-width: 992px) {
