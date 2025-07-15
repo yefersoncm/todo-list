@@ -161,7 +161,7 @@ border-radius: var(--radius);
 }
 
 .section-center {
-  width: 100vw;
+  width: 100%;
   margin: 2rem;
   max-width: 100%;
 }
