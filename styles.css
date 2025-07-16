@@ -351,3 +351,25 @@ Grocery List
   column-count: 2;
   align-items: stretch;
 }
+
+
+/* ... (Tu código CSS existente) ... */
+
+/* New filter container for better layout control */
+.filters-container {
+    display: flex; /* or grid, depending on desired layout */
+    justify-content: center; /* or space-around, etc. */
+    gap: 1.5rem; /* Space between the filter checkboxes */
+    margin-top: 1.5rem; /* Add some space above filters */
+}
+
+.form-check-label {
+    margin-left: 0.5rem; /* Space between checkbox and label text */
+    cursor: pointer;
+}
+
+/* Ensure the done class makes the text visible on colored background */
+.done .title {
+    color: var(--clr-grey-1) !important; /* Adjust if needed to ensure readability on primary color background */
+    text-decoration: line-through;
+}
