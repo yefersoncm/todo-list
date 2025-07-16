@@ -9,7 +9,6 @@ const DOM = {
     clearBtn: document.querySelector('.clear-btn'),
     checkBoxCompletadas: document.querySelector('#checkBoxCompletadas'),
     checkBoxNoCompletadas: document.querySelector('#checkBoxNoCompletadas'),
-    // Nuevo selector para mostrar el número de tareas (opcional, pero útil)
     taskCountDisplay: document.querySelector('.task-count'),
 };
 
@@ -58,7 +57,7 @@ class TaskManager {
             return;
         }
         if (!confirm("¿Estás seguro de que quieres limpiar toda la lista?")) {
-            return; // Si el usuario cancela, no hacemos nada
+            return;
         }
         this.clearAllTasks();
         this.displayAlert("Lista vacía", "danger");
@@ -66,7 +65,7 @@ class TaskManager {
 
     handleToggleDoneTasks() {
         if (DOM.checkBoxCompletadas.checked) {
-            DOM.checkBoxNoCompletadas.checked = false; // Desmarcar el otro checkbox
+            DOM.checkBoxNoCompletadas.checked = false;
             this.renderFilteredTasks("true");
         } else {
             this.renderTasks();
@@ -75,7 +74,7 @@ class TaskManager {
 
     handleToggleUndoneTasks() {
         if (DOM.checkBoxNoCompletadas.checked) {
-            DOM.checkBoxCompletadas.checked = false; // Desmarcar el otro checkbox
+            DOM.checkBoxCompletadas.checked = false;
             this.renderFilteredTasks("false");
         } else {
             this.renderTasks();
@@ -86,11 +85,11 @@ class TaskManager {
         const element = e.currentTarget.closest('.grocery-item');
         const id = element.dataset.id;
         let isDone = element.dataset.done === "true";
-        isDone = !isDone; // Toggle the status
+        isDone = !isDone;
 
         element.classList.toggle("done", isDone);
         element.dataset.done = String(isDone);
-        e.currentTarget.checked = isDone; // Sincroniza el checkbox
+        e.currentTarget.checked = isDone;
 
         this.updateTaskStatus(id, String(isDone));
         this.displayAlert(isDone ? 'Tarea marcada como hecha' : 'Tarea pendiente', isDone ? 'success' : 'warning');
@@ -100,7 +99,7 @@ class TaskManager {
         const element = e.currentTarget.closest('.grocery-item');
         const id = element.dataset.id;
         if (!confirm("¿Estás seguro de que quieres eliminar esta tarea?")) {
-            return; // Si el usuario cancela, no hacemos nada
+            return;
         }
         this.removeTask(id);
         this.displayAlert("Item eliminado", "danger");
@@ -119,10 +118,11 @@ class TaskManager {
     // ****** FUNCIONES DE GESTIÓN DE TAREAS **********
 
     addTask(value) {
+        // El ID es el timestamp epoch, que ahora también representa la fecha de creación
         const id = new Date().getTime().toString();
         const done = "false";
-        const createdAt = new Date().toISOString(); // Guarda la fecha de creación en formato ISO
-        this.tasks.push({ id, value, done, createdAt });
+        // Ya no necesitamos la propiedad 'createdAt' separada
+        this.tasks.push({ id, value, done });
         this.sortAndSaveTasks();
         this.displayAlert("Item agregado a la lista", "success");
         this.renderTasks();
@@ -160,35 +160,39 @@ class TaskManager {
     // ****** FUNCIONES DE RENDERIZADO **********
 
     renderTasks() {
-        DOM.list.innerHTML = ''; // Limpiar la lista existente
+        DOM.list.innerHTML = '';
         if (this.tasks.length > 0) {
-            this.tasks.forEach(item => this.createListItem(item.id, item.value, item.done, item.createdAt));
+            // Pasamos 'item.id' como 'creationTimestamp' para el cálculo de días
+            this.tasks.forEach(item => this.createListItem(item.id, item.value, item.done, item.id));
             DOM.container.classList.add('show-container');
         } else {
             DOM.container.classList.remove("show-container");
         }
-        this.updateTaskCount(); // Actualizar el contador de tareas
+        this.updateTaskCount();
     }
 
     renderFilteredTasks(status) {
         DOM.list.innerHTML = '';
         const filteredTasks = this.tasks.filter(task => task.done === status);
         if (filteredTasks.length > 0) {
-            filteredTasks.forEach(item => this.createListItem(item.id, item.value, item.done, item.createdAt));
+            // Pasamos 'item.id' como 'creationTimestamp' para el cálculo de días
+            filteredTasks.forEach(item => this.createListItem(item.id, item.value, item.done, item.id));
             DOM.container.classList.add('show-container');
         } else {
             DOM.container.classList.remove("show-container");
         }
-        this.updateTaskCount(status); // Actualizar el contador de tareas filtradas
+        this.updateTaskCount(status);
     }
 
-    createListItem(id, value, done, createdAt) {
+    // La función createListItem ahora usa 'creationTimestamp' (que es el ID)
+    createListItem(id, value, done, creationTimestamp) {
         const element = document.createElement('article');
         element.classList.add('grocery-item');
         element.dataset.id = id;
         element.dataset.done = done;
 
-        const daysOld = this.getDaysSinceCreation(createdAt);
+        // Calcular días transcurridos usando el ID como timestamp
+        const daysOld = this.getDaysSinceCreation(parseInt(creationTimestamp)); // Asegurarse de que sea un número
         const daysText = daysOld === 0 ? 'Hoy' : (daysOld === 1 ? '1 día' : `${daysOld} días`);
 
         element.innerHTML = `
@@ -235,44 +239,45 @@ class TaskManager {
         editID = '';
         editElement = null;
         DOM.submitBtn.textContent = "Agregar";
-        DOM.checkBoxCompletadas.checked = false; // Asegurar que los filtros estén desmarcados
-        DOM.checkBoxNoCompletadas.checked = false; // al volver a la vista por defecto
+        DOM.checkBoxCompletadas.checked = false;
+        DOM.checkBoxNoCompletadas.checked = false;
     }
 
-    getDaysSinceCreation(createdAt) {
-        if (!createdAt) return 'N/A'; // Manejar tareas antiguas sin fecha
-        const creationDate = new Date(createdAt);
+    // `creationTimestamp` ahora es el ID de la tarea
+    getDaysSinceCreation(creationTimestamp) {
+        // Si la tarea es antigua y no tiene un ID basado en timestamp (epoch), o si el ID no es un número válido
+        if (!creationTimestamp || isNaN(creationTimestamp)) return 'N/A';
+
+        // Convertir el timestamp a un objeto Date
+        const creationDate = new Date(creationTimestamp);
         const today = new Date();
-        // Resetear horas para cálculo preciso de días
+
+        // Resetear horas para cálculo preciso de días (solo días completos)
         creationDate.setHours(0, 0, 0, 0);
         today.setHours(0, 0, 0, 0);
 
         const diffTime = Math.abs(today.getTime() - creationDate.getTime());
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)); // Usar Math.floor para días completos
         return diffDays;
     }
 
     updateTaskCount(filterStatus = null) {
-        if (!DOM.taskCountDisplay) return; // Asegurarse de que el elemento exista
+        if (!DOM.taskCountDisplay) return;
 
         let totalTasks = this.tasks.length;
         let completedTasks = this.tasks.filter(task => task.done === "true").length;
         let uncompletedTasks = totalTasks - completedTasks;
 
-        let displayCount = totalTasks;
         let displayText = `Total: ${totalTasks}`;
 
         if (filterStatus === "true") {
-            displayCount = completedTasks;
             displayText = `Completadas: ${completedTasks}`;
         } else if (filterStatus === "false") {
-            displayCount = uncompletedTasks;
             displayText = `Pendientes: ${uncompletedTasks}`;
         }
 
         DOM.taskCountDisplay.textContent = `Tareas: ${displayText}`;
     }
-
 
     // ****** LOCAL STORAGE **********
 
@@ -283,16 +288,14 @@ class TaskManager {
     }
 
     sortAndSaveTasks() {
-        // Separa las tareas completadas de las no completadas
         let doneTasks = this.tasks.filter(item => item.done === "true");
         let undoneTasks = this.tasks.filter(item => item.done === "false");
 
-        // Ordena cada grupo por ID (asumiendo que el ID es un timestamp y sirve para ordenar por creación)
-        // Opcional: ordenar también por createdAt si se prefiere
+        // Ordena cada grupo por ID (timestamp) para mantener el orden de creación
         doneTasks.sort((a, b) => parseInt(a.id) - parseInt(b.id));
         undoneTasks.sort((a, b) => parseInt(a.id) - parseInt(b.id));
 
-        // Concatena primero las no completadas y luego las completadas
+        // Concatena las tareas no completadas y luego las completadas
         this.tasks = undoneTasks.concat(doneTasks);
         localStorage.setItem('list', JSON.stringify(this.tasks));
     }
