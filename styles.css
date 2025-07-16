@@ -373,3 +373,13 @@ Grocery List
     color: var(--clr-grey-1) !important; /* Adjust if needed to ensure readability on primary color background */
     text-decoration: line-through;
 }
+
+/* Ajuste para que los botones y el texto de días se alineen bien */
+.grocery-item .btn-container {
+    display: flex;
+    align-items: center;
+    gap: 0.2rem;
+    /* --- NUEVO ESTILO --- */
+    min-width: 200px; /* Asegura un ancho mínimo para las opciones */
+    justify-content: flex-end; /* Alinea los elementos a la derecha dentro del contenedor */
+}
