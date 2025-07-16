@@ -9,6 +9,8 @@ const DOM = {
     clearBtn: document.querySelector('.clear-btn'),
     checkBoxCompletadas: document.querySelector('#checkBoxCompletadas'),
     checkBoxNoCompletadas: document.querySelector('#checkBoxNoCompletadas'),
+    // Nuevo selector para mostrar el número de tareas (opcional, pero útil)
+    taskCountDisplay: document.querySelector('.task-count'),
 };
 
 // ****** ESTADO DE LA APLICACIÓN **********
@@ -55,6 +57,9 @@ class TaskManager {
             this.displayAlert("La lista ya está vacía", "danger");
             return;
         }
+        if (!confirm("¿Estás seguro de que quieres limpiar toda la lista?")) {
+            return; // Si el usuario cancela, no hacemos nada
+        }
         this.clearAllTasks();
         this.displayAlert("Lista vacía", "danger");
     }
@@ -94,6 +99,9 @@ class TaskManager {
     handleDeleteItem(e) {
         const element = e.currentTarget.closest('.grocery-item');
         const id = element.dataset.id;
+        if (!confirm("¿Estás seguro de que quieres eliminar esta tarea?")) {
+            return; // Si el usuario cancela, no hacemos nada
+        }
         this.removeTask(id);
         this.displayAlert("Item eliminado", "danger");
         this.setBackToDefault();
@@ -113,7 +121,8 @@ class TaskManager {
     addTask(value) {
         const id = new Date().getTime().toString();
         const done = "false";
-        this.tasks.push({ id, value, done });
+        const createdAt = new Date().toISOString(); // Guarda la fecha de creación en formato ISO
+        this.tasks.push({ id, value, done, createdAt });
         this.sortAndSaveTasks();
         this.displayAlert("Item agregado a la lista", "success");
         this.renderTasks();
@@ -133,7 +142,7 @@ class TaskManager {
             item.id === id ? { ...item, done: doneStatus } : item
         );
         this.sortAndSaveTasks();
-        this.renderTasks(); // Volver a renderizar para que el orden se aplique si cambian de estado
+        this.renderTasks();
     }
 
     removeTask(id) {
@@ -153,29 +162,34 @@ class TaskManager {
     renderTasks() {
         DOM.list.innerHTML = ''; // Limpiar la lista existente
         if (this.tasks.length > 0) {
-            this.tasks.forEach(item => this.createListItem(item.id, item.value, item.done));
+            this.tasks.forEach(item => this.createListItem(item.id, item.value, item.done, item.createdAt));
             DOM.container.classList.add('show-container');
         } else {
             DOM.container.classList.remove("show-container");
         }
+        this.updateTaskCount(); // Actualizar el contador de tareas
     }
 
     renderFilteredTasks(status) {
         DOM.list.innerHTML = '';
         const filteredTasks = this.tasks.filter(task => task.done === status);
         if (filteredTasks.length > 0) {
-            filteredTasks.forEach(item => this.createListItem(item.id, item.value, item.done));
+            filteredTasks.forEach(item => this.createListItem(item.id, item.value, item.done, item.createdAt));
             DOM.container.classList.add('show-container');
         } else {
             DOM.container.classList.remove("show-container");
         }
+        this.updateTaskCount(status); // Actualizar el contador de tareas filtradas
     }
 
-    createListItem(id, value, done) {
+    createListItem(id, value, done, createdAt) {
         const element = document.createElement('article');
         element.classList.add('grocery-item');
         element.dataset.id = id;
         element.dataset.done = done;
+
+        const daysOld = this.getDaysSinceCreation(createdAt);
+        const daysText = daysOld === 0 ? 'Hoy' : (daysOld === 1 ? '1 día' : `${daysOld} días`);
 
         element.innerHTML = `
             <p class="title">${value}</p>
@@ -187,6 +201,7 @@ class TaskManager {
                 <button type="button" class="delete-btn">
                     <i class="fas fa-trash"></i>
                 </button>
+                <span class="task-days-old">${daysText}</span>
             </div>
         `;
 
@@ -224,6 +239,41 @@ class TaskManager {
         DOM.checkBoxNoCompletadas.checked = false; // al volver a la vista por defecto
     }
 
+    getDaysSinceCreation(createdAt) {
+        if (!createdAt) return 'N/A'; // Manejar tareas antiguas sin fecha
+        const creationDate = new Date(createdAt);
+        const today = new Date();
+        // Resetear horas para cálculo preciso de días
+        creationDate.setHours(0, 0, 0, 0);
+        today.setHours(0, 0, 0, 0);
+
+        const diffTime = Math.abs(today.getTime() - creationDate.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        return diffDays;
+    }
+
+    updateTaskCount(filterStatus = null) {
+        if (!DOM.taskCountDisplay) return; // Asegurarse de que el elemento exista
+
+        let totalTasks = this.tasks.length;
+        let completedTasks = this.tasks.filter(task => task.done === "true").length;
+        let uncompletedTasks = totalTasks - completedTasks;
+
+        let displayCount = totalTasks;
+        let displayText = `Total: ${totalTasks}`;
+
+        if (filterStatus === "true") {
+            displayCount = completedTasks;
+            displayText = `Completadas: ${completedTasks}`;
+        } else if (filterStatus === "false") {
+            displayCount = uncompletedTasks;
+            displayText = `Pendientes: ${uncompletedTasks}`;
+        }
+
+        DOM.taskCountDisplay.textContent = `Tareas: ${displayText}`;
+    }
+
+
     // ****** LOCAL STORAGE **********
 
     getLocalStorage() {
@@ -238,6 +288,7 @@ class TaskManager {
         let undoneTasks = this.tasks.filter(item => item.done === "false");
 
         // Ordena cada grupo por ID (asumiendo que el ID es un timestamp y sirve para ordenar por creación)
+        // Opcional: ordenar también por createdAt si se prefiere
         doneTasks.sort((a, b) => parseInt(a.id) - parseInt(b.id));
         undoneTasks.sort((a, b) => parseInt(a.id) - parseInt(b.id));
 
