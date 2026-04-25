@@ -12,15 +12,13 @@ const DOM = {
     taskCountDisplay: document.querySelector('.task-count'),
 };
 
-// ****** ESTADO DE LA APLICACIÓN **********
-let editElement = null;
-let editFlag = false;
-let editID = "";
-
 // ****** CLASE/MÓDULO PARA GESTIÓN DE TAREAS **********
 class TaskManager {
     constructor() {
         this.tasks = this.getLocalStorage();
+        this.editElement = null;
+        this.editFlag = false;
+        this.editID = "";
         this.setupEventListeners();
         this.renderTasks(); // Carga inicial de tareas
     }
@@ -43,8 +41,8 @@ class TaskManager {
             return;
         }
 
-        if (editFlag) {
-            this.updateTask(editID, value);
+        if (this.editFlag) {
+            this.updateTask(this.editID, value);
         } else {
             this.addTask(value);
         }
@@ -108,10 +106,10 @@ class TaskManager {
 
     handleEditItem(e) {
         const element = e.currentTarget.closest('.grocery-item');
-        editElement = element.querySelector('.title');
-        DOM.groceryInput.value = editElement.textContent;
-        editFlag = true;
-        editID = element.dataset.id;
+        this.editElement = element.querySelector('.title');
+        DOM.groceryInput.value = this.editElement.textContent;
+        this.editFlag = true;
+        this.editID = element.dataset.id;
         DOM.submitBtn.textContent = "Editar";
     }
 
@@ -235,9 +233,9 @@ class TaskManager {
 
     setBackToDefault() {
         DOM.groceryInput.value = "";
-        editFlag = false;
-        editID = '';
-        editElement = null;
+        this.editFlag = false;
+        this.editID = '';
+        this.editElement = null;
         DOM.submitBtn.textContent = "Agregar";
         DOM.checkBoxCompletadas.checked = false;
         DOM.checkBoxNoCompletadas.checked = false;
