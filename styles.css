@@ -293,30 +293,36 @@ Grocery List
   transition: var(--transition);
 }
 .edit-btn,
-.delete-btn{
-  background: transparent;
-  border-color: transparent;
-  cursor: pointer;
-  font-size: 0.7rem;
-  margin: 0 0.15rem;
-  transition: var(--transition);
-}
-
-
-.done-btn {
-  background: #49a6e9;
-}
-.edit-btn {
-  color: var(--clr-green-light);
+.delete-btn {
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: 0.4rem;
+    cursor: pointer;
+    color: var(--clr-grey-5);
+    transition: var(--transition);
 }
 .edit-btn:hover {
-  color: var(--clr-green-dark);
-}
-.delete-btn {
-  color: var(--clr-red-light);
+    color: var(--clr-primary-3);
+    background: var(--clr-primary-10);
 }
 .delete-btn:hover {
-  color: var(--clr-red-dark);
+    color: var(--clr-red-dark);
+    background: hsla(360, 67%, 44%, 0.08);
+}
+.edit-btn:focus-visible,
+.delete-btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--clr-primary-10);
+}
+.edit-btn .icon,
+.delete-btn .icon {
+    display: block;
 }
 .clear-btn {
   text-transform: capitalize;
@@ -452,23 +458,6 @@ Combobox custom (reemplaza al <select> nativo)
     background: var(--clr-primary-9);
 }
 
-/*
-===============
-Font Awesome fallback
-===============
-Si FA carga (caso normal), .fa-fallback queda oculto y el ícono lo
-pinta el pseudo-elemento ::before del <i>. Si FA falla, el script
-añade .no-fa a <html> y se muestra el glifo unicode.
-*/
-.fa-fallback {
-    display: none;
-}
-.no-fa .fa-fallback {
-    display: inline;
-    font-style: normal;
-    font-size: 0.9rem;
-}
-
 .form-check-label {
     margin-left: 0.5rem; /* Space between checkbox and label text */
     cursor: pointer;
@@ -480,14 +469,29 @@ añade .no-fa a <html> y se muestra el glifo unicode.
     text-decoration: line-through;
 }
 
-/* Ajuste para que los botones y el texto de días se alineen bien */
+/* Cluster derecho de cada tarea: switch | acciones | metadata */
 .grocery-item .btn-container {
     display: flex;
     align-items: center;
-    gap: 0.2rem;
-    /* --- NUEVO ESTILO --- */
-    min-width: 200px; /* Asegura un ancho mínimo para las opciones */
-    justify-content: flex-end; /* Alinea los elementos a la derecha dentro del contenedor */
+    gap: 0.75rem;       /* aire entre los tres grupos conceptuales */
+    min-width: 220px;
+    justify-content: flex-end;
+}
+/* Sub-grupo: editar + eliminar van juntos (más cercanos entre sí
+   que respecto del switch o del indicador de días). */
+.grocery-item .action-group {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+/* Indicador de antigüedad — metadata, no acción. */
+.task-days-old {
+    color: var(--clr-grey-6);
+    font-size: 0.75rem;
+    font-style: italic;
+    letter-spacing: 0.5px;
+    min-width: 3rem;
+    text-align: right;
 }
 
 /*

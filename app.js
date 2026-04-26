@@ -1,5 +1,6 @@
 import { TaskStore, LocalStorageAdapter } from './taskStore.js';
 import { Combobox } from './combobox.js';
+import { createIcon } from './icons.js';
 
 // ****** SELECTORES DE ELEMENTOS **********
 const DOM = {
@@ -192,31 +193,25 @@ class TaskManager {
         editBtn.type = 'button';
         editBtn.className = 'edit-btn';
         editBtn.setAttribute('aria-label', 'Editar tarea');
-        const editIcon = document.createElement('i');
-        editIcon.className = 'fas fa-edit';
-        const editFallback = document.createElement('span');
-        editFallback.className = 'fa-fallback';
-        editFallback.textContent = '✎';
-        editIcon.appendChild(editFallback);
-        editBtn.appendChild(editIcon);
+        editBtn.appendChild(createIcon('pencil'));
 
         const deleteBtn = document.createElement('button');
         deleteBtn.type = 'button';
         deleteBtn.className = 'delete-btn';
         deleteBtn.setAttribute('aria-label', 'Eliminar tarea');
-        const deleteIcon = document.createElement('i');
-        deleteIcon.className = 'fas fa-trash';
-        const deleteFallback = document.createElement('span');
-        deleteFallback.className = 'fa-fallback';
-        deleteFallback.textContent = '🗑';
-        deleteIcon.appendChild(deleteFallback);
-        deleteBtn.appendChild(deleteIcon);
+        deleteBtn.appendChild(createIcon('trash'));
+
+        // Agrupa los botones de acción para separarlos visualmente del switch
+        // y del indicador de antigüedad.
+        const actionGroup = document.createElement('div');
+        actionGroup.className = 'action-group';
+        actionGroup.append(editBtn, deleteBtn);
 
         const daysSpan = document.createElement('span');
         daysSpan.className = 'task-days-old';
         daysSpan.textContent = daysText;
 
-        btnContainer.append(checkbox, editBtn, deleteBtn, daysSpan);
+        btnContainer.append(checkbox, actionGroup, daysSpan);
         element.append(title, btnContainer);
 
         deleteBtn.addEventListener('click', this.handleDeleteItem.bind(this));
