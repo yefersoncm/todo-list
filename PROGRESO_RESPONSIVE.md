@@ -20,8 +20,8 @@ Documento actualizado después de cada fase para proteger contra cortes de energ
 | 2 | Touch targets ≥44px | DONE | `d156c05` | Bloque `@media (pointer: coarse)` con min 2.75rem (44px) en chevron, edit/delete, toggle, paginación, combo-toggle, bulk, confirm, inputs. Iconos visuales sin cambios. |
 | 3 | DnD opción B | DONE | `c6ba928` | Botones touch ↑/↓ (reorder en mismo scope) + ⬅ promote para subs. Reusan `moveToParent` y `store.move`. CSS oculta en pointer:fine, muestra en pointer:coarse. Promote-zone hide en touch. Disabled si sort != manual o no hay vecino. Tests 95/95 pasan. |
 | 4 | Edición inline touch-friendly | DONE | `b84a539` | `dblclick` solo se registra en pointer:fine. En touch el lápiz queda como único trigger. Helper nuevo `_isPrimaryTouch()`. Tests 95/95 pasan. |
-| 5 | Hover → tap-friendly | IN PROGRESS | — | Bloque `@media (hover: none)` revierte fondo/borde/color/shadow de los `:hover` problemáticos (sticky-hover en touch). Refuerzo `:active` con `transform: scale(0.96)` para feedback inmediato al tap. |
-| 6 | QA cross-viewport | PENDING | — | 320, 375, 412, 768, 1024, 1440. |
+| 5 | Hover → tap-friendly | DONE | `1498d73` | Bloque `@media (hover: none)` revierte fondo/borde/color/shadow de los `:hover` problemáticos (sticky-hover en touch). Refuerzo `:active` con `transform: scale(0.96)` para feedback inmediato al tap. |
+| 6 | QA cross-viewport | READY (manual) | — | Servidor en http://localhost:8000. Probar en DevTools Device Toolbar a 320, 375, 412, 768, 1024, 1440. Checklist abajo. |
 
 ## Cambios concretos por archivo (acumulados)
 
@@ -88,6 +88,54 @@ Desktop (mouse) sin cambios — los hit areas pequeños se mantienen.
     `.confirm-btn-cancel`, `.confirm-btn-ok`, `.app-toast-close`, `.done`.
   - `:active` con `transform: scale(0.96)` en los botones principales para
     feedback inmediato al tap.
+
+## Checklist Fase 6 — QA cross-viewport
+
+Server: `npm run serve` (o `python3 -m http.server 8000`). Abrir DevTools
+→ Toggle device toolbar → probar cada viewport.
+
+### 320px (S24 Ultra estrecho, iPhone SE 1)
+- [ ] El header con `Todo List` cabe sin overflow horizontal.
+- [ ] El input principal + botón "Agregar" caben en una sola línea (input se encoge).
+- [ ] La fila `.task-count-row` wrappea limpio: contador, controles abajo si no caben.
+- [ ] `.combo-sort .combo-toggle` no excede el ancho disponible.
+- [ ] Subtarea con título largo no rompe layout (indentación reducida).
+- [ ] Sin scroll horizontal en ningún viewport.
+
+### 375px (iPhone SE 2/3, 12 mini)
+- [ ] Igual que 320 pero más holgado.
+- [ ] Botones touch ↑/↓/⬅ en cada item se ven (probar con `Toggle device toolbar` que activa pointer:coarse).
+- [ ] Edit/delete y touch-controls no se solapan.
+
+### 412px (S24 Ultra estándar, Pixel 7)
+- [ ] Toast notifications (al agregar/borrar) caben en pantalla, no se cortan.
+- [ ] Modal de confirmación centrado y legible.
+- [ ] Tap en lápiz abre edición inline sin trigger de zoom (Fase 4).
+
+### 768px (tablet vertical / iPad mini)
+- [ ] Layout sigue compacto pero con más respiro.
+- [ ] Tipografía sube (h1 4rem, body 1rem) por el breakpoint min-width:768.
+- [ ] DnD por mouse funciona (probar con mouse — pointer:fine).
+
+### 1024px (tablet horizontal / laptop chico)
+- [ ] Wrapper `.section-center` queda con max-width 1170px aplicado.
+- [ ] `.combo-sort .combo-toggle` llega a 13rem.
+- [ ] Botones touch NO se ven (pointer:fine).
+
+### 1440px (desktop)
+- [ ] Centrado con margin auto, ancho razonable.
+- [ ] Drag-and-drop estable (cubierto por tests).
+- [ ] Doble-click en título abre edición.
+
+### Smoke tests funcionales
+- [ ] Crear tarea, marcarla como hecha, eliminarla.
+- [ ] Crear sub, colapsar/expandir padre.
+- [ ] Buscar texto.
+- [ ] Cambiar sort, paginación.
+- [ ] En touch (DevTools Toolbar): usar ↑/↓ para reordenar (sort=manual) y ⬅ para promover sub.
+- [ ] En touch: tap rápido NO deja sticky highlight en el item.
+
+Si algo falla, anotar viewport + síntoma y se arregla puntual con un commit `fase 6: ...`.
 
 ## Cómo hacer rollback
 
