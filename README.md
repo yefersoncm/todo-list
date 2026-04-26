@@ -11,7 +11,7 @@ App sencilla para gestionar tareas por hacer: agregar, editar, marcar como hecha
 - Marcar / desmarcar como hecha (la fila queda destacada y el texto tachado).
 - Eliminar una tarea (con confirmación) o limpiar la lista entera.
 - Filtrar la vista por: Todas / Hechas / Pendientes.
-- Indicador de antigüedad por tarea ("Hoy", "1 día", "N días") calculado a partir del timestamp de creación.
+- Indicador de tiempo transcurrido por tarea con desglose completo ("1 Año, 3 Meses, 4 Días, 5 Horas, 30 Minutos y 55 Segundos"), refrescado cada segundo. La columna alinea su ancho al de la tarea más antigua.
 - Contador de tareas según el filtro activo.
 - Persistencia en `localStorage` — al recargar, las tareas siguen ahí.
 - Modal de confirmación custom (sin `confirm()` nativo) con soporte de teclado (`Esc` cancela, `Enter` confirma).
@@ -57,9 +57,13 @@ todo-list/
 ├── styles.css              # Estilos custom + variables
 ├── app.js                  # Capa UI (clase TaskManager, DOM)
 ├── taskStore.js            # Lógica pura: TaskStore + adapters de storage
+├── elapsed.js              # Cálculo y formato de tiempo transcurrido
+├── icons.js                # Iconos SVG inline (Lucide)
+├── combobox.js             # Combobox accesible (reemplazo del <select>)
 ├── package.json
 ├── tests/
-│   └── taskStore.test.js   # Suite con node --test
+│   ├── taskStore.test.js   # Suite con node --test
+│   └── elapsed.test.js
 ├── vendor/
 │   └── fallback.css        # Fallback de Bootstrap si el CDN falla
 ├── logo.svg

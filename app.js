@@ -1,6 +1,7 @@
 import { TaskStore, LocalStorageAdapter } from './taskStore.js';
 import { Combobox } from './combobox.js';
 import { createIcon } from './icons.js';
+import { elapsedComponents, formatElapsed } from './elapsed.js';
 
 // ****** SELECTORES DE ELEMENTOS **********
 const DOM = {
@@ -59,12 +60,54 @@ class TaskManager {
         this.editElement = null;
         this.editFlag = false;
         this.editID = "";
+        this._elapsedProbe = null;     // span oculto para medir el texto más largo
+        this._elapsedTicker = null;    // id del setInterval
         this.filter = new Combobox(DOM.taskFilterRoot, {
             onChange: () => this.handleFilterChange(),
         });
         this.setSubmitMode('add');
         this.setupEventListeners();
         this.renderTasks();
+        this._startElapsedTicker();
+    }
+
+    // ----- Tiempo transcurrido por tarea ------------------------------------
+
+    _startElapsedTicker() {
+        if (this._elapsedTicker) return;
+        this._elapsedTicker = setInterval(() => this._updateElapsed(), 1000);
+    }
+
+    _ensureElapsedProbe() {
+        if (this._elapsedProbe) return this._elapsedProbe;
+        const probe = document.createElement('span');
+        probe.className = 'task-days-old';
+        probe.style.cssText = 'position:absolute;visibility:hidden;left:-9999px;top:0;min-width:0;white-space:nowrap;pointer-events:none;';
+        document.body.appendChild(probe);
+        this._elapsedProbe = probe;
+        return probe;
+    }
+
+    _updateElapsed() {
+        const items = DOM.list.querySelectorAll('.grocery-item');
+        if (items.length === 0) {
+            DOM.list.style.removeProperty('--elapsed-min-width');
+            return;
+        }
+        const probe = this._ensureElapsedProbe();
+        const now = new Date();
+        let maxWidth = 0;
+        for (const el of items) {
+            const id = el.dataset.id;
+            const span = el.querySelector('.task-days-old');
+            if (!span) continue;
+            const text = formatElapsed(elapsedComponents(parseInt(id), now));
+            if (span.textContent !== text) span.textContent = text;
+            probe.textContent = text;
+            const w = probe.offsetWidth;
+            if (w > maxWidth) maxWidth = w;
+        }
+        DOM.list.style.setProperty('--elapsed-min-width', `${maxWidth}px`);
     }
 
     setSubmitMode(mode) {
@@ -156,11 +199,13 @@ class TaskManager {
     renderTasks() {
         this._renderList(this.store.tasks);
         this.updateTaskCount();
+        this._updateElapsed();
     }
 
     renderFilteredTasks(showDone) {
         this._renderList(this.store.filter(showDone));
         this.updateTaskCount(showDone);
+        this._updateElapsed();
     }
 
     _renderList(items) {
@@ -180,8 +225,7 @@ class TaskManager {
         element.dataset.done = String(done);
         if (done) element.classList.add('done');
 
-        const daysOld = TaskStore.daysSinceCreation(id);
-        const daysText = daysOld === 0 ? 'Hoy' : (daysOld === 1 ? '1 día' : `${daysOld} días`);
+        const elapsedText = formatElapsed(elapsedComponents(parseInt(id)));
 
         // Botón de toggle (izquierda): círculo vacío / círculo con check.
         const toggleBtn = document.createElement('button');
@@ -215,7 +259,7 @@ class TaskManager {
 
         const daysSpan = document.createElement('span');
         daysSpan.className = 'task-days-old';
-        daysSpan.textContent = daysText;
+        daysSpan.textContent = elapsedText;
 
         // Cluster derecho: acciones + metadata.
         const meta = document.createElement('div');
