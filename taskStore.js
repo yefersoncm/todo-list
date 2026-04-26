@@ -222,26 +222,31 @@ export class TaskStore {
     }
 
     /**
-     * Mueve una tarea entre niveles:
+     * Mueve una tarea entre niveles y/o a una posición específica.
      *  - newParentId === null → promote a top-level.
-     *  - newParentId = id de un padre válido → re-parent (si era sub)
-     *    o demote (si era top-level sin subs).
+     *  - newParentId = id de un padre válido → re-parent.
+     *  - insertBeforeId:
+     *      undefined → legacy: top-level=unshift, child=al inicio del bloque.
+     *      null      → al final del scope (lista top-level si newParentId=null,
+     *                  o final del bloque del padre si no).
+     *      '<id>'    → insertar antes de esa tarea (debe estar en el scope correcto).
      * Validaciones:
-     *  - No mover una tarea sobre sí misma.
+     *  - No mover sobre sí misma.
      *  - El nuevo padre debe existir y ser top-level.
      *  - Padre con subs NO puede demotarse (crearía subsub).
-     *  - No re-parentar a su mismo padre actual (no-op).
-     * Después se re-evalúan padre viejo y padre nuevo.
      * Devuelve true si se aplicó el cambio, false si fue rechazado/no-op.
      */
-    moveToParent(taskId, newParentId, now = Date.now()) {
+    moveToParent(taskId, newParentId, insertBeforeId = undefined, now = Date.now()) {
         if (taskId === newParentId) return false;
+        if (taskId === insertBeforeId) return false;
         const task = this.tasks.find(t => t.id === taskId);
         if (!task) return false;
-        if (task.parentId === newParentId) return false;
+
+        const sameParent = task.parentId === newParentId;
+        if (sameParent && insertBeforeId === undefined) return false;
 
         if (task.parentId === null && newParentId !== null && this.subsOf(taskId).length > 0) {
-            return false; // padre con subs no puede demotarse
+            return false;
         }
 
         if (newParentId !== null) {
@@ -250,20 +255,46 @@ export class TaskStore {
         }
 
         const oldParentId = task.parentId;
-
         const idx = this.tasks.findIndex(t => t.id === taskId);
         const [item] = this.tasks.splice(idx, 1);
         item.parentId = newParentId;
         item.updatedAt = now;
 
-        if (newParentId === null) {
-            this.tasks.unshift(item);
+        if (insertBeforeId === undefined) {
+            // Legacy: comportamiento histórico.
+            if (newParentId === null) {
+                this.tasks.unshift(item);
+            } else {
+                const parentIdx = this.tasks.findIndex(t => t.id === newParentId);
+                this.tasks.splice(parentIdx + 1, 0, item);
+            }
+        } else if (insertBeforeId === null) {
+            // Al final del scope.
+            if (newParentId === null) {
+                // Final de la lista de top-levels = después del último padre y sus subs.
+                // En this.tasks eso es simplemente el final.
+                this.tasks.push(item);
+            } else {
+                // Final del bloque del padre = después de la última sub de ese padre.
+                const parentIdx = this.tasks.findIndex(t => t.id === newParentId);
+                let insertAt = parentIdx + 1;
+                while (insertAt < this.tasks.length && this.tasks[insertAt].parentId === newParentId) {
+                    insertAt++;
+                }
+                this.tasks.splice(insertAt, 0, item);
+            }
         } else {
-            const parentIdx = this.tasks.findIndex(t => t.id === newParentId);
-            this.tasks.splice(parentIdx + 1, 0, item);
+            // Antes de un id específico.
+            const beforeIdx = this.tasks.findIndex(t => t.id === insertBeforeId);
+            if (beforeIdx < 0) {
+                // Fallback: al final.
+                this.tasks.push(item);
+            } else {
+                this.tasks.splice(beforeIdx, 0, item);
+            }
         }
 
-        if (oldParentId) this._reevaluateParent(oldParentId, now);
+        if (oldParentId && oldParentId !== newParentId) this._reevaluateParent(oldParentId, now);
         if (newParentId) this._reevaluateParent(newParentId, now);
 
         this.save();

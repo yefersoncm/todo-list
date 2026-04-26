@@ -451,7 +451,7 @@ describe('TaskStore — moveToParent (re-parent / promote / demote)', () => {
         store.add('A', () => 'A');
         store.add('B', () => 'B');
         store.addSubtask('A', 'sub', () => 'SA');
-        store.moveToParent('SA', 'B', 9999);
+        store.moveToParent('SA', 'B', undefined, 9999);
         assert.equal(store.tasks.find(t => t.id === 'SA').updatedAt, 9999);
     });
 });
