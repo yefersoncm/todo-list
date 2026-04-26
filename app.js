@@ -30,6 +30,7 @@ const DOM = {
     bulkCollapseRoot: document.getElementById('bulkCollapse'),
     bulkCollapseAllBtn: document.querySelector('.bulk-collapse-all'),
     bulkExpandAllBtn: document.querySelector('.bulk-expand-all'),
+    promoteZone: document.getElementById('promoteZone'),
     paginationNav: document.querySelector('.pagination'),
     taskCountDisplay: document.querySelector('.task-count'),
     toastContainer: document.getElementById('toastContainer'),
@@ -191,6 +192,11 @@ class TaskManager {
         if (DOM.bulkExpandAllBtn) {
             DOM.bulkExpandAllBtn.addEventListener('click', this.handleExpandAll.bind(this));
         }
+        if (DOM.promoteZone) {
+            DOM.promoteZone.addEventListener('dragover', this.handlePromoteDragOver.bind(this));
+            DOM.promoteZone.addEventListener('dragleave', this.handlePromoteDragLeave.bind(this));
+            DOM.promoteZone.addEventListener('drop', this.handlePromoteDrop.bind(this));
+        }
     }
 
     // ****** MANEJADORES DE EVENTOS **********
@@ -320,14 +326,21 @@ class TaskManager {
 
     handleDragStart(e) {
         const el = e.currentTarget;
-        this._draggingId = el.dataset.id;
+        const id = el.dataset.id;
+        const task = this.store.tasks.find(t => t.id === id);
+        this._draggingId = id;
+        this._draggingIsSub = task ? task.parentId !== null : false;
         el.classList.add('is-dragging');
         e.dataTransfer.effectAllowed = 'move';
         // Algunos browsers requieren que escribamos algo a dataTransfer
         // para que el drag sea válido; el id real lo guardamos en una
         // propiedad de instancia porque dragover no permite leer
         // dataTransfer en Chromium.
-        e.dataTransfer.setData('text/plain', el.dataset.id);
+        e.dataTransfer.setData('text/plain', id);
+        // Mostrar el promote zone sólo cuando arrastramos una sub.
+        if (this._draggingIsSub && DOM.promoteZone) {
+            DOM.promoteZone.hidden = false;
+        }
     }
 
     handleDragOver(e) {
@@ -335,36 +348,93 @@ class TaskManager {
         e.preventDefault();
         e.dataTransfer.dropEffect = 'move';
         const target = e.currentTarget;
-        if (target.dataset.id !== this._draggingId) {
+        if (target.dataset.id === this._draggingId) return;
+        // Source = sub → siempre nest. Source = parent → reorder.
+        if (this._draggingIsSub) {
+            target.classList.add('is-drop-nest');
+        } else {
             target.classList.add('is-drop-target');
         }
     }
 
     handleDragLeave(e) {
-        e.currentTarget.classList.remove('is-drop-target');
+        e.currentTarget.classList.remove('is-drop-target', 'is-drop-nest');
     }
 
     handleDrop(e) {
         e.preventDefault();
-        e.currentTarget.classList.remove('is-drop-target');
+        e.currentTarget.classList.remove('is-drop-target', 'is-drop-nest');
         const fromId = this._draggingId;
         const toId = e.currentTarget.dataset.id;
+        const wasSub = this._draggingIsSub;
         this._draggingId = null;
+        this._draggingIsSub = false;
         if (!fromId || fromId === toId) return;
-        const fromIdx = this.store.tasks.findIndex(t => t.id === fromId);
-        const toIdx = this.store.tasks.findIndex(t => t.id === toId);
-        if (fromIdx < 0 || toIdx < 0) return;
-        this.store.move(fromIdx, toIdx);
-        this.renderTasks();
+
+        if (wasSub) {
+            // Sub → re-parent. El target puede ser un padre (nestear ahí)
+            // o una sub (entonces nesteamos al padre de esa sub).
+            const targetTask = this.store.tasks.find(t => t.id === toId);
+            if (!targetTask) return;
+            const newParentId = targetTask.parentId === null ? toId : targetTask.parentId;
+            const ok = this.store.moveToParent(fromId, newParentId);
+            if (ok) {
+                this.currentPage = 1;
+                this.renderTasks();
+                this.displayAlert('Subtarea movida', 'success');
+            }
+        } else {
+            // Parent → reorder. move() opera sobre índices de la lista
+            // de PADRES, no de tasks completo (importante con subs intercaladas).
+            const parents = this.store.tasks.filter(t => t.parentId === null);
+            const fromIdx = parents.findIndex(p => p.id === fromId);
+            const toIdx = parents.findIndex(p => p.id === toId);
+            if (fromIdx < 0 || toIdx < 0) return;
+            this.store.move(fromIdx, toIdx);
+            this.renderTasks();
+        }
     }
 
     handleDragEnd(e) {
         e.currentTarget.classList.remove('is-dragging');
         // Limpieza defensiva: si dragend dispara sin drop (cancelado),
-        // dejamos los .is-drop-target colgados — los borramos todos.
-        DOM.list.querySelectorAll('.grocery-item.is-drop-target')
-            .forEach(el => el.classList.remove('is-drop-target'));
+        // dejamos los .is-drop-target/.is-drop-nest colgados — borramos.
+        DOM.list.querySelectorAll('.grocery-item.is-drop-target, .grocery-item.is-drop-nest')
+            .forEach(el => el.classList.remove('is-drop-target', 'is-drop-nest'));
+        if (DOM.promoteZone) {
+            DOM.promoteZone.classList.remove('is-drop-target');
+            DOM.promoteZone.hidden = true;
+        }
         this._draggingId = null;
+        this._draggingIsSub = false;
+    }
+
+    // Listeners del promote zone (sólo recibe drops de subs).
+    handlePromoteDragOver(e) {
+        if (!this._draggingId || !this._draggingIsSub) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        DOM.promoteZone.classList.add('is-drop-target');
+    }
+
+    handlePromoteDragLeave() {
+        DOM.promoteZone.classList.remove('is-drop-target');
+    }
+
+    handlePromoteDrop(e) {
+        e.preventDefault();
+        DOM.promoteZone.classList.remove('is-drop-target');
+        if (!this._draggingId || !this._draggingIsSub) return;
+        const id = this._draggingId;
+        this._draggingId = null;
+        this._draggingIsSub = false;
+        const ok = this.store.moveToParent(id, null);
+        if (ok) {
+            this.currentPage = 1;
+            this.renderTasks();
+            this.displayAlert('Promovida a tarea principal', 'success');
+        }
+        DOM.promoteZone.hidden = true;
     }
 
     // ----- Collapse / expand de grupos de subtareas ---------------------------
@@ -435,18 +505,21 @@ class TaskManager {
     }
 
     handleManualKeyDown(e) {
-        // Alt+ArrowUp/Down reordena la tarea enfocada.
+        // Alt+ArrowUp/Down reordena la tarea PADRE enfocada.
+        // (Subs no son keyboard-reordenables; siguen a su padre.)
         if (!e.altKey) return;
         if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
         e.preventDefault();
         const id = e.currentTarget.dataset.id;
-        const idx = this.store.tasks.findIndex(t => t.id === id);
+        // move() trabaja sobre la lista de PADRES, no sobre el array completo.
+        const parents = this.store.tasks.filter(t => t.parentId === null);
+        const idx = parents.findIndex(p => p.id === id);
+        if (idx < 0) return;
         const newIdx = e.key === 'ArrowUp' ? idx - 1 : idx + 1;
-        if (newIdx < 0 || newIdx >= this.store.tasks.length) return;
+        if (newIdx < 0 || newIdx >= parents.length) return;
         this.store.move(idx, newIdx);
         this.renderTasks();
-        // Mantén el foco en la tarea movida para que el usuario pueda
-        // seguir reordenando con Alt+arrow sin tabular de nuevo.
+        // Mantén el foco en la tarea movida.
         const moved = DOM.list.querySelector(`.grocery-item[data-id="${id}"]`);
         if (moved) moved.focus();
     }
@@ -592,18 +665,22 @@ class TaskManager {
         element.dataset.done = String(done);
         if (done) element.classList.add('done');
 
-        // Drag-and-drop sólo se habilita en padres (nunca subs) cuando
-        // sort=manual y sin filtro.
-        if (!isSubtask && this._isManualReorderActive()) {
+        // Drag-and-drop en modo manual sin filtro:
+        //   - Padres son draggables (reorder + soporte para teclado Alt+↑/↓).
+        //   - Subs son draggables (solo drop entre niveles: re-parent o promote).
+        if (this._isManualReorderActive()) {
             element.draggable = true;
-            element.tabIndex = 0;
             element.classList.add('is-draggable');
             element.addEventListener('dragstart', this.handleDragStart.bind(this));
             element.addEventListener('dragover', this.handleDragOver.bind(this));
             element.addEventListener('dragleave', this.handleDragLeave.bind(this));
             element.addEventListener('drop', this.handleDrop.bind(this));
             element.addEventListener('dragend', this.handleDragEnd.bind(this));
-            element.addEventListener('keydown', this.handleManualKeyDown.bind(this));
+            // Teclado de reordenamiento sólo aplica a padres.
+            if (!isSubtask) {
+                element.tabIndex = 0;
+                element.addEventListener('keydown', this.handleManualKeyDown.bind(this));
+            }
         }
 
         const elapsedText = formatElapsed(elapsedComponents(parseInt(id)));
