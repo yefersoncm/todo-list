@@ -1,0 +1,286 @@
+/* =====================================================================
+   ToDo — Design tokens
+   Sistema unificado: paleta refinada (azul primario), tipografía con
+   JetBrains Mono + Inter Tight, escala de espaciado 4/8/12/16/24/32/48,
+   elevation en 3 niveles, radii en 3 escalones, dark mode intencional.
+
+   Toggle de tema:    [data-theme="dark"]    sobre <html> o <body>.
+   Toggle de densidad: [data-density="compact"] sobre <html> o <body>.
+   ===================================================================== */
+
+:root {
+  /* ─── Color: primario azul (refinado, OKLCH) ─────────────────────── */
+  /* Antes: 10 escalones HSL desordenados, un único `--clr-primary-5`
+     pasaba como "main". Ahora: 50/100/200/.../900 normalizada,
+     `--accent` apunta al 600 que cumple AA contra blanco. */
+  --blue-50:  oklch(97.5% 0.018 240);
+  --blue-100: oklch(94% 0.038 240);
+  --blue-200: oklch(88% 0.072 240);
+  --blue-300: oklch(80% 0.110 240);
+  --blue-400: oklch(70% 0.140 240);
+  --blue-500: oklch(62% 0.165 240);
+  --blue-600: oklch(54% 0.180 245);
+  --blue-700: oklch(46% 0.165 248);
+  --blue-800: oklch(38% 0.130 250);
+  --blue-900: oklch(30% 0.090 250);
+  --blue-950: oklch(22% 0.060 250);
+
+  /* ─── Color: neutros (slate, ligero hue azulado) ─────────────────── */
+  --slate-0:   oklch(99.5% 0.003 250);
+  --slate-50:  oklch(98%   0.005 250);
+  --slate-100: oklch(95%   0.008 250);
+  --slate-200: oklch(91%   0.012 250);
+  --slate-300: oklch(84%   0.015 250);
+  --slate-400: oklch(72%   0.020 250);
+  --slate-500: oklch(58%   0.022 250);
+  --slate-600: oklch(46%   0.022 250);
+  --slate-700: oklch(36%   0.020 250);
+  --slate-800: oklch(26%   0.018 250);
+  --slate-900: oklch(18%   0.015 250);
+  --slate-950: oklch(12%   0.012 250);
+
+  /* ─── Color: feedback (mismo chroma que primario para coherencia) ── */
+  --red-50:    oklch(97% 0.020 25);
+  --red-100:   oklch(93% 0.045 25);
+  --red-500:   oklch(60% 0.180 25);
+  --red-600:   oklch(53% 0.180 25);
+  --red-700:   oklch(45% 0.160 25);
+
+  --green-50:  oklch(96% 0.025 150);
+  --green-100: oklch(92% 0.055 150);
+  --green-500: oklch(62% 0.150 150);
+  --green-600: oklch(54% 0.140 150);
+  --green-700: oklch(46% 0.130 150);
+
+  --amber-50:  oklch(97% 0.030 85);
+  --amber-100: oklch(93% 0.075 85);
+  --amber-500: oklch(72% 0.150 85);
+  --amber-600: oklch(64% 0.150 85);
+  --amber-700: oklch(54% 0.140 85);
+
+  /* ─── Roles semánticos: LIGHT THEME ──────────────────────────────── */
+  --bg-app:        var(--slate-50);
+  --bg-surface:    var(--slate-0);
+  --bg-surface-2:  var(--slate-100);   /* hover ghost, sub bg */
+  --bg-surface-3:  var(--slate-200);   /* hover más fuerte */
+  --bg-inset:      var(--slate-100);   /* inputs en reposo */
+
+  --fg-default:    var(--slate-900);
+  --fg-muted:      var(--slate-600);
+  --fg-subtle:     var(--slate-500);
+  --fg-onAccent:   var(--slate-0);
+
+  --border-subtle: var(--slate-200);
+  --border-default:var(--slate-300);
+  --border-strong: var(--slate-400);
+
+  --accent:        var(--blue-600);
+  --accent-hover:  var(--blue-700);
+  --accent-active: var(--blue-800);
+  --accent-fg:     var(--slate-0);
+  --accent-soft:   var(--blue-50);
+  --accent-soft-2: var(--blue-100);
+  --accent-ring:   color-mix(in oklch, var(--blue-500) 35%, transparent);
+
+  --danger:        var(--red-600);
+  --danger-hover:  var(--red-700);
+  --danger-soft:   var(--red-50);
+  --danger-ring:   color-mix(in oklch, var(--red-500) 35%, transparent);
+
+  --success:       var(--green-600);
+  --success-soft:  var(--green-50);
+
+  --warning:       var(--amber-600);
+  --warning-soft:  var(--amber-50);
+
+  /* ─── Typography ─────────────────────────────────────────────────── */
+  --ff-sans: "Inter Tight", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --ff-mono: "JetBrains Mono", "Fira Code", "SF Mono", ui-monospace, Menlo, monospace;
+
+  /* Escala modular ratio 1.125, base 14px desktop. */
+  --fs-xs:   12px;
+  --fs-sm:   13px;
+  --fs-base: 14px;
+  --fs-md:   15px;
+  --fs-lg:   17px;
+  --fs-xl:   20px;
+  --fs-2xl:  24px;
+  --fs-3xl:  30px;
+  --fs-4xl:  38px;
+
+  --lh-tight: 1.2;
+  --lh-snug:  1.35;
+  --lh-normal:1.5;
+
+  --fw-regular: 400;
+  --fw-medium:  500;
+  --fw-semibold:600;
+  --fw-bold:    700;
+
+  --tracking-tight:  -0.01em;
+  --tracking-normal:  0;
+  --tracking-mono:    0.01em;
+  --tracking-caps:    0.06em;
+
+  /* ─── Spacing scale (4 / 8 / 12 / 16 / 24 / 32 / 48 / 64) ─────────── */
+  --sp-0: 0;
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+  --sp-7: 48px;
+  --sp-8: 64px;
+
+  /* ─── Radii ───────────────────────────────────────────────────────── */
+  --r-sm: 6px;     /* botones pequeños, badges, controls inline */
+  --r-md: 10px;    /* botones primarios, inputs, items de lista */
+  --r-lg: 14px;    /* cards, modales, panel principal */
+  --r-pill: 999px;
+
+  /* ─── Elevation (3 niveles + inner) ──────────────────────────────── */
+  --shadow-flat:    0 0 0 1px var(--border-subtle);
+  --shadow-raised:  0 1px 2px rgba(15, 23, 42, 0.04),
+                    0 4px 12px rgba(15, 23, 42, 0.06);
+  --shadow-overlay: 0 8px 16px rgba(15, 23, 42, 0.08),
+                    0 24px 48px rgba(15, 23, 42, 0.12);
+  --shadow-inset:   inset 0 0 0 1px var(--border-subtle);
+
+  /* ─── Density tokens (default = comfy) ──────────────────────────── */
+  --row-h:        44px;
+  --row-py:       var(--sp-2);
+  --row-px:       var(--sp-3);
+  --row-gap:      var(--sp-2);
+  --field-h:      36px;
+  --btn-h:        36px;
+  --btn-h-sm:     28px;
+
+  /* ─── Motion ─────────────────────────────────────────────────────── */
+  --ease-out:    cubic-bezier(.16, .84, .44, 1);
+  --ease-in-out: cubic-bezier(.65, 0, .35, 1);
+  --dur-fast:    120ms;
+  --dur-base:    180ms;
+  --dur-slow:    260ms;
+
+  /* ─── Layout ─────────────────────────────────────────────────────── */
+  --container-max: 1200px;
+  --content-max:   780px;
+  --sidebar-w:     264px;
+}
+
+/* ─── Density: compact ─────────────────────────────────────────────── */
+[data-density="compact"] {
+  --row-h:    34px;
+  --row-py:   var(--sp-1);
+  --row-px:   var(--sp-3);
+  --row-gap:  6px;
+  --field-h:  30px;
+  --btn-h:    30px;
+  --btn-h-sm: 24px;
+}
+
+/* ─── Dark theme ───────────────────────────────────────────────────── */
+[data-theme="dark"] {
+  --bg-app:        var(--slate-950);
+  --bg-surface:    var(--slate-900);
+  --bg-surface-2:  oklch(22% 0.018 250);
+  --bg-surface-3:  oklch(28% 0.020 250);
+  --bg-inset:      oklch(20% 0.015 250);
+
+  --fg-default:    oklch(96% 0.008 250);
+  --fg-muted:      oklch(72% 0.015 250);
+  --fg-subtle:     oklch(58% 0.018 250);
+  --fg-onAccent:   var(--slate-0);
+
+  --border-subtle: oklch(26% 0.015 250);
+  --border-default:oklch(32% 0.018 250);
+  --border-strong: oklch(42% 0.020 250);
+
+  --accent:        var(--blue-400);
+  --accent-hover:  var(--blue-300);
+  --accent-active: var(--blue-500);
+  --accent-fg:     var(--slate-950);
+  --accent-soft:   color-mix(in oklch, var(--blue-500) 18%, var(--slate-900));
+  --accent-soft-2: color-mix(in oklch, var(--blue-500) 28%, var(--slate-900));
+  --accent-ring:   color-mix(in oklch, var(--blue-400) 45%, transparent);
+
+  --danger:        oklch(68% 0.180 25);
+  --danger-hover:  oklch(75% 0.180 25);
+  --danger-soft:   color-mix(in oklch, var(--red-500) 18%, var(--slate-900));
+  --danger-ring:   color-mix(in oklch, var(--red-500) 45%, transparent);
+
+  --success:       oklch(70% 0.150 150);
+  --success-soft:  color-mix(in oklch, var(--green-500) 18%, var(--slate-900));
+
+  --warning:       oklch(78% 0.150 85);
+  --warning-soft:  color-mix(in oklch, var(--amber-500) 18%, var(--slate-900));
+
+  --shadow-flat:    0 0 0 1px var(--border-subtle);
+  --shadow-raised:  0 1px 2px rgba(0, 0, 0, 0.3),
+                    0 4px 12px rgba(0, 0, 0, 0.35);
+  --shadow-overlay: 0 8px 16px rgba(0, 0, 0, 0.4),
+                    0 24px 48px rgba(0, 0, 0, 0.55);
+  --shadow-inset:   inset 0 0 0 1px var(--border-subtle);
+}
+
+/* ─── Reset y base ─────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+* { margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+}
+body {
+  font-family: var(--ff-sans);
+  font-size: var(--fs-base);
+  line-height: var(--lh-normal);
+  color: var(--fg-default);
+  background: var(--bg-app);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "ss01", "cv11";
+  transition: background-color var(--dur-base) var(--ease-out),
+              color var(--dur-base) var(--ease-out);
+}
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+}
+input, textarea, select {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+ul, ol { list-style: none; }
+a { color: inherit; text-decoration: none; }
+img, svg { display: block; }
+
+/* Focus ring uniforme */
+:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--bg-surface), 0 0 0 4px var(--accent-ring);
+  border-radius: var(--r-sm);
+}
+
+/* Scrollbar fina y discreta */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb {
+  background: var(--border-default);
+  border: 2px solid var(--bg-app);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* Selection */
+::selection {
+  background: var(--accent-soft-2);
+  color: var(--fg-default);
+}
