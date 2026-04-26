@@ -69,7 +69,9 @@ class TaskManager {
 
     setSubmitMode(mode) {
         const isEdit = mode === 'edit';
-        DOM.submitIcon.replaceChildren(createIcon(isEdit ? 'check' : 'plus', { size: 16, className: 'icon' }));
+        // En edit usamos 'pencil' — el mismo icono del botón Editar de
+        // cada tarea, para mantener coherencia visual del verbo.
+        DOM.submitIcon.replaceChildren(createIcon(isEdit ? 'pencil' : 'plus', { size: 16, className: 'icon' }));
         DOM.submitLabel.textContent = isEdit ? 'Editar' : 'Agregar';
     }
 

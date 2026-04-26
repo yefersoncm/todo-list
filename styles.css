@@ -243,7 +243,10 @@ Grocery List
 .submit-btn {
   background: var(--clr-primary-8);
   border: none;
-  flex: 0 0 5.5rem;
+  /* Ancho fijo: el botón no debe crecer ni encogerse al alternar entre
+     'Agregar' y 'Editar'. 7.5rem cabe holgado el más ancho de los dos. */
+  flex: none;
+  width: 7.5rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
