@@ -1,0 +1,31 @@
+/*
+ * Estilos de respaldo si el CDN de Bootstrap o Font Awesome falla.
+ * Se cargan SIEMPRE, antes de los CDNs. Bootstrap los sobreescribe
+ * cuando carga; si no carga, los íconos de Font Awesome se sustituyen
+ * por glifos unicode (clase .no-fa en <html>, ver styles.css).
+ *
+ * Mínimo viable para que la app siga siendo usable.
+ */
+
+/* Bootstrap form-check / form-switch fallback */
+.form-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+.form-check-input {
+    width: 1.1rem;
+    height: 1.1rem;
+    margin: 0;
+    cursor: pointer;
+    accent-color: #49a6e9;
+}
+.form-switch .form-check-input {
+    width: 2rem;
+    height: 1.1rem;
+    border-radius: 1rem;
+}
+.form-check-label {
+    cursor: pointer;
+    user-select: none;
+}
