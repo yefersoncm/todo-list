@@ -112,7 +112,7 @@ p {
   margin-bottom: 1.25rem;
   color: var(--clr-grey-5);
 }
-@media screen and (min-width: 800px) {
+@media screen and (min-width: 768px) {
   h1 {
     font-size: 4rem;
   }
@@ -160,20 +160,12 @@ border-radius: var(--radius);
   padding: 5rem 0;
 }
 
+/* Mobile-first: márgenes fluidos. En mobile el wrapper consume casi todo
+   el ancho, en desktop se queda centrado con max-width. */
 .section-center {
-  margin: 2rem;
-  max-width: 100%;
-}
-@media screen and (min-width: 992px) {
-  .section-center {
-    margin: 2rem;
-    max-width: 100%;
-  }
-}
-@media screen and (max-width: 992px) {
-  .section-center {
-    width: 90vw;
-  }
+  margin: clamp(0.5rem, 3vw, 2rem);
+  width: auto;
+  max-width: var(--max-width);
 }
 main {
   min-height: 100vh;
@@ -190,7 +182,7 @@ Grocery List
   border-radius: var(--radius);
   box-shadow: var(--light-shadow);
   transition: var(--transition);
-  padding: 2rem;
+  padding: clamp(1rem, 4vw, 2rem);
 }
 .section-center:hover {
   box-shadow: var(--dark-shadow);
@@ -219,7 +211,7 @@ con mayor especificidad y haría invisibles nuestras notificaciones.
 .app-toast {
     pointer-events: auto;
     position: relative;
-    min-width: 16rem;
+    min-width: min(16rem, 100%);
     max-width: 22rem;
     padding: 0.75rem 1rem;
     border-radius: var(--radius);
@@ -331,7 +323,9 @@ con mayor especificidad y haría invisibles nuestras notificaciones.
   border-bottom-left-radius: var(--radius);
   border-color: transparent;
   font-size: 1rem;
-  flex: 1 0 auto;
+  /* flex: 1 1 auto para que se encoja en mobile y no fuerce overflow. */
+  flex: 1 1 auto;
+  min-width: 0;
   color: var(--clr-grey-5);
 }
 
@@ -343,10 +337,10 @@ con mayor especificidad y haría invisibles nuestras notificaciones.
 .submit-btn {
   background: var(--clr-primary-8);
   border: none;
-  /* Ancho fijo: el botón no debe crecer ni encogerse al alternar entre
-     'Agregar' y 'Editar'. 7.5rem cabe holgado el más ancho de los dos. */
+  /* Ancho fluido: holgado para 'Editar' en desktop, compacto en mobile.
+     flex: none para que no se encoja por el flex container. */
   flex: none;
-  width: 7.5rem;
+  width: clamp(5.5rem, 24vw, 7.5rem);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -451,7 +445,7 @@ con mayor especificidad y haría invisibles nuestras notificaciones.
     font-size: 0.8rem;
 }
 .combo-sort .combo-toggle {
-    min-width: 13rem;
+    min-width: clamp(8rem, 40vw, 13rem);
 }
 .page-size-control .combo-toggle {
     min-width: 4.5rem;
@@ -554,9 +548,11 @@ Paginación
 /* Subtareas: indentación pura, sin línea conectora.
    max-height + transition para animar collapse/expand. */
 .grocery-item.is-subtask {
-  margin-left: 3.5rem;
+  /* Indentación proporcional: en mobile no come tanto ancho, en desktop
+     mantiene la jerarquía visual fuerte. */
+  margin-left: clamp(1.25rem, 6vw, 3.5rem);
   position: relative;
-  padding-left: 1.25rem;
+  padding-left: clamp(0.5rem, 2vw, 1.25rem);
   overflow: hidden;
   max-height: 8rem;
   transition: max-height 220ms ease, opacity 200ms ease,
@@ -646,7 +642,7 @@ Paginación
   flex: 0 0 auto;
 }
 .subtask-add-input {
-  width: 9rem;
+  width: clamp(7rem, 28vw, 9rem);
   padding: 0.3rem 0.6rem;
   border: 1px solid var(--clr-grey-9);
   border-radius: var(--radius);
@@ -1088,3 +1084,34 @@ Confirm modal
 .confirm-btn-ok:hover {
     background: var(--clr-red-dark);
 }
+
+/*
+===============
+Mobile-first overrides (≤480px)
+===============
+Ajustes finos para pantallas estrechas. Lo importante (widths fluidos,
+indentación proporcional) ya está resuelto vía clamp() arriba; aquí
+solo se ajustan paddings y gaps que en mobile sienten apretados.
+*/
+@media screen and (max-width: 480px) {
+  .section {
+    padding: 1.5rem 0;
+  }
+  .grocery-item {
+    padding: 0.35rem 0.5rem;
+    gap: 0.4rem;
+  }
+  .task-count-row,
+  .task-count-controls {
+    gap: 0.5rem;
+  }
+  .pagination {
+    justify-content: center;
+    gap: 0.35rem;
+  }
+  /* En filas estrechas, gap reducido entre meta y acciones. */
+  .grocery-item .meta {
+    gap: 0.4rem;
+  }
+}
+
