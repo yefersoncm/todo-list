@@ -8,6 +8,8 @@ const DOM = {
     form: document.querySelector('.grocery-form'),
     groceryInput: document.getElementById('grocery'),
     submitBtn: document.querySelector('.submit-btn'),
+    submitIcon: document.querySelector('.submit-icon'),
+    submitLabel: document.querySelector('.submit-label'),
     container: document.querySelector('.grocery-container'),
     list: document.querySelector('.grocery-list'),
     clearBtn: document.querySelector('.clear-btn'),
@@ -60,8 +62,15 @@ class TaskManager {
         this.filter = new Combobox(DOM.taskFilterRoot, {
             onChange: () => this.handleFilterChange(),
         });
+        this.setSubmitMode('add');
         this.setupEventListeners();
         this.renderTasks();
+    }
+
+    setSubmitMode(mode) {
+        const isEdit = mode === 'edit';
+        DOM.submitIcon.replaceChildren(createIcon(isEdit ? 'check' : 'plus', { size: 16, className: 'icon' }));
+        DOM.submitLabel.textContent = isEdit ? 'Editar' : 'Agregar';
     }
 
     setupEventListeners() {
@@ -110,13 +119,10 @@ class TaskManager {
     }
 
     handleMarkTaskAsDone(e) {
-        const element = e.currentTarget.closest('.grocery-item');
+        const button = e.currentTarget;
+        const element = button.closest('.grocery-item');
         const id = element.dataset.id;
         const isDone = element.dataset.done !== "true";
-
-        element.classList.toggle("done", isDone);
-        element.dataset.done = String(isDone);
-        e.currentTarget.checked = isDone;
 
         this.store.toggle(id, isDone);
         this.renderTasks();
@@ -140,7 +146,7 @@ class TaskManager {
         DOM.groceryInput.value = this.editElement.textContent;
         this.editFlag = true;
         this.editID = element.dataset.id;
-        DOM.submitBtn.textContent = "Editar";
+        this.setSubmitMode('edit');
     }
 
     // ****** FUNCIONES DE RENDERIZADO **********
@@ -175,19 +181,18 @@ class TaskManager {
         const daysOld = TaskStore.daysSinceCreation(id);
         const daysText = daysOld === 0 ? 'Hoy' : (daysOld === 1 ? '1 día' : `${daysOld} días`);
 
-        // Construimos los nodos en lugar de usar innerHTML para evitar XSS:
-        // 'value' viene del input del usuario y se asigna por textContent.
+        // Botón de toggle (izquierda): círculo vacío / círculo con check.
+        const toggleBtn = document.createElement('button');
+        toggleBtn.type = 'button';
+        toggleBtn.className = 'toggle-btn';
+        toggleBtn.setAttribute('aria-pressed', String(!!done));
+        toggleBtn.setAttribute('aria-label', done ? 'Marcar como pendiente' : 'Marcar como hecha');
+        toggleBtn.appendChild(createIcon(done ? 'circle-check' : 'circle', { size: 22, className: 'toggle-icon' }));
+
+        // Título — value viene del input del usuario, se asigna por textContent (anti-XSS).
         const title = document.createElement('p');
         title.classList.add('title');
         title.textContent = value;
-
-        const btnContainer = document.createElement('div');
-        btnContainer.className = 'btn-container form-check form-switch';
-
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.className = 'form-check-input';
-        checkbox.checked = !!done;
 
         const editBtn = document.createElement('button');
         editBtn.type = 'button';
@@ -201,8 +206,7 @@ class TaskManager {
         deleteBtn.setAttribute('aria-label', 'Eliminar tarea');
         deleteBtn.appendChild(createIcon('trash'));
 
-        // Agrupa los botones de acción para separarlos visualmente del switch
-        // y del indicador de antigüedad.
+        // Editar + eliminar agrupados como cluster de "meta-acciones".
         const actionGroup = document.createElement('div');
         actionGroup.className = 'action-group';
         actionGroup.append(editBtn, deleteBtn);
@@ -211,12 +215,17 @@ class TaskManager {
         daysSpan.className = 'task-days-old';
         daysSpan.textContent = daysText;
 
-        btnContainer.append(checkbox, actionGroup, daysSpan);
-        element.append(title, btnContainer);
+        // Cluster derecho: acciones + metadata.
+        const meta = document.createElement('div');
+        meta.className = 'meta';
+        meta.append(actionGroup, daysSpan);
 
+        // Layout de la fila: toggle | title | meta
+        element.append(toggleBtn, title, meta);
+
+        toggleBtn.addEventListener('click', this.handleMarkTaskAsDone.bind(this));
         deleteBtn.addEventListener('click', this.handleDeleteItem.bind(this));
         editBtn.addEventListener('click', this.handleEditItem.bind(this));
-        checkbox.addEventListener('change', this.handleMarkTaskAsDone.bind(this));
 
         DOM.list.insertBefore(element, DOM.list.firstChild);
     }
@@ -237,7 +246,7 @@ class TaskManager {
         this.editFlag = false;
         this.editID = '';
         this.editElement = null;
-        DOM.submitBtn.textContent = "Agregar";
+        this.setSubmitMode('add');
     }
 
     updateTaskCount(filterStatus = null) {
