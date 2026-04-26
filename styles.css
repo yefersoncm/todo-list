@@ -756,6 +756,27 @@ Paginación
   color: var(--clr-grey-1);
   letter-spacing: 2px;
   transition: var(--transition);
+  cursor: text;
+}
+/* Input que reemplaza al .title cuando la fila entra en modo edición
+   inline (doble-click o lápiz). Hereda el flex: 1 del .title para
+   ocupar el mismo espacio horizontal. */
+.title-edit-input {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding: 0.25rem 0.5rem;
+  background: var(--clr-white);
+  border: 1px solid var(--clr-primary-5);
+  border-radius: 0.3rem;
+  color: var(--clr-grey-1);
+  font: inherit;
+  letter-spacing: 2px;
+  text-transform: capitalize;
+  box-shadow: 0 0 0 3px var(--clr-primary-10);
+}
+.title-edit-input:focus {
+  outline: none;
 }
 .edit-btn,
 .delete-btn {
