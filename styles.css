@@ -954,11 +954,6 @@ Combobox custom (reemplaza al <select> nativo)
     background: var(--clr-primary-9);
 }
 
-.form-check-label {
-    margin-left: 0.5rem; /* Space between checkbox and label text */
-    cursor: pointer;
-}
-
 /* Ensure the done class makes the text visible on colored background */
 .done .title {
     color: var(--clr-grey-1) !important; /* Adjust if needed to ensure readability on primary color background */
