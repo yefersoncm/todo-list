@@ -17,6 +17,7 @@ const PATHS = {
     'circle-check': '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
     'chevron-left': '<path d="m15 18-6-6 6-6"/>',
     'chevron-right': '<path d="m9 18 6-6-6-6"/>',
+    x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
 };
 
 const SVG_NS = 'http://www.w3.org/2000/svg';

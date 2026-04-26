@@ -17,6 +17,7 @@ App sencilla para gestionar tareas por hacer: agregar, editar, marcar como hecha
 - Contador de tareas según el filtro activo.
 - Persistencia en `localStorage` — al recargar, las tareas siguen ahí.
 - Modal de confirmación custom (sin `confirm()` nativo) con soporte de teclado (`Esc` cancela, `Enter` confirma).
+- Notificaciones tipo toast en la esquina superior derecha (success / danger / warning), con auto-dismiss a 5 s o cierre con la X. Máximo 5 visibles — al exceder, la más antigua se cierra. Slide-in desde la derecha + fade.
 
 ## Stack
 
@@ -61,6 +62,7 @@ todo-list/
 ├── taskStore.js            # Lógica pura: TaskStore + adapters de storage
 ├── elapsed.js              # Cálculo y formato de tiempo transcurrido
 ├── pagination.js           # Lógica de paginación (paginate(P, C))
+├── toast.js                # Sistema de notificaciones flotantes
 ├── icons.js                # Iconos SVG inline (Lucide)
 ├── combobox.js             # Combobox accesible (reemplazo del <select>)
 ├── package.json
