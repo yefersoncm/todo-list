@@ -494,6 +494,54 @@ Paginación
   flex: 1;
   min-width: 0;
 }
+/* Subtareas: indentación + línea conectora a la izquierda. */
+.grocery-item.is-subtask {
+  margin-left: 2rem;
+  position: relative;
+  padding-left: 1.25rem;
+  border-left: 2px solid var(--clr-grey-9);
+}
+.grocery-item.is-subtask:hover {
+  border-left-color: var(--clr-primary-7);
+}
+/* Contador "(X/Y)" en el título del padre. */
+.subtask-counter {
+  margin-left: 0.4rem;
+  color: var(--clr-grey-5);
+  font-size: 0.85rem;
+  font-weight: normal;
+  letter-spacing: 0;
+}
+/* Input inline para agregar subtareas en el row del padre. */
+.subtask-add-form {
+  flex: 0 0 auto;
+}
+.subtask-add-input {
+  width: 9rem;
+  padding: 0.3rem 0.6rem;
+  border: 1px solid var(--clr-grey-9);
+  border-radius: var(--radius);
+  background: var(--clr-grey-10);
+  color: var(--clr-grey-1);
+  font-family: var(--ff-secondary);
+  font-size: 0.8rem;
+  transition: var(--transition);
+}
+.subtask-add-input::placeholder {
+  color: var(--clr-grey-6);
+  font-style: italic;
+}
+.subtask-add-input:hover {
+  background: var(--clr-white);
+  border-color: var(--clr-primary-7);
+}
+.subtask-add-input:focus {
+  outline: none;
+  background: var(--clr-white);
+  border-color: var(--clr-primary-5);
+  box-shadow: 0 0 0 3px var(--clr-primary-10);
+}
+
 /* Modo manual: cursor de agarre y feedback visual al arrastrar. */
 .grocery-item.is-draggable {
   cursor: grab;

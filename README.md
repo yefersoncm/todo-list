@@ -11,6 +11,7 @@ App sencilla para gestionar tareas por hacer: agregar, editar, marcar como hecha
 - Marcar / desmarcar como hecha (la fila queda destacada y el texto tachado).
 - Eliminar una tarea (con confirmación) o limpiar la lista entera.
 - Filtrar la vista por: Todas / Hechas / Pendientes.
+- **Subtareas** (1 nivel de profundidad): cada tarea puede tener subtareas que se agregan desde un input inline en la fila del padre. El padre muestra un contador `(X/Y)` con el progreso. Marcar el padre propaga a sus subs (y viceversa), agregar una sub a un padre hecho lo re-abre, borrar el padre borra todas las subs en cascada con confirmación. Filtros, sort y paginación operan sobre padres; las subs van pegadas a su padre.
 - Ordenamiento configurable (persistido en `localStorage`) por: tiempo de creación, alfabético, longitud del texto, estado, última modificación, o **manual**. En modo manual se puede reordenar arrastrando o con `Alt+↑` / `Alt+↓` cuando el item está enfocado.
 - Paginación con tamaño configurable (10 / 20 / 50 / 100, persistido en `localStorage`). Navegación Anterior / Siguiente más números alrededor del actual; los huecos de 1 página se rellenan, los mayores muestran `…`.
 - Indicador de tiempo transcurrido por tarea con desglose completo ("1 Año, 3 Meses, 4 Días, 5 Horas, 30 Minutos y 55 Segundos"), refrescado cada segundo. La columna alinea su ancho al de la tarea más antigua.
