@@ -24,8 +24,8 @@ Archivos del diseño Claude generados externamente, copia local en
 
 | # | Sub-fase | Estado | Commit | Notas |
 |---|---|---|---|---|
-| 7A | Tokens + reset + tipografías nuevas | IN PROGRESS | — | tokens.css y components.css copiados al repo. index.html carga Google Fonts (Inter Tight + JetBrains Mono) y los CSS en orden tokens → components → styles. |
-| 7B | `.btn` y `.field` aplicados | PENDING | — | |
+| 7A | Tokens + reset + tipografías nuevas | DONE | `f09eff8` | tokens.css y components.css copiados al repo. index.html carga Google Fonts (Inter Tight + JetBrains Mono) y los CSS en orden tokens → components → styles. |
+| 7B | `.btn` y `.field` aplicados | IN PROGRESS | — | HTML: `.submit-btn` con `.btn .btn--primary`; `#grocery`, `.search-input`, `.subtask-add-input` con `.field`; `.bulk-btn`/`.bulk-btn-danger` con `.btn .btn--ghost/--danger .btn--sm`; `.confirm-btn-cancel/-ok` con `.btn--secondary/--danger-filled`. styles.css: eliminadas reglas legacy duplicadas (153 líneas borradas). |
 | 7C | `.toggle-check` con check-pop | PENDING | — | |
 | 7D | Rename `.grocery-item` → `.task` + grid | PENDING | — | Toca `_renderItem` en app.js |
 | 7E | Toast + modal nuevo look | PENDING | — | |
