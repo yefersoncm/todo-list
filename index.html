@@ -31,31 +31,67 @@
         <div class="grocery-container">
             <div class="task-count-row">
                 <p class="task-count"></p>
-                <div class="page-size-control">
-                    <span id="pageSizeLabel" class="page-size-label">Por página</span>
-                    <div class="combo" id="pageSize">
-                        <button
-                            type="button"
-                            class="combo-toggle"
-                            aria-haspopup="listbox"
-                            aria-expanded="false"
-                            aria-labelledby="pageSizeLabel"
-                        >
-                            <span class="combo-toggle-label">10</span>
-                            <span class="combo-arrow" aria-hidden="true">▾</span>
-                        </button>
-                        <ul
-                            class="combo-listbox"
-                            role="listbox"
-                            tabindex="-1"
-                            aria-labelledby="pageSizeLabel"
-                            hidden
-                        >
-                            <li role="option" data-value="10" aria-selected="true" id="opt-ps-10">10</li>
-                            <li role="option" data-value="20" aria-selected="false" id="opt-ps-20">20</li>
-                            <li role="option" data-value="50" aria-selected="false" id="opt-ps-50">50</li>
-                            <li role="option" data-value="100" aria-selected="false" id="opt-ps-100">100</li>
-                        </ul>
+                <div class="task-count-controls">
+                    <div class="sort-control">
+                        <span id="sortByLabel" class="sort-label">Ordenar</span>
+                        <div class="combo combo-sort" id="sortBy">
+                            <button
+                                type="button"
+                                class="combo-toggle"
+                                aria-haspopup="listbox"
+                                aria-expanded="false"
+                                aria-labelledby="sortByLabel"
+                            >
+                                <span class="combo-toggle-label">Más recientes primero</span>
+                                <span class="combo-arrow" aria-hidden="true">▾</span>
+                            </button>
+                            <ul
+                                class="combo-listbox"
+                                role="listbox"
+                                tabindex="-1"
+                                aria-labelledby="sortByLabel"
+                                hidden
+                            >
+                                <li role="option" data-value="created-desc" aria-selected="true" id="opt-sort-created-desc">Más recientes primero</li>
+                                <li role="option" data-value="created-asc" aria-selected="false" id="opt-sort-created-asc">Más antiguas primero</li>
+                                <li role="option" data-value="alpha-asc" aria-selected="false" id="opt-sort-alpha-asc">Alfabético: A → Z</li>
+                                <li role="option" data-value="alpha-desc" aria-selected="false" id="opt-sort-alpha-desc">Alfabético: Z → A</li>
+                                <li role="option" data-value="length-asc" aria-selected="false" id="opt-sort-length-asc">Más cortas primero</li>
+                                <li role="option" data-value="length-desc" aria-selected="false" id="opt-sort-length-desc">Más largas primero</li>
+                                <li role="option" data-value="pending-first" aria-selected="false" id="opt-sort-pending-first">Pendientes primero</li>
+                                <li role="option" data-value="done-first" aria-selected="false" id="opt-sort-done-first">Hechas primero</li>
+                                <li role="option" data-value="modified-desc" aria-selected="false" id="opt-sort-modified-desc">Modificadas recientemente</li>
+                                <li role="option" data-value="modified-asc" aria-selected="false" id="opt-sort-modified-asc">Modificadas hace tiempo</li>
+                                <li role="option" data-value="manual" aria-selected="false" id="opt-sort-manual">Orden manual (arrastrar)</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="page-size-control">
+                        <span id="pageSizeLabel" class="page-size-label">Por página</span>
+                        <div class="combo" id="pageSize">
+                            <button
+                                type="button"
+                                class="combo-toggle"
+                                aria-haspopup="listbox"
+                                aria-expanded="false"
+                                aria-labelledby="pageSizeLabel"
+                            >
+                                <span class="combo-toggle-label">10</span>
+                                <span class="combo-arrow" aria-hidden="true">▾</span>
+                            </button>
+                            <ul
+                                class="combo-listbox"
+                                role="listbox"
+                                tabindex="-1"
+                                aria-labelledby="pageSizeLabel"
+                                hidden
+                            >
+                                <li role="option" data-value="10" aria-selected="true" id="opt-ps-10">10</li>
+                                <li role="option" data-value="20" aria-selected="false" id="opt-ps-20">20</li>
+                                <li role="option" data-value="50" aria-selected="false" id="opt-ps-50">50</li>
+                                <li role="option" data-value="100" aria-selected="false" id="opt-ps-100">100</li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
             </div>

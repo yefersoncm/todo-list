@@ -1,4 +1,4 @@
-import { TaskStore, LocalStorageAdapter } from './taskStore.js';
+import { TaskStore, LocalStorageAdapter, SORT_MODES } from './taskStore.js';
 import { Combobox } from './combobox.js';
 import { createIcon } from './icons.js';
 import { elapsedComponents, formatElapsed } from './elapsed.js';
@@ -7,6 +7,9 @@ import { paginate, ELLIPSIS } from './pagination.js';
 const PAGE_SIZE_KEY = 'todo-list:pageSize';
 const VALID_PAGE_SIZES = [10, 20, 50, 100];
 const DEFAULT_PAGE_SIZE = 10;
+
+const SORT_BY_KEY = 'todo-list:sortBy';
+const DEFAULT_SORT = 'created-desc';
 
 // ****** SELECTORES DE ELEMENTOS **********
 const DOM = {
@@ -20,6 +23,7 @@ const DOM = {
     list: document.querySelector('.grocery-list'),
     clearBtn: document.querySelector('.clear-btn'),
     taskFilterRoot: document.getElementById('taskFilter'),
+    sortByRoot: document.getElementById('sortBy'),
     pageSizeRoot: document.getElementById('pageSize'),
     paginationNav: document.querySelector('.pagination'),
     taskCountDisplay: document.querySelector('.task-count'),
@@ -34,6 +38,15 @@ function loadPageSize() {
 
 function savePageSize(size) {
     localStorage.setItem(PAGE_SIZE_KEY, String(size));
+}
+
+function loadSortBy() {
+    const raw = localStorage.getItem(SORT_BY_KEY);
+    return SORT_MODES.includes(raw) ? raw : DEFAULT_SORT;
+}
+
+function saveSortBy(mode) {
+    localStorage.setItem(SORT_BY_KEY, mode);
 }
 
 // Modal de confirmación que reemplaza al confirm() nativo.
@@ -79,11 +92,16 @@ class TaskManager {
         this._elapsedProbe = null;     // span oculto para medir el texto más largo
         this._elapsedTicker = null;    // id del setInterval
         this.filterMode = 'all';       // 'all' | 'done' | 'pending'
+        this.sortBy = loadSortBy();
         this.pageSize = loadPageSize();
         this.currentPage = 1;
         this.filter = new Combobox(DOM.taskFilterRoot, {
             onChange: () => this.handleFilterChange(),
         });
+        this.sortByCombo = new Combobox(DOM.sortByRoot, {
+            onChange: (value) => this.handleSortChange(value),
+        });
+        this.sortByCombo.setValue(this.sortBy);
         this.pageSizeCombo = new Combobox(DOM.pageSizeRoot, {
             onChange: (value) => this.handlePageSizeChange(parseInt(value)),
         });
@@ -195,6 +213,14 @@ class TaskManager {
         this.renderTasks();
     }
 
+    handleSortChange(mode) {
+        if (!SORT_MODES.includes(mode)) return;
+        this.sortBy = mode;
+        saveSortBy(mode);
+        this.currentPage = 1;
+        this.renderTasks();
+    }
+
     handlePageClick(page) {
         if (page === this.currentPage) return;
         this.currentPage = page;
@@ -251,9 +277,13 @@ class TaskManager {
     }
 
     _filteredTasks() {
-        if (this.filterMode === 'done') return this.store.filter(true);
-        if (this.filterMode === 'pending') return this.store.filter(false);
-        return this.store.tasks;
+        // Ordena primero según el modo activo, luego filtra. El sort
+        // produce una copia, así que filter sobre esa copia no muta el
+        // store. El orden se preserva en el resultado del filter.
+        const ordered = this.store.getOrderedTasks(this.sortBy);
+        if (this.filterMode === 'done') return ordered.filter(t => t.done);
+        if (this.filterMode === 'pending') return ordered.filter(t => !t.done);
+        return ordered;
     }
 
     _renderList(items) {
