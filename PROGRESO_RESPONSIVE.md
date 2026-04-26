@@ -25,6 +25,7 @@ Documento actualizado después de cada fase para proteger contra cortes de energ
 | 6.1 | Toast bloqueaba botón "Agregar" | DONE | — | `pointer-events: none` en `.app-toast`; `auto` solo en `.app-toast-close` y `.app-toast-action`. En mobile el container va al `bottom`. |
 | 6.2 | Botones aplastaban el título | DONE | — | En `pointer:coarse`: `.grocery-item { flex-wrap: wrap }`, `.title { flex: 1 1 100%; order: -1 }` (título arriba, full-width), meta en su propia línea, `task-days-old` hidden, subtask-add-form también full-width. |
 | 6.3 | Scroll horizontal por elapsed-time | DONE | — | `.grocery-item` y `.meta` con `min-width: 0` y `flex-shrink: 1` (era 0); `.task-days-old min-width: 0` en `(max-width: 768px)`. |
+| 6.4 | Chevrones ↑/↓ sin acción ocupando espacio | DONE | — | Antes se renderizaban siempre disabled si sort != manual. Ahora se omiten del DOM cuando no aplican (sort != manual o no hay vecino). Promote (⬅) sigue siempre visible en subs. |
 
 ## Cambios concretos por archivo (acumulados)
 
