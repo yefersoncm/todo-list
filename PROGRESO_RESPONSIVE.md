@@ -17,8 +17,8 @@ Documento actualizado después de cada fase para proteger contra cortes de energ
 |---|---|---|---|---|
 | 0 | Sacar Bootstrap | DONE | `dabd71b` | Eliminados `<link>`, `<script>`, `vendor/fallback.css` y regla `.form-check-label` huérfana. |
 | 1 | Layout fluido mobile-first | DONE | `7980462` | clamp/min en widths, breakpoint 800→768, márgenes/paddings fluidos, indentación subs proporcional, bloque `@media (max-width: 480px)` con ajustes de gap/padding. |
-| 2 | Touch targets ≥44px | IN PROGRESS | — | Bloque `@media (pointer: coarse)` con min 2.75rem (44px) en chevron, edit/delete, toggle, paginación, combo-toggle, bulk, confirm, inputs. Iconos visuales sin cambios. |
-| 3 | DnD opción B | PENDING | — | |
+| 2 | Touch targets ≥44px | DONE | `d156c05` | Bloque `@media (pointer: coarse)` con min 2.75rem (44px) en chevron, edit/delete, toggle, paginación, combo-toggle, bulk, confirm, inputs. Iconos visuales sin cambios. |
+| 3 | DnD opción B | IN PROGRESS | — | Botones touch ↑/↓ (reorder en mismo scope) + ⬅ promote para subs. Reusan `moveToParent` y `store.move`. CSS oculta en pointer:fine, muestra en pointer:coarse. Promote-zone hide en touch. Disabled si sort != manual o no hay vecino. Tests 95/95 pasan. |
 | 4 | Edición inline touch-friendly | PENDING | — | |
 | 5 | Hover → tap-friendly | PENDING | — | |
 | 6 | QA cross-viewport | PENDING | — | 320, 375, 412, 768, 1024, 1440. |
@@ -55,6 +55,21 @@ Bloque nuevo `@media (pointer: coarse)` al final de styles.css:
 - `.grocery-item .action-group` → gap 0.5rem (evita mis-taps).
 
 Desktop (mouse) sin cambios — los hit areas pequeños se mantienen.
+
+### Fase 3 — DnD opción B (sumado encima de fase 2)
+- `icons.js`: agregado `chevron-up`.
+- `app.js`: nuevo método `_buildTouchMoveControls(task, isSubtask)` y handlers
+  `_touchMove(id, direction, isSubtask)` y `_touchPromote(id)`. Los 2-3 botones
+  se appendan al inicio del `.action-group` antes de `editBtn`/`deleteBtn`.
+  Reusan `store.moveToParent` y `store.move` — misma lógica que los keybindings
+  Alt+↑/↓.
+- `styles.css`:
+  - Estilos base de `.touch-move-btn` con `display: none` (desktop).
+  - En `@media (pointer: coarse)`: `display: inline-flex`, 2.75rem (44px),
+    `cursor: default` en `.is-draggable`, `.promote-zone { display: none !important }`.
+- Estados disabled: si sort != manual o no hay vecino arriba/abajo.
+- Promote (⬅) está siempre activo en subs (el nuevo orden de top-levels lo
+  determina el sort actual, no se necesita modo manual).
 
 ## Cómo hacer rollback
 
