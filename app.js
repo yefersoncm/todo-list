@@ -230,15 +230,25 @@ class TaskManager {
         const editBtn = document.createElement('button');
         editBtn.type = 'button';
         editBtn.className = 'edit-btn';
+        editBtn.setAttribute('aria-label', 'Editar tarea');
         const editIcon = document.createElement('i');
         editIcon.className = 'fas fa-edit';
+        const editFallback = document.createElement('span');
+        editFallback.className = 'fa-fallback';
+        editFallback.textContent = '✎';
+        editIcon.appendChild(editFallback);
         editBtn.appendChild(editIcon);
 
         const deleteBtn = document.createElement('button');
         deleteBtn.type = 'button';
         deleteBtn.className = 'delete-btn';
+        deleteBtn.setAttribute('aria-label', 'Eliminar tarea');
         const deleteIcon = document.createElement('i');
         deleteIcon.className = 'fas fa-trash';
+        const deleteFallback = document.createElement('span');
+        deleteFallback.className = 'fa-fallback';
+        deleteFallback.textContent = '🗑';
+        deleteIcon.appendChild(deleteFallback);
         deleteBtn.appendChild(deleteIcon);
 
         const daysSpan = document.createElement('span');
