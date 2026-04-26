@@ -391,6 +391,35 @@ con mayor especificidad y haría invisibles nuestras notificaciones.
   visibility: visible;
 }
 
+/* Fila de búsqueda: input full-width arriba del header del listado. */
+.search-row {
+    margin-bottom: 0.75rem;
+}
+.search-input {
+    width: 100%;
+    padding: 0.45rem 0.75rem;
+    border: 1px solid var(--clr-grey-9);
+    border-radius: var(--radius);
+    background: var(--clr-grey-10);
+    color: var(--clr-grey-1);
+    font: inherit;
+    font-size: 0.85rem;
+    transition: var(--transition);
+}
+.search-input::placeholder {
+    color: var(--clr-grey-6);
+    font-style: italic;
+}
+.search-input:hover {
+    background: var(--clr-white);
+    border-color: var(--clr-primary-7);
+}
+.search-input:focus {
+    outline: none;
+    background: var(--clr-white);
+    border-color: var(--clr-primary-5);
+    box-shadow: 0 0 0 3px var(--clr-primary-10);
+}
 /* Cabecera del listado: contador a la izquierda, controles a la derecha. */
 .task-count-row {
     display: flex;

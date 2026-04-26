@@ -31,6 +31,7 @@ const DOM = {
     bulkCollapseAllBtn: document.querySelector('.bulk-collapse-all'),
     bulkExpandAllBtn: document.querySelector('.bulk-expand-all'),
     promoteZone: document.getElementById('promoteZone'),
+    searchInput: document.getElementById('searchInput'),
     paginationNav: document.querySelector('.pagination'),
     taskCountDisplay: document.querySelector('.task-count'),
     toastContainer: document.getElementById('toastContainer'),
@@ -114,6 +115,7 @@ class TaskManager {
         this._elapsedProbe = null;     // span oculto para medir el texto más largo
         this._elapsedTicker = null;    // id del setInterval
         this.filterMode = 'all';       // 'all' | 'done' | 'pending'
+        this.searchQuery = '';         // texto de búsqueda (no persistido)
         this.sortBy = loadSortBy();
         this.pageSize = loadPageSize();
         this.currentPage = 1;
@@ -210,6 +212,9 @@ class TaskManager {
         // Delegación de drag en el contenedor de la lista: dragover/leave/drop
         // se resuelven desde aquí, calculando target lógico (item específico
         // o gap entre bloques) según geometría.
+        if (DOM.searchInput) {
+            DOM.searchInput.addEventListener('input', this.handleSearchInput.bind(this));
+        }
         DOM.list.addEventListener('dragover', this.handleListDragOver.bind(this));
         DOM.list.addEventListener('dragleave', this.handleListDragLeave.bind(this));
         DOM.list.addEventListener('drop', this.handleListDrop.bind(this));
@@ -276,6 +281,12 @@ class TaskManager {
         if (!VALID_PAGE_SIZES.includes(size)) return;
         this.pageSize = size;
         savePageSize(size);
+        this.currentPage = 1;
+        this.renderTasks();
+    }
+
+    handleSearchInput(e) {
+        this.searchQuery = e.target.value.trim().toLowerCase();
         this.currentPage = 1;
         this.renderTasks();
     }
@@ -884,9 +895,19 @@ class TaskManager {
     _filteredParents() {
         // Sort sólo aplica a padres; el filtro también sólo aplica a padres.
         const ordered = this.store.getOrderedTasks(this.sortBy);
-        const parents = ordered.filter(t => t.parentId === null);
-        if (this.filterMode === 'done') return parents.filter(t => t.done);
-        if (this.filterMode === 'pending') return parents.filter(t => !t.done);
+        let parents = ordered.filter(t => t.parentId === null);
+        if (this.filterMode === 'done') parents = parents.filter(t => t.done);
+        else if (this.filterMode === 'pending') parents = parents.filter(t => !t.done);
+        // Búsqueda: substring case-insensitive en el value del padre o
+        // de cualquiera de sus subs. Match en sub también muestra al
+        // padre completo para preservar el contexto.
+        if (this.searchQuery) {
+            const q = this.searchQuery;
+            parents = parents.filter(p => {
+                if (p.value.toLowerCase().includes(q)) return true;
+                return this.store.subsOf(p.id).some(s => s.value.toLowerCase().includes(q));
+            });
+        }
         return parents;
     }
 
