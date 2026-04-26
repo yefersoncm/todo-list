@@ -12,25 +12,7 @@
         integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
         crossorigin="anonymous"
     />
-    <link
-        rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.14.0/css/all.min.css"
-    />
     <link rel="stylesheet" href="styles.css" />
-    <script>
-        // Detecta si Font Awesome no cargó y activa el fallback unicode.
-        // Se ejecuta tras DOMContentLoaded para tener acceso a document.fonts.
-        document.addEventListener('DOMContentLoaded', () => {
-            const apply = () => document.documentElement.classList.add('no-fa');
-            if (!document.fonts || !document.fonts.check) { apply(); return; }
-            document.fonts.ready.then(() => {
-                const loaded =
-                    document.fonts.check('900 1em "Font Awesome 5 Free"') ||
-                    document.fonts.check('1em "Font Awesome 5 Free"');
-                if (!loaded) apply();
-            }).catch(apply);
-        });
-    </script>
 </head>
 <body>
     <section class="section-center">
