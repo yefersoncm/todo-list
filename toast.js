@@ -45,18 +45,21 @@ export class ToastManager {
 
     _buildToast(id, text, type) {
         const el = document.createElement('div');
-        el.className = `toast toast-${type}`;
+        // Prefijo 'app-toast' para evitar colisión con la clase .toast de
+        // Bootstrap (cargado por CDN) que aplicaría opacity:0 con mayor
+        // especificidad que nuestra .is-visible.
+        el.className = `app-toast app-toast-${type}`;
         el.setAttribute('role', 'status');
         el.setAttribute('aria-live', 'polite');
         el.dataset.toastId = String(id);
 
         const message = document.createElement('p');
-        message.className = 'toast-message';
+        message.className = 'app-toast-message';
         message.textContent = text;
 
         const closeBtn = document.createElement('button');
         closeBtn.type = 'button';
-        closeBtn.className = 'toast-close';
+        closeBtn.className = 'app-toast-close';
         closeBtn.setAttribute('aria-label', 'Cerrar notificación');
         closeBtn.appendChild(createIcon('x', { size: 14 }));
         closeBtn.addEventListener('click', () => this._dismiss(id));

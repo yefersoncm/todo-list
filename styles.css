@@ -201,8 +201,11 @@ Toast notifications
 ===============
 Notificaciones flotantes en la esquina superior derecha.
 Stack vertical con la más nueva arriba (DOM: prepend).
+Las clases usan el prefijo 'app-toast' para no colisionar con la
+clase .toast de Bootstrap (cargado por CDN), que aplicaría opacity:0
+con mayor especificidad y haría invisibles nuestras notificaciones.
 */
-.toast-container {
+.app-toast-container {
     position: fixed;
     top: 1rem;
     right: 1rem;
@@ -213,7 +216,7 @@ Stack vertical con la más nueva arriba (DOM: prepend).
     pointer-events: none; /* deja pasar clics fuera de las cards */
     max-width: calc(100vw - 2rem);
 }
-.toast {
+.app-toast {
     pointer-events: auto;
     position: relative;
     min-width: 16rem;
@@ -229,20 +232,20 @@ Stack vertical con la más nueva arriba (DOM: prepend).
     opacity: 0;
     transition: transform 250ms ease-out, opacity 200ms ease-out;
 }
-.toast.is-visible {
+.app-toast.is-visible {
     transform: translateX(0);
     opacity: 1;
 }
-.toast.is-leaving {
+.app-toast.is-leaving {
     transform: translateX(120%);
     opacity: 0;
 }
-.toast-message {
+.app-toast-message {
     margin: 0;
     color: inherit;
     word-break: break-word;
 }
-.toast-close {
+.app-toast-close {
     position: absolute;
     top: 0.4rem;
     right: 0.4rem;
@@ -260,28 +263,28 @@ Stack vertical con la más nueva arriba (DOM: prepend).
     opacity: 0.6;
     transition: opacity 0.15s linear, background-color 0.15s linear;
 }
-.toast-close:hover {
+.app-toast-close:hover {
     opacity: 1;
     background: rgba(0, 0, 0, 0.06);
 }
-.toast-close:focus-visible {
+.app-toast-close:focus-visible {
     outline: none;
     opacity: 1;
     box-shadow: 0 0 0 2px currentColor;
 }
-.toast-close .icon {
+.app-toast-close .icon {
     display: block;
 }
 /* Paleta por tipo. El border-left toma el color del texto via currentColor. */
-.toast-success {
+.app-toast-success {
     background: #d4edda;
     color: #155724;
 }
-.toast-danger {
+.app-toast-danger {
     background: #f8d7da;
     color: #721c24;
 }
-.toast-warning {
+.app-toast-warning {
     background: #fff3cd;
     color: #856404;
 }
