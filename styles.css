@@ -497,7 +497,7 @@ Paginación
 /* Subtareas: indentación pura, sin línea conectora.
    max-height + transition para animar collapse/expand. */
 .grocery-item.is-subtask {
-  margin-left: 2rem;
+  margin-left: 3.5rem;
   position: relative;
   padding-left: 1.25rem;
   overflow: hidden;
