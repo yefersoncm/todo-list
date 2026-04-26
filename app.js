@@ -1206,19 +1206,20 @@ class TaskManager {
         const isSubtask = parentId !== null;
 
         const element = document.createElement('article');
-        element.classList.add('grocery-item');
+        // Clases dobles: viejas (para selectores JS legacy) + nuevas (para
+        // CSS del rediseño). Fase 7D mantiene compat hasta que se
+        // refactoricen los selectores JS en otra pasada.
+        element.classList.add('grocery-item', 'task');
         if (isSubtask) {
-            element.classList.add('is-subtask');
+            element.classList.add('is-subtask', 'is-sub');
             element.dataset.parentId = parentId;
-            // Si el padre está colapsado, la sub se renderiza con
-            // .is-collapsed (max-height 0 → invisible vía CSS).
             if (this.collapsedParents.has(parentId)) {
                 element.classList.add('is-collapsed');
             }
         }
         element.dataset.id = id;
         element.dataset.done = String(done);
-        if (done) element.classList.add('done');
+        if (done) element.classList.add('done', 'is-done');
 
         // Drag-and-drop en modo manual sin filtro:
         //   - dragstart/dragend van en cada item (cycle del drag).
@@ -1251,7 +1252,7 @@ class TaskManager {
 
         // Título + (opcional) contador de subs.
         const title = document.createElement('p');
-        title.classList.add('title');
+        title.classList.add('title', 'task__title');
         title.textContent = value;
         // Doble-click sobre el título activa edición inline. Solo en
         // desktop: en touch el browser interpreta el doble-tap como zoom
@@ -1263,7 +1264,7 @@ class TaskManager {
             const subs = this.store.subsOf(id);
             if (subs.length > 0) {
                 const counter = document.createElement('span');
-                counter.className = 'subtask-counter';
+                counter.className = 'subtask-counter task__counter';
                 const doneCount = subs.filter(s => s.done).length;
                 counter.textContent = ` (${doneCount}/${subs.length})`;
                 title.appendChild(counter);
@@ -1272,26 +1273,23 @@ class TaskManager {
 
         const editBtn = document.createElement('button');
         editBtn.type = 'button';
-        editBtn.className = 'edit-btn';
+        editBtn.className = 'edit-btn btn-icon btn-icon--sm';
         editBtn.setAttribute('aria-label', 'Editar tarea');
         editBtn.appendChild(createIcon('pencil'));
 
         const deleteBtn = document.createElement('button');
         deleteBtn.type = 'button';
-        deleteBtn.className = 'delete-btn';
+        deleteBtn.className = 'delete-btn btn-icon btn-icon--sm btn-icon--danger';
         deleteBtn.setAttribute('aria-label', 'Eliminar tarea');
         deleteBtn.appendChild(createIcon('trash'));
 
         const actionGroup = document.createElement('div');
-        actionGroup.className = 'action-group';
-        // Botones touch (Fase 3): siempre se renderizan; CSS los oculta en
-        // pointer:fine. Replican la lógica de handleManualKeyDown /
-        // handleSubKeyDown sin necesidad de teclado.
+        actionGroup.className = 'action-group task__actions';
         const touchControls = this._buildTouchMoveControls(task, isSubtask);
         actionGroup.append(...touchControls, editBtn, deleteBtn);
 
         const daysSpan = document.createElement('span');
-        daysSpan.className = 'task-days-old';
+        daysSpan.className = 'task-days-old task__elapsed';
         daysSpan.textContent = elapsedText;
 
         const meta = document.createElement('div');
