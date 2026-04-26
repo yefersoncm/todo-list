@@ -109,9 +109,6 @@ function confirmDialog(message) {
 class TaskManager {
     constructor(store) {
         this.store = store;
-        this.editElement = null;
-        this.editFlag = false;
-        this.editID = "";
         this._elapsedProbe = null;     // span oculto para medir el texto más largo
         this._elapsedTicker = null;    // id del setInterval
         this.filterMode = 'all';       // 'all' | 'done' | 'pending'
@@ -132,7 +129,6 @@ class TaskManager {
             onChange: (value) => this.handlePageSizeChange(parseInt(value)),
         });
         this.pageSizeCombo.setValue(String(this.pageSize));
-        this.setSubmitMode('add');
         this._mountStaticIcons();
         this.setupEventListeners();
         this.renderTasks();
@@ -178,15 +174,14 @@ class TaskManager {
         DOM.list.style.setProperty('--elapsed-min-width', `${maxWidth}px`);
     }
 
-    setSubmitMode(mode) {
-        const isEdit = mode === 'edit';
-        // En edit usamos 'pencil' — el mismo icono del botón Editar de
-        // cada tarea, para mantener coherencia visual del verbo.
-        DOM.submitIcon.replaceChildren(createIcon(isEdit ? 'pencil' : 'plus', { size: 16, className: 'icon' }));
-        DOM.submitLabel.textContent = isEdit ? 'Editar' : 'Agregar';
-    }
-
     _mountStaticIcons() {
+        // Icono fijo del botón principal (siempre 'Agregar' — la edición
+        // ahora es inline sobre la fila de la tarea).
+        if (DOM.submitIcon && !DOM.submitIcon.firstChild) {
+            DOM.submitIcon.appendChild(createIcon('plus', { size: 16, className: 'icon' }));
+        }
+        if (DOM.submitLabel) DOM.submitLabel.textContent = 'Agregar';
+
         // Inyecta iconos en botones del header que viven en HTML estático
         // (no se rebindean en cada renderTasks).
         const clearIconSlot = DOM.clearBtn?.querySelector('.bulk-btn-icon');
@@ -229,17 +224,11 @@ class TaskManager {
             this.displayAlert("Por favor ingrese un valor", "danger");
             return;
         }
-
-        if (this.editFlag) {
-            this.store.update(this.editID, value);
-            this.displayAlert("Valor cambiado", "success");
-        } else {
-            this.store.add(value);
-            this.displayAlert("Item agregado a la lista", "success");
-        }
+        this.store.add(value);
+        this.displayAlert("Item agregado a la lista", "success");
         this.currentPage = 1;
         this.renderTasks();
-        this.setBackToDefault();
+        DOM.groceryInput.value = "";
     }
 
     async handleClearItems() {
@@ -346,16 +335,63 @@ class TaskManager {
         this.currentPage = 1;
         this.renderTasks();
         this.displayAlert("Item eliminado", "danger");
-        this.setBackToDefault();
     }
 
     handleEditItem(e) {
         const element = e.currentTarget.closest('.grocery-item');
-        this.editElement = element.querySelector('.title');
-        DOM.groceryInput.value = this.editElement.textContent;
-        this.editFlag = true;
-        this.editID = element.dataset.id;
-        this.setSubmitMode('edit');
+        this._enterEditMode(element);
+    }
+
+    /**
+     * Activa edición inline sobre la fila: reemplaza el <p class="title">
+     * por un <input> con el valor actual. Enter o blur guardan, Esc
+     * cancela. Si la fila ya está en modo edit, no-op.
+     */
+    _enterEditMode(taskEl) {
+        if (!taskEl || taskEl.dataset.editing === 'true') return;
+        const titleEl = taskEl.querySelector('.title');
+        if (!titleEl) return;
+        const id = taskEl.dataset.id;
+        const task = this.store.tasks.find(t => t.id === id);
+        if (!task) return;
+
+        const oldText = task.value;
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'title-edit-input';
+        input.value = oldText;
+        input.setAttribute('aria-label', 'Editar tarea');
+
+        taskEl.dataset.editing = 'true';
+        // Mientras editamos suspendemos el draggable para que el drag
+        // no se dispare al seleccionar texto con el mouse.
+        const wasDraggable = taskEl.draggable;
+        taskEl.draggable = false;
+
+        titleEl.replaceWith(input);
+        input.focus();
+        input.select();
+
+        let resolved = false;
+        const finish = (save) => {
+            if (resolved) return;
+            resolved = true;
+            taskEl.dataset.editing = 'false';
+            taskEl.draggable = wasDraggable;
+            const newValue = input.value.trim();
+            if (save && newValue && newValue !== oldText) {
+                this.store.update(id, newValue);
+                this.displayAlert('Tarea actualizada', 'success');
+            }
+            this.renderTasks();
+        };
+
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); finish(true); }
+            else if (e.key === 'Escape') { e.preventDefault(); finish(false); }
+        });
+        // Click fuera = guardar (decisión UX confirmada con el usuario).
+        input.addEventListener('blur', () => finish(true));
     }
 
     // ----- Reordenamiento manual: drag-and-drop + teclado --------------------
@@ -1043,6 +1079,8 @@ class TaskManager {
         const title = document.createElement('p');
         title.classList.add('title');
         title.textContent = value;
+        // Doble-click sobre el título activa edición inline.
+        title.addEventListener('dblclick', () => this._enterEditMode(element));
         if (!isSubtask) {
             const subs = this.store.subsOf(id);
             if (subs.length > 0) {
@@ -1152,14 +1190,6 @@ class TaskManager {
         // Delegado al ToastManager — el método se conserva como fachada
         // para no tocar todos los call sites.
         this.toast.show(text, type);
-    }
-
-    setBackToDefault() {
-        DOM.groceryInput.value = "";
-        this.editFlag = false;
-        this.editID = '';
-        this.editElement = null;
-        this.setSubmitMode('add');
     }
 
     updateTaskCount(filteredCount) {
