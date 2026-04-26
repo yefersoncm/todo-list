@@ -11,6 +11,10 @@
 const PATHS = {
     pencil: '<path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/>',
     trash: '<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/>',
+    plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
+    check: '<polyline points="20 6 9 17 4 12"/>',
+    circle: '<circle cx="12" cy="12" r="10"/>',
+    'circle-check': '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
 };
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
