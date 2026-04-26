@@ -383,3 +383,65 @@ Grocery List
     min-width: 200px; /* Asegura un ancho mínimo para las opciones */
     justify-content: flex-end; /* Alinea los elementos a la derecha dentro del contenedor */
 }
+
+/*
+===============
+Confirm modal
+===============
+*/
+.confirm-modal {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(34, 34, 34, 0.45);
+    z-index: 1000;
+    padding: 1rem;
+}
+.confirm-modal[hidden] {
+    display: none;
+}
+.confirm-modal-dialog {
+    background: var(--clr-white);
+    border-radius: var(--radius);
+    box-shadow: var(--dark-shadow);
+    padding: 1.5rem;
+    max-width: 22rem;
+    width: 100%;
+    text-align: center;
+}
+.confirm-modal-text {
+    color: var(--clr-grey-1);
+    margin-bottom: 1.25rem;
+    font-size: 0.95rem;
+}
+.confirm-modal-actions {
+    display: flex;
+    justify-content: center;
+    gap: 0.75rem;
+}
+.confirm-btn {
+    border: none;
+    border-radius: var(--radius);
+    padding: 0.4rem 1rem;
+    font-size: 0.85rem;
+    letter-spacing: var(--spacing);
+    text-transform: capitalize;
+    cursor: pointer;
+    transition: var(--transition);
+}
+.confirm-btn-cancel {
+    background: var(--clr-grey-9);
+    color: var(--clr-grey-1);
+}
+.confirm-btn-cancel:hover {
+    background: var(--clr-grey-8);
+}
+.confirm-btn-ok {
+    background: var(--clr-red-light);
+    color: var(--clr-white);
+}
+.confirm-btn-ok:hover {
+    background: var(--clr-red-dark);
+}
