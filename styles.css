@@ -494,21 +494,17 @@ Paginación
   flex: 1;
   min-width: 0;
 }
-/* Subtareas: indentación + línea conectora a la izquierda.
+/* Subtareas: indentación pura, sin línea conectora.
    max-height + transition para animar collapse/expand. */
 .grocery-item.is-subtask {
   margin-left: 2rem;
   position: relative;
   padding-left: 1.25rem;
-  border-left: 2px solid var(--clr-grey-9);
   overflow: hidden;
   max-height: 8rem;
   transition: max-height 220ms ease, opacity 200ms ease,
               padding-top 220ms ease, padding-bottom 220ms ease,
               margin-top 220ms ease, margin-bottom 220ms ease;
-}
-.grocery-item.is-subtask:hover {
-  border-left-color: var(--clr-primary-7);
 }
 .grocery-item.is-subtask.is-collapsed {
   max-height: 0;
