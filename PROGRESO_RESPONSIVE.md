@@ -21,7 +21,10 @@ Documento actualizado después de cada fase para proteger contra cortes de energ
 | 3 | DnD opción B | DONE | `c6ba928` | Botones touch ↑/↓ (reorder en mismo scope) + ⬅ promote para subs. Reusan `moveToParent` y `store.move`. CSS oculta en pointer:fine, muestra en pointer:coarse. Promote-zone hide en touch. Disabled si sort != manual o no hay vecino. Tests 95/95 pasan. |
 | 4 | Edición inline touch-friendly | DONE | `b84a539` | `dblclick` solo se registra en pointer:fine. En touch el lápiz queda como único trigger. Helper nuevo `_isPrimaryTouch()`. Tests 95/95 pasan. |
 | 5 | Hover → tap-friendly | DONE | `1498d73` | Bloque `@media (hover: none)` revierte fondo/borde/color/shadow de los `:hover` problemáticos (sticky-hover en touch). Refuerzo `:active` con `transform: scale(0.96)` para feedback inmediato al tap. |
-| 6 | QA cross-viewport | READY (manual) | — | Servidor en http://localhost:8000. Probar en DevTools Device Toolbar a 320, 375, 412, 768, 1024, 1440. Checklist abajo. |
+| 6 | QA cross-viewport | IN PROGRESS | — | Reportes desde S24 Ultra Chrome. Fixes en commits sucesivos. |
+| 6.1 | Toast bloqueaba botón "Agregar" | DONE | — | `pointer-events: none` en `.app-toast`; `auto` solo en `.app-toast-close` y `.app-toast-action`. En mobile el container va al `bottom`. |
+| 6.2 | Botones aplastaban el título | DONE | — | En `pointer:coarse`: `.grocery-item { flex-wrap: wrap }`, `.title { flex: 1 1 100%; order: -1 }` (título arriba, full-width), meta en su propia línea, `task-days-old` hidden, subtask-add-form también full-width. |
+| 6.3 | Scroll horizontal por elapsed-time | DONE | — | `.grocery-item` y `.meta` con `min-width: 0` y `flex-shrink: 1` (era 0); `.task-days-old min-width: 0` en `(max-width: 768px)`. |
 
 ## Cambios concretos por archivo (acumulados)
 
