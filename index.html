@@ -29,8 +29,38 @@
         </form>
 
         <div class="grocery-container">
-            <p class="task-count"></p> <div class="grocery-list">
+            <div class="task-count-row">
+                <p class="task-count"></p>
+                <div class="page-size-control">
+                    <span id="pageSizeLabel" class="page-size-label">Por página</span>
+                    <div class="combo" id="pageSize">
+                        <button
+                            type="button"
+                            class="combo-toggle"
+                            aria-haspopup="listbox"
+                            aria-expanded="false"
+                            aria-labelledby="pageSizeLabel"
+                        >
+                            <span class="combo-toggle-label">10</span>
+                            <span class="combo-arrow" aria-hidden="true">▾</span>
+                        </button>
+                        <ul
+                            class="combo-listbox"
+                            role="listbox"
+                            tabindex="-1"
+                            aria-labelledby="pageSizeLabel"
+                            hidden
+                        >
+                            <li role="option" data-value="10" aria-selected="true" id="opt-ps-10">10</li>
+                            <li role="option" data-value="20" aria-selected="false" id="opt-ps-20">20</li>
+                            <li role="option" data-value="50" aria-selected="false" id="opt-ps-50">50</li>
+                            <li role="option" data-value="100" aria-selected="false" id="opt-ps-100">100</li>
+                        </ul>
+                    </div>
                 </div>
+            </div>
+            <div class="grocery-list"></div>
+            <nav class="pagination" aria-label="Paginación" hidden></nav>
             <button type="button" class="clear-btn">Limpiar lista</button>
         </div>
 

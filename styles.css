@@ -290,6 +290,109 @@ Grocery List
 .show-container {
   visibility: visible;
 }
+
+/* Cabecera del listado: contador a la izquierda, page-size a la derecha. */
+.task-count-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+}
+.task-count-row .task-count {
+    margin: 0;
+    color: var(--clr-grey-3);
+}
+.page-size-control {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.page-size-label {
+    color: var(--clr-grey-5);
+    font-size: 0.8rem;
+}
+.page-size-control .combo-toggle {
+    min-width: 4.5rem;
+}
+
+/*
+===============
+Paginación
+===============
+*/
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin: 1rem 0 0.5rem;
+    flex-wrap: wrap;
+}
+.pagination[hidden] {
+    display: none;
+}
+.page-list {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+}
+.page-num,
+.page-prev,
+.page-next {
+    min-width: 2rem;
+    height: 2rem;
+    padding: 0 0.5rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    background: transparent;
+    border: 1px solid var(--clr-grey-9);
+    border-radius: var(--radius);
+    color: var(--clr-grey-3);
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.8rem;
+    transition: var(--transition);
+}
+.page-num:hover,
+.page-prev:hover,
+.page-next:hover {
+    background: var(--clr-primary-10);
+    border-color: var(--clr-primary-7);
+    color: var(--clr-primary-2);
+}
+.page-num:focus-visible,
+.page-prev:focus-visible,
+.page-next:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--clr-primary-10);
+}
+.page-num.is-current {
+    background: var(--clr-primary-5);
+    border-color: var(--clr-primary-5);
+    color: var(--clr-white);
+    cursor: default;
+    font-weight: 600;
+}
+.page-num.is-current:hover {
+    background: var(--clr-primary-5);
+    border-color: var(--clr-primary-5);
+    color: var(--clr-white);
+}
+.page-ellipsis {
+    min-width: 1.5rem;
+    text-align: center;
+    color: var(--clr-grey-6);
+    user-select: none;
+}
+.page-nav-label {
+    line-height: 1;
+}
 .grocery-item {
   display: flex;
   align-items: center;
