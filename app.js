@@ -1239,13 +1239,15 @@ class TaskManager {
 
         const elapsedText = formatElapsed(elapsedComponents(parseInt(id)));
 
-        // Toggle (izquierda).
+        // Toggle (izquierda). El círculo sale del CSS border de .toggle-check;
+        // el SVG check es invisible cuando aria-pressed=false (color: transparent
+        // en components.css) y aparece animado al marcar.
         const toggleBtn = document.createElement('button');
         toggleBtn.type = 'button';
-        toggleBtn.className = 'toggle-btn';
+        toggleBtn.className = 'toggle-check';
         toggleBtn.setAttribute('aria-pressed', String(!!done));
         toggleBtn.setAttribute('aria-label', done ? 'Marcar como pendiente' : 'Marcar como hecha');
-        toggleBtn.appendChild(createIcon(done ? 'circle-check' : 'circle', { size: 22, className: 'toggle-icon' }));
+        toggleBtn.appendChild(createIcon('check', { size: 14, className: 'toggle-icon' }));
 
         // Título + (opcional) contador de subs.
         const title = document.createElement('p');
