@@ -964,57 +964,49 @@ class TaskManager {
         const id = task.id;
         const manualOk = this._isManualReorderActive();
 
-        // Calcula si hay vecino arriba/abajo en el scope correcto.
-        let canUp = false, canDown = false;
-        if (isSubtask) {
-            const siblings = this.store.subsOf(task.parentId);
-            const sIdx = siblings.findIndex(s => s.id === id);
-            canUp = sIdx > 0;
-            canDown = sIdx >= 0 && sIdx < siblings.length - 1;
-        } else {
-            const parents = this.store.tasks.filter(t => t.parentId === null);
-            const pIdx = parents.findIndex(p => p.id === id);
-            canUp = pIdx > 0;
-            canDown = pIdx >= 0 && pIdx < parents.length - 1;
+        // Si el sort no es manual, los botones ↑/↓ no sirven — los omitimos
+        // para no ocupar espacio en mobile. El promote (⬅) sí queda en subs
+        // porque funciona en cualquier sort.
+        const out = [];
+
+        if (manualOk) {
+            // Calcula si hay vecino arriba/abajo en el scope correcto.
+            let canUp = false, canDown = false;
+            if (isSubtask) {
+                const siblings = this.store.subsOf(task.parentId);
+                const sIdx = siblings.findIndex(s => s.id === id);
+                canUp = sIdx > 0;
+                canDown = sIdx >= 0 && sIdx < siblings.length - 1;
+            } else {
+                const parents = this.store.tasks.filter(t => t.parentId === null);
+                const pIdx = parents.findIndex(p => p.id === id);
+                canUp = pIdx > 0;
+                canDown = pIdx >= 0 && pIdx < parents.length - 1;
+            }
+            if (canUp) out.push(this._makeTouchMoveBtn('chevron-up', 'Mover arriba',
+                () => this._touchMove(id, 'up', isSubtask)));
+            if (canDown) out.push(this._makeTouchMoveBtn('chevron-down', 'Mover abajo',
+                () => this._touchMove(id, 'down', isSubtask)));
         }
 
-        const mkBtn = (iconName, label, onClick, enabled) => {
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'touch-move-btn';
-            btn.setAttribute('aria-label', label);
-            btn.title = label;
-            btn.appendChild(createIcon(iconName, { size: 18 }));
-            if (!enabled) btn.disabled = true;
-            else btn.addEventListener('click', onClick);
-            return btn;
-        };
-
-        const upBtn = mkBtn(
-            'chevron-up',
-            manualOk ? 'Mover arriba' : 'Mover arriba (requiere orden manual)',
-            () => this._touchMove(id, 'up', isSubtask),
-            manualOk && canUp,
-        );
-        const downBtn = mkBtn(
-            'chevron-down',
-            manualOk ? 'Mover abajo' : 'Mover abajo (requiere orden manual)',
-            () => this._touchMove(id, 'down', isSubtask),
-            manualOk && canDown,
-        );
-
-        const out = [upBtn, downBtn];
         if (isSubtask) {
-            const promoteBtn = mkBtn(
-                'chevron-left',
-                'Convertir en tarea principal',
-                () => this._touchPromote(id),
-                true,
-            );
+            const promoteBtn = this._makeTouchMoveBtn('chevron-left',
+                'Convertir en tarea principal', () => this._touchPromote(id));
             promoteBtn.classList.add('touch-promote-btn');
             out.push(promoteBtn);
         }
         return out;
+    }
+
+    _makeTouchMoveBtn(iconName, label, onClick) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'touch-move-btn';
+        btn.setAttribute('aria-label', label);
+        btn.title = label;
+        btn.appendChild(createIcon(iconName, { size: 18 }));
+        btn.addEventListener('click', onClick);
+        return btn;
     }
 
     _touchMove(id, direction, isSubtask) {
