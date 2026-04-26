@@ -494,15 +494,83 @@ Paginación
   flex: 1;
   min-width: 0;
 }
-/* Subtareas: indentación + línea conectora a la izquierda. */
+/* Subtareas: indentación + línea conectora a la izquierda.
+   max-height + transition para animar collapse/expand. */
 .grocery-item.is-subtask {
   margin-left: 2rem;
   position: relative;
   padding-left: 1.25rem;
   border-left: 2px solid var(--clr-grey-9);
+  overflow: hidden;
+  max-height: 8rem;
+  transition: max-height 220ms ease, opacity 200ms ease,
+              padding-top 220ms ease, padding-bottom 220ms ease,
+              margin-top 220ms ease, margin-bottom 220ms ease;
 }
 .grocery-item.is-subtask:hover {
   border-left-color: var(--clr-primary-7);
+}
+.grocery-item.is-subtask.is-collapsed {
+  max-height: 0;
+  opacity: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  margin-top: 0;
+  margin-bottom: 0;
+  pointer-events: none;
+}
+/* Chevron del padre que toggla la visibilidad del grupo de subs. */
+.subtask-collapse-btn {
+  width: 1.4rem;
+  height: 1.4rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 0.3rem;
+  cursor: pointer;
+  color: var(--clr-grey-5);
+  transition: color 0.15s linear, background-color 0.15s linear;
+  flex: none;
+}
+.subtask-collapse-btn:hover {
+  color: var(--clr-primary-3);
+  background: var(--clr-primary-10);
+}
+.subtask-collapse-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--clr-primary-10);
+}
+/* Botones globales 'Colapsar todo / Expandir todo' en el task-count-row. */
+.bulk-collapse {
+  display: inline-flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+.bulk-collapse[hidden] {
+  display: none;
+}
+.bulk-btn {
+  background: transparent;
+  border: 1px solid var(--clr-grey-9);
+  border-radius: var(--radius);
+  padding: 0.25rem 0.6rem;
+  color: var(--clr-grey-3);
+  font-family: var(--ff-secondary);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.bulk-btn:hover {
+  background: var(--clr-primary-10);
+  border-color: var(--clr-primary-7);
+  color: var(--clr-primary-2);
+}
+.bulk-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--clr-primary-10);
 }
 /* Contador "(X/Y)" en el título del padre. */
 .subtask-counter {

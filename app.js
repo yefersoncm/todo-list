@@ -12,6 +12,8 @@ const DEFAULT_PAGE_SIZE = 10;
 const SORT_BY_KEY = 'todo-list:sortBy';
 const DEFAULT_SORT = 'created-desc';
 
+const COLLAPSED_KEY = 'todo-list:collapsedParents';
+
 // ****** SELECTORES DE ELEMENTOS **********
 const DOM = {
     form: document.querySelector('.grocery-form'),
@@ -25,6 +27,9 @@ const DOM = {
     taskFilterRoot: document.getElementById('taskFilter'),
     sortByRoot: document.getElementById('sortBy'),
     pageSizeRoot: document.getElementById('pageSize'),
+    bulkCollapseRoot: document.getElementById('bulkCollapse'),
+    bulkCollapseAllBtn: document.querySelector('.bulk-collapse-all'),
+    bulkExpandAllBtn: document.querySelector('.bulk-expand-all'),
     paginationNav: document.querySelector('.pagination'),
     taskCountDisplay: document.querySelector('.task-count'),
     toastContainer: document.getElementById('toastContainer'),
@@ -48,6 +53,21 @@ function loadSortBy() {
 
 function saveSortBy(mode) {
     localStorage.setItem(SORT_BY_KEY, mode);
+}
+
+function loadCollapsed() {
+    try {
+        const raw = localStorage.getItem(COLLAPSED_KEY);
+        if (!raw) return new Set();
+        const arr = JSON.parse(raw);
+        return new Set(Array.isArray(arr) ? arr : []);
+    } catch {
+        return new Set();
+    }
+}
+
+function saveCollapsed(set) {
+    localStorage.setItem(COLLAPSED_KEY, JSON.stringify([...set]));
 }
 
 // Modal de confirmación que reemplaza al confirm() nativo.
@@ -96,6 +116,7 @@ class TaskManager {
         this.sortBy = loadSortBy();
         this.pageSize = loadPageSize();
         this.currentPage = 1;
+        this.collapsedParents = loadCollapsed();
         this.toast = new ToastManager(DOM.toastContainer);
         this.filter = new Combobox(DOM.taskFilterRoot, {
             onChange: () => this.handleFilterChange(),
@@ -164,6 +185,12 @@ class TaskManager {
     setupEventListeners() {
         DOM.form.addEventListener('submit', this.handleAddItem.bind(this));
         DOM.clearBtn.addEventListener('click', this.handleClearItems.bind(this));
+        if (DOM.bulkCollapseAllBtn) {
+            DOM.bulkCollapseAllBtn.addEventListener('click', this.handleCollapseAll.bind(this));
+        }
+        if (DOM.bulkExpandAllBtn) {
+            DOM.bulkExpandAllBtn.addEventListener('click', this.handleExpandAll.bind(this));
+        }
     }
 
     // ****** MANEJADORES DE EVENTOS **********
@@ -245,13 +272,28 @@ class TaskManager {
         const element = e.currentTarget.closest('.grocery-item');
         const id = element.dataset.id;
         const task = this.store.tasks.find(t => t.id === id);
-        const subs = task && task.parentId === null ? this.store.subsOf(id) : [];
+        const isParent = task && task.parentId === null;
+        const subs = isParent ? this.store.subsOf(id) : [];
         const message = subs.length > 0
             ? `Esta tarea tiene ${subs.length} subtarea${subs.length === 1 ? '' : 's'}. ¿Borrarla${subs.length === 1 ? '' : 's'} también?`
             : '¿Estás seguro de que quieres eliminar esta tarea?';
         const ok = await confirmDialog(message);
         if (!ok) return;
+        // Limpieza del Set de colapsados:
+        if (isParent && this.collapsedParents.has(id)) {
+            this.collapsedParents.delete(id);
+            saveCollapsed(this.collapsedParents);
+        }
         this.store.remove(id);
+        // Si esa sub era la última de su padre, el padre ya no tiene
+        // subs y su entrada en el Set queda obsoleta — limpiarla.
+        if (!isParent && task) {
+            const parentStillHasSubs = this.store.subsOf(task.parentId).length > 0;
+            if (!parentStillHasSubs && this.collapsedParents.has(task.parentId)) {
+                this.collapsedParents.delete(task.parentId);
+                saveCollapsed(this.collapsedParents);
+            }
+        }
         this.currentPage = 1;
         this.renderTasks();
         this.displayAlert("Item eliminado", "danger");
@@ -325,6 +367,73 @@ class TaskManager {
         this._draggingId = null;
     }
 
+    // ----- Collapse / expand de grupos de subtareas ---------------------------
+
+    _parentsWithSubs() {
+        // Devuelve la lista de IDs de padres que tienen al menos una sub.
+        return this.store.tasks
+            .filter(t => t.parentId === null)
+            .map(p => p.id)
+            .filter(id => this.store.subsOf(id).length > 0);
+    }
+
+    _toggleCollapsed(parentId) {
+        if (this.collapsedParents.has(parentId)) {
+            this.collapsedParents.delete(parentId);
+        } else {
+            this.collapsedParents.add(parentId);
+        }
+        saveCollapsed(this.collapsedParents);
+    }
+
+    _expandParent(parentId) {
+        if (!this.collapsedParents.has(parentId)) return false;
+        this.collapsedParents.delete(parentId);
+        saveCollapsed(this.collapsedParents);
+        return true;
+    }
+
+    handleSubtaskToggleCollapse(e) {
+        const btn = e.currentTarget;
+        const parentId = btn.dataset.parentId;
+        this._toggleCollapsed(parentId);
+        const isNowCollapsed = this.collapsedParents.has(parentId);
+        // Actualiza el icono y aria-expanded sin re-renderizar todo —
+        // así se ve la animación CSS al cambiar de clase.
+        btn.setAttribute('aria-expanded', String(!isNowCollapsed));
+        btn.setAttribute('aria-label', isNowCollapsed ? 'Expandir subtareas' : 'Contraer subtareas');
+        btn.replaceChildren(createIcon(isNowCollapsed ? 'chevron-right' : 'chevron-down', { size: 14 }));
+        // Toggle .is-collapsed en las subs del DOM con ese parentId.
+        DOM.list.querySelectorAll(`.grocery-item.is-subtask[data-parent-id="${parentId}"]`)
+            .forEach(el => el.classList.toggle('is-collapsed', isNowCollapsed));
+    }
+
+    handleSubtaskToggleKeyDown(e) {
+        const btn = e.currentTarget;
+        const parentId = btn.dataset.parentId;
+        const isCollapsed = this.collapsedParents.has(parentId);
+        if (e.key === 'ArrowLeft' && !isCollapsed) {
+            e.preventDefault();
+            btn.click();
+        } else if (e.key === 'ArrowRight' && isCollapsed) {
+            e.preventDefault();
+            btn.click();
+        }
+    }
+
+    handleCollapseAll() {
+        const ids = this._parentsWithSubs();
+        for (const id of ids) this.collapsedParents.add(id);
+        saveCollapsed(this.collapsedParents);
+        this.renderTasks();
+    }
+
+    handleExpandAll() {
+        this.collapsedParents.clear();
+        saveCollapsed(this.collapsedParents);
+        this.renderTasks();
+    }
+
     handleManualKeyDown(e) {
         // Alt+ArrowUp/Down reordena la tarea enfocada.
         if (!e.altKey) return;
@@ -362,7 +471,14 @@ class TaskManager {
         this._renderList(pageItems);
         this._renderPagination(totalPages);
         this.updateTaskCount(filteredParents.length);
+        this._updateBulkCollapseVisibility();
         this._updateElapsed();
+    }
+
+    _updateBulkCollapseVisibility() {
+        if (!DOM.bulkCollapseRoot) return;
+        const hasAny = this._parentsWithSubs().length > 0;
+        DOM.bulkCollapseRoot.hidden = !hasAny;
     }
 
     _filteredParents() {
@@ -463,7 +579,15 @@ class TaskManager {
 
         const element = document.createElement('article');
         element.classList.add('grocery-item');
-        if (isSubtask) element.classList.add('is-subtask');
+        if (isSubtask) {
+            element.classList.add('is-subtask');
+            element.dataset.parentId = parentId;
+            // Si el padre está colapsado, la sub se renderiza con
+            // .is-collapsed (max-height 0 → invisible vía CSS).
+            if (this.collapsedParents.has(parentId)) {
+                element.classList.add('is-collapsed');
+            }
+        }
         element.dataset.id = id;
         element.dataset.done = String(done);
         if (done) element.classList.add('done');
@@ -531,10 +655,17 @@ class TaskManager {
         meta.className = 'meta';
         meta.append(actionGroup, daysSpan);
 
-        // Padres llevan input inline para agregar subtareas.
+        // Padres llevan input inline para agregar subtareas, y un
+        // chevron al inicio si tienen al menos una sub.
         if (!isSubtask) {
+            const hasSubs = this.store.subsOf(id).length > 0;
+            const subToggle = hasSubs ? this._buildSubtaskCollapseBtn(id) : null;
             const subForm = this._buildSubtaskAddForm(id);
-            element.append(toggleBtn, title, subForm, meta);
+            if (subToggle) {
+                element.append(subToggle, toggleBtn, title, subForm, meta);
+            } else {
+                element.append(toggleBtn, title, subForm, meta);
+            }
         } else {
             element.append(toggleBtn, title, meta);
         }
@@ -564,11 +695,27 @@ class TaskManager {
             if (!value) return;
             this.store.addSubtask(parentId, value);
             input.value = '';
+            // Auto-expandir si estaba colapsado: si no, la sub nueva queda invisible.
+            this._expandParent(parentId);
             this.currentPage = 1;
             this.renderTasks();
             this.displayAlert('Subtarea agregada', 'success');
         });
         return form;
+    }
+
+    _buildSubtaskCollapseBtn(parentId) {
+        const isCollapsed = this.collapsedParents.has(parentId);
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'subtask-collapse-btn';
+        btn.dataset.parentId = parentId;
+        btn.setAttribute('aria-expanded', String(!isCollapsed));
+        btn.setAttribute('aria-label', isCollapsed ? 'Expandir subtareas' : 'Contraer subtareas');
+        btn.appendChild(createIcon(isCollapsed ? 'chevron-right' : 'chevron-down', { size: 14 }));
+        btn.addEventListener('click', this.handleSubtaskToggleCollapse.bind(this));
+        btn.addEventListener('keydown', this.handleSubtaskToggleKeyDown.bind(this));
+        return btn;
     }
 
     // ****** UTILIDADES **********
