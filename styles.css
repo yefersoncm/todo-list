@@ -357,10 +357,29 @@ Grocery List
 
 /* New filter container for better layout control */
 .filters-container {
-    display: flex; /* or grid, depending on desired layout */
-    justify-content: center; /* or space-around, etc. */
-    gap: 1.5rem; /* Space between the filter checkboxes */
-    margin-top: 1.5rem; /* Add some space above filters */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+}
+
+.task-filter {
+    padding: 0.3rem 0.6rem;
+    border: 1px solid var(--clr-grey-9);
+    border-radius: var(--radius);
+    background: var(--clr-grey-10);
+    color: var(--clr-grey-1);
+    font-family: var(--ff-secondary);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: var(--transition);
+}
+.task-filter:focus,
+.task-filter:hover {
+    outline: none;
+    border-color: var(--clr-primary-5);
+    background: var(--clr-white);
 }
 
 .form-check-label {
