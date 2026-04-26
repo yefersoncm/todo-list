@@ -403,6 +403,18 @@ class TaskManager {
         return this.sortBy === 'manual' && this.filterMode === 'all';
     }
 
+    /**
+     * true si el dispositivo es primary touch (pointer: coarse). Coincide
+     * con el media query que el CSS usa para mostrar los botones touch.
+     * Usado para deshabilitar `dblclick` en mobile (Fase 4) y otros
+     * comportamientos hover/desktop-only.
+     */
+    _isPrimaryTouch() {
+        return typeof window !== 'undefined'
+            && typeof window.matchMedia === 'function'
+            && window.matchMedia('(pointer: coarse)').matches;
+    }
+
     handleDragStart(e) {
         const el = e.currentTarget;
         const id = el.dataset.id;
@@ -1247,8 +1259,12 @@ class TaskManager {
         const title = document.createElement('p');
         title.classList.add('title');
         title.textContent = value;
-        // Doble-click sobre el título activa edición inline.
-        title.addEventListener('dblclick', () => this._enterEditMode(element));
+        // Doble-click sobre el título activa edición inline. Solo en
+        // desktop: en touch el browser interpreta el doble-tap como zoom
+        // y el handler es poco confiable; ahí el lápiz es el único trigger.
+        if (!this._isPrimaryTouch()) {
+            title.addEventListener('dblclick', () => this._enterEditMode(element));
+        }
         if (!isSubtask) {
             const subs = this.store.subsOf(id);
             if (subs.length > 0) {
