@@ -864,12 +864,11 @@ class TaskManager {
 
     handleManualKeyDown(e) {
         // Alt+ArrowUp/Down reordena la tarea PADRE enfocada.
-        // (Subs no son keyboard-reordenables; siguen a su padre.)
-        if (!e.altKey) return;
+        // El check de !shiftKey deja libre Alt+Shift+↑/↓ para subs.
+        if (!e.altKey || e.shiftKey) return;
         if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
         e.preventDefault();
         const id = e.currentTarget.dataset.id;
-        // move() trabaja sobre la lista de PADRES, no sobre el array completo.
         const parents = this.store.tasks.filter(t => t.parentId === null);
         const idx = parents.findIndex(p => p.id === id);
         if (idx < 0) return;
@@ -877,9 +876,61 @@ class TaskManager {
         if (newIdx < 0 || newIdx >= parents.length) return;
         this.store.move(idx, newIdx);
         this.renderTasks();
-        // Mantén el foco en la tarea movida.
         const moved = DOM.list.querySelector(`.grocery-item[data-id="${id}"]`);
         if (moved) moved.focus();
+    }
+
+    /**
+     * Atajos sobre una SUBTAREA enfocada (Tab para llegar). Requieren Alt:
+     *   Alt+↑/↓        → reorder dentro del padre actual.
+     *   Alt+Shift+↑    → promote a top-level (queda antes del padre actual).
+     *   Alt+Shift+↓    → re-parent al siguiente padre (al final del bloque).
+     */
+    handleSubKeyDown(e) {
+        if (!e.altKey) return;
+        if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+        const id = e.currentTarget.dataset.id;
+        const sub = this.store.tasks.find(t => t.id === id);
+        if (!sub || sub.parentId === null) return;
+        e.preventDefault();
+
+        let ok = false;
+        let msg = '';
+
+        if (e.shiftKey) {
+            if (e.key === 'ArrowUp') {
+                // Promote: queda como top-level antes del padre actual.
+                ok = this.store.moveToParent(id, null, sub.parentId);
+                msg = 'Promovida a tarea principal';
+            } else {
+                // Re-parent al siguiente padre, al final del bloque.
+                const parents = this.store.tasks.filter(t => t.parentId === null);
+                const parentIdx = parents.findIndex(p => p.id === sub.parentId);
+                const nextParent = parents[parentIdx + 1];
+                if (!nextParent) return;
+                ok = this.store.moveToParent(id, nextParent.id, null);
+                msg = 'Subtarea movida al siguiente padre';
+            }
+        } else {
+            const siblings = this.store.subsOf(sub.parentId);
+            const idx = siblings.findIndex(s => s.id === id);
+            if (e.key === 'ArrowUp') {
+                if (idx <= 0) return;
+                const beforeId = siblings[idx - 1].id;
+                ok = this.store.moveToParent(id, sub.parentId, beforeId);
+            } else {
+                if (idx < 0 || idx >= siblings.length - 1) return;
+                const beforeId = idx + 2 < siblings.length ? siblings[idx + 2].id : null;
+                ok = this.store.moveToParent(id, sub.parentId, beforeId);
+            }
+        }
+
+        if (ok) {
+            this.renderTasks();
+            if (msg) this.displayAlert(msg, 'success');
+            const moved = DOM.list.querySelector(`.grocery-item[data-id="${id}"]`);
+            if (moved) moved.focus();
+        }
     }
 
     // ****** FUNCIONES DE RENDERIZADO **********
@@ -1058,9 +1109,10 @@ class TaskManager {
             element.classList.add('is-draggable');
             element.addEventListener('dragstart', this.handleDragStart.bind(this));
             element.addEventListener('dragend', this.handleDragEnd.bind(this));
-            // Teclado de reordenamiento sólo aplica a padres.
-            if (!isSubtask) {
-                element.tabIndex = 0;
+            element.tabIndex = 0;
+            if (isSubtask) {
+                element.addEventListener('keydown', this.handleSubKeyDown.bind(this));
+            } else {
                 element.addEventListener('keydown', this.handleManualKeyDown.bind(this));
             }
         }
