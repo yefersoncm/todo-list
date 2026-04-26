@@ -209,7 +209,10 @@ con mayor especificidad y haría invisibles nuestras notificaciones.
     max-width: calc(100vw - 2rem);
 }
 .app-toast {
-    pointer-events: auto;
+    /* El cuerpo del toast NO debe capturar taps — bloquearía botones
+       debajo (ej: 'Agregar' en mobile). Solo los controles interactivos
+       (close / action) reactivan pointer-events. */
+    pointer-events: none;
     position: relative;
     min-width: min(16rem, 100%);
     max-width: 22rem;
@@ -243,6 +246,7 @@ con mayor especificidad y haría invisibles nuestras notificaciones.
     min-width: 0;
 }
 .app-toast-action {
+    pointer-events: auto;
     margin-left: 0.5rem;
     padding: 0.25rem 0.6rem;
     background: transparent;
@@ -265,6 +269,7 @@ con mayor especificidad y haría invisibles nuestras notificaciones.
     box-shadow: 0 0 0 2px currentColor;
 }
 .app-toast-close {
+    pointer-events: auto;
     width: 1.5rem;
     height: 1.5rem;
     padding: 0;
@@ -536,6 +541,12 @@ Paginación
   transition: var(--transition);
   padding: 0.25rem 1rem;
   border-radius: var(--radius);
+  /* min-width: 0 evita que un hijo con nowrap (.task-days-old con
+     min-width calculado por JS) fuerce overflow horizontal del viewport. */
+  min-width: 0;
+}
+.grocery-item .meta {
+  min-width: 0;
 }
 /* Capitaliza SOLO la primera letra del título (no cada palabra). */
 .grocery-item .title::first-letter {
@@ -1003,7 +1014,12 @@ Combobox custom (reemplaza al <select> nativo)
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    flex-shrink: 0;
+    /* flex-shrink: 1 (default) y min-width: 0 (en regla de arriba) permiten
+       que el meta se encoja cuando .task-days-old quiere imponer un
+       min-width grande calculado por JS. Sin esto, el viewport scrollea
+       horizontal en mobile/tablet con tareas viejas (texto largo de tiempo). */
+    flex-shrink: 1;
+    min-width: 0;
 }
 .grocery-item .action-group {
     display: flex;
@@ -1021,6 +1037,15 @@ Combobox custom (reemplaza al <select> nativo)
     text-align: right;
     white-space: nowrap;
     min-width: var(--elapsed-min-width, 0);
+}
+/* En tablets/mobiles, el min-width calculado por JS puede ser más ancho
+   que el espacio disponible y forzar scroll horizontal. Apagamos el
+   alineado en columna por debajo de 768px — la metadata sigue visible
+   pero sin imponer ancho. */
+@media (max-width: 768px) {
+    .task-days-old {
+        min-width: 0;
+    }
 }
 
 /*
@@ -1112,6 +1137,50 @@ solo se ajustan paddings y gaps que en mobile sienten apretados.
   /* En filas estrechas, gap reducido entre meta y acciones. */
   .grocery-item .meta {
     gap: 0.4rem;
+  }
+  /* Toast a la parte inferior en mobile: arriba choca con el form de
+     'Agregar' y aunque ya no bloquea taps (pointer-events:none), tapaba
+     visualmente el botón. */
+  .app-toast-container {
+    top: auto;
+    bottom: 1rem;
+    right: 1rem;
+    left: 1rem;
+    align-items: flex-end;
+  }
+  /* El item se vuelve flex-wrap para que el title tenga línea propia
+     cuando los botones touch (toggle + ↑ ↓ ⬅ edit delete) no le dejan
+     espacio. La metadata de tiempo se oculta — secundaria. */
+  .grocery-item {
+    flex-wrap: wrap;
+    row-gap: 0.35rem;
+  }
+  .grocery-item .title {
+    flex: 1 1 100%;
+    order: -1;
+    padding: 0 0.25rem;
+    word-break: break-word;
+    letter-spacing: 1px;
+  }
+  /* La sub mantiene su indentación pero el title también va arriba. */
+  .grocery-item.is-subtask .title {
+    flex-basis: 100%;
+  }
+  /* La metadata (tiempo) ocupa demasiado en mobile y no es crítica. */
+  .task-days-old {
+    display: none;
+  }
+  /* El meta se alinea a la derecha en su línea propia. */
+  .grocery-item .meta {
+    margin-left: auto;
+  }
+  /* Subtask add form (input "+ subtarea") también baja a su propia línea. */
+  .subtask-add-form {
+    flex: 1 1 100%;
+    margin-top: 0.25rem;
+  }
+  .subtask-add-input {
+    width: 100%;
   }
 }
 
