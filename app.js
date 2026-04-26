@@ -13,6 +13,27 @@ const SORT_BY_KEY = 'todo-list:sortBy';
 const DEFAULT_SORT = 'created-desc';
 
 const COLLAPSED_KEY = 'todo-list:collapsedParents';
+const THEME_KEY = 'todo-list:theme';
+const DENSITY_KEY = 'todo-list:density';
+
+function loadTheme() {
+    const v = localStorage.getItem(THEME_KEY);
+    if (v === 'light' || v === 'dark') return v;
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+function applyTheme(theme) {
+    if (theme === 'dark') document.documentElement.dataset.theme = 'dark';
+    else document.documentElement.removeAttribute('data-theme');
+    localStorage.setItem(THEME_KEY, theme);
+}
+function loadDensity() {
+    return localStorage.getItem(DENSITY_KEY) === 'compact' ? 'compact' : 'comfy';
+}
+function applyDensity(density) {
+    if (density === 'compact') document.documentElement.dataset.density = 'compact';
+    else document.documentElement.removeAttribute('data-density');
+    localStorage.setItem(DENSITY_KEY, density);
+}
 
 // ****** SELECTORES DE ELEMENTOS **********
 const DOM = {
@@ -37,6 +58,8 @@ const DOM = {
     toastContainer: document.getElementById('toastContainer'),
     confirmModal: document.getElementById('confirmModal'),
     confirmModalText: document.getElementById('confirmModalText'),
+    themeSeg: document.getElementById('themeSeg'),
+    densitySeg: document.getElementById('densitySeg'),
 };
 
 function loadPageSize() {
@@ -134,6 +157,7 @@ class TaskManager {
         });
         this.pageSizeCombo.setValue(String(this.pageSize));
         this._mountStaticIcons();
+        this._setupChromeToggles();
         this.setupEventListeners();
         this.renderTasks();
         this._startElapsedTicker();
@@ -192,6 +216,58 @@ class TaskManager {
         if (clearIconSlot && !clearIconSlot.firstChild) {
             clearIconSlot.appendChild(createIcon('trash', { size: 14 }));
         }
+    }
+
+    /**
+     * Setup de los toggles de tema (light/dark) y densidad (comfy/compact).
+     * Persistencia en localStorage. Aplica `data-theme` y `data-density`
+     * sobre <html> para que los tokens.css los lean.
+     */
+    _setupChromeToggles() {
+        if (!DOM.themeSeg || !DOM.densitySeg) return;
+
+        // Estado inicial.
+        const theme = loadTheme();
+        const density = loadDensity();
+        applyTheme(theme);
+        applyDensity(density);
+
+        // Iconos en los botones del seg de tema.
+        const sunBtn = DOM.themeSeg.querySelector('[data-theme="light"]');
+        const moonBtn = DOM.themeSeg.querySelector('[data-theme="dark"]');
+        sunBtn?.appendChild(createIcon('sun', { size: 14 }));
+        moonBtn?.appendChild(createIcon('moon', { size: 14 }));
+
+        // Iconos en los botones del seg de densidad.
+        const rowsBtn = DOM.densitySeg.querySelector('[data-density="comfy"]');
+        const tightBtn = DOM.densitySeg.querySelector('[data-density="compact"]');
+        rowsBtn?.appendChild(createIcon('rows', { size: 14 }));
+        tightBtn?.appendChild(createIcon('align-justify', { size: 14 }));
+
+        const setActive = (seg, attr, value) => {
+            seg.querySelectorAll('.seg__btn').forEach(b => {
+                b.classList.toggle('is-active', b.dataset[attr] === value);
+            });
+        };
+        setActive(DOM.themeSeg, 'theme', theme);
+        setActive(DOM.densitySeg, 'density', density);
+
+        DOM.themeSeg.addEventListener('click', (e) => {
+            const btn = e.target.closest('.seg__btn');
+            if (!btn) return;
+            const v = btn.dataset.theme;
+            if (v !== 'light' && v !== 'dark') return;
+            applyTheme(v);
+            setActive(DOM.themeSeg, 'theme', v);
+        });
+        DOM.densitySeg.addEventListener('click', (e) => {
+            const btn = e.target.closest('.seg__btn');
+            if (!btn) return;
+            const v = btn.dataset.density;
+            if (v !== 'comfy' && v !== 'compact') return;
+            applyDensity(v);
+            setActive(DOM.densitySeg, 'density', v);
+        });
     }
 
     setupEventListeners() {

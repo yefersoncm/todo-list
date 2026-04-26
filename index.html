@@ -15,6 +15,18 @@
 </head>
 <body>
     <section class="section-center">
+        <!-- App chrome: toggles de tema y densidad (Fase 7H). Iconos
+             se montan en JS via createIcon. -->
+        <div class="app-chrome">
+            <div class="seg" id="themeSeg" role="group" aria-label="Tema">
+                <button type="button" class="seg__btn" data-theme="light" aria-label="Tema claro" title="Claro"></button>
+                <button type="button" class="seg__btn" data-theme="dark" aria-label="Tema oscuro" title="Oscuro"></button>
+            </div>
+            <div class="seg" id="densitySeg" role="group" aria-label="Densidad">
+                <button type="button" class="seg__btn" data-density="comfy" aria-label="Densidad cómoda" title="Cómoda"></button>
+                <button type="button" class="seg__btn" data-density="compact" aria-label="Densidad compacta" title="Compacta"></button>
+            </div>
+        </div>
         <form class="grocery-form">
             <h3>Todo List</h3>
             <div class="form-control1">
