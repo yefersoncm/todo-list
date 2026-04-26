@@ -38,8 +38,33 @@ describe('paginate — bordes con totales medianos', () => {
     test('P=8, C=8', () => assert.deepEqual(paginate(8, 8), [1, E, 6, 7, 8]));
 });
 
+describe('paginate — C=1 con centro literal (caben ambos elipsis)', () => {
+    // Cuando current=1 y el centro literal del total deja >=2 páginas
+    // ocultas a cada lado, se muestra el patrón [1] [...] [mid] [...] [P]
+    // para permitir saltos largos desde la primera página.
+    test('P=8, C=1 → fallback (left gap = 1 hidden, no cabe elipsis)', () => {
+        assert.deepEqual(paginate(8, 1), [1, 2, 3, E, 8]);
+    });
+    test('P=9, C=1 → centro literal (4,5,6) con ambos elipsis (umbral)', () => {
+        assert.deepEqual(paginate(9, 1), [1, E, 4, 5, 6, E, 9]);
+    });
+    test('P=10, C=1 → centro literal (4,5,6)', () => {
+        assert.deepEqual(paginate(10, 1), [1, E, 4, 5, 6, E, 10]);
+    });
+    test('P=11, C=1 → centro literal (5,6,7)', () => {
+        assert.deepEqual(paginate(11, 1), [1, E, 5, 6, 7, E, 11]);
+    });
+    // C=2 (no es el primer botón) NO aplica la regla — sigue con
+    // ventana alrededor del current.
+    test('P=10, C=2 → window alrededor del current, no centro literal', () => {
+        assert.deepEqual(paginate(10, 2), [1, 2, 3, E, 10]);
+    });
+});
+
 describe('paginate — totales grandes (P=100)', () => {
-    test('C=1', () => assert.deepEqual(paginate(100, 1), [1, 2, 3, E, 100]));
+    test('C=1 → centro literal (49,50,51) con ambos elipsis', () => {
+        assert.deepEqual(paginate(100, 1), [1, E, 49, 50, 51, E, 100]);
+    });
     test('C=2', () => assert.deepEqual(paginate(100, 2), [1, 2, 3, E, 100]));
     test('C=3', () => assert.deepEqual(paginate(100, 3), [1, 2, 3, 4, E, 100]));
     test('C=4', () => assert.deepEqual(paginate(100, 4), [1, 2, 3, 4, 5, E, 100]));
