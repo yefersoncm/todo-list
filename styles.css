@@ -1115,3 +1115,65 @@ solo se ajustan paddings y gaps que en mobile sienten apretados.
   }
 }
 
+/*
+===============
+Touch targets ≥44px (Fase 2)
+===============
+Activamos áreas tappables grandes solo en dispositivos primary touch
+(`pointer: coarse`). Los iconos visuales no cambian de tamaño, lo que
+crece es el padding / min-height para alcanzar el estándar 44x44.
+*/
+@media (pointer: coarse) {
+  /* Botones cuadrados de acción de fila. */
+  .subtask-collapse-btn,
+  .subtask-collapse-placeholder,
+  .edit-btn,
+  .delete-btn {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+  .grocery-item .toggle-btn {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+  /* Paginación. */
+  .page-num,
+  .page-prev,
+  .page-next {
+    min-width: 2.75rem;
+    height: 2.75rem;
+    padding: 0 0.75rem;
+    font-size: 0.9rem;
+  }
+  /* Combobox triggers (sort, page-size, filter). */
+  .combo-toggle {
+    padding: 0.65rem 0.75rem;
+    font-size: 0.95rem;
+  }
+  /* Bulk buttons (Limpiar lista, Colapsar/Expandir todo). */
+  .bulk-btn {
+    padding: 0.55rem 0.85rem;
+    font-size: 0.85rem;
+  }
+  /* Confirm modal buttons. */
+  .confirm-btn {
+    padding: 0.65rem 1.15rem;
+    font-size: 0.95rem;
+  }
+  /* Submit principal. */
+  .submit-btn {
+    min-height: 2.75rem;
+  }
+  /* Inputs alcanzan 44px también para no parecer aplastados frente a botones. */
+  .search-input,
+  .subtask-add-input,
+  #grocery {
+    min-height: 2.75rem;
+  }
+  /* Espaciado entre acciones para evitar mis-taps. */
+  .grocery-item .action-group {
+    gap: 0.5rem;
+  }
+}
+
+
