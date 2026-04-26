@@ -141,10 +141,10 @@
 
     <div class="app-toast-container" id="toastContainer" aria-live="polite" aria-atomic="false"></div>
 
-    <div class="confirm-modal" id="confirmModal" hidden>
-        <div class="confirm-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="confirmModalText">
-            <p class="confirm-modal-text" id="confirmModalText"></p>
-            <div class="confirm-modal-actions">
+    <div class="confirm-modal modal-backdrop" id="confirmModal" hidden>
+        <div class="confirm-modal-dialog modal" role="dialog" aria-modal="true" aria-labelledby="confirmModalText">
+            <p class="confirm-modal-text modal__body" id="confirmModalText"></p>
+            <div class="confirm-modal-actions modal__actions">
                 <button type="button" class="confirm-btn confirm-btn-cancel btn btn--secondary" data-action="cancel">Cancelar</button>
                 <button type="button" class="confirm-btn confirm-btn-ok btn btn--danger-filled" data-action="ok">Aceptar</button>
             </div>

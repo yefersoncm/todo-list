@@ -197,38 +197,36 @@ Las clases usan el prefijo 'app-toast' para no colisionar con la
 clase .toast de Bootstrap (cargado por CDN), que aplicaría opacity:0
 con mayor especificidad y haría invisibles nuestras notificaciones.
 */
+/* Toast: el contenedor y la paleta vienen de components.css (.toast-stack y
+   .toast--*). Aquí solo conservamos el contenedor wrapper original
+   (`#toastContainer` con `.app-toast-container`) y la animación slide-in
+   que el design no provee. */
 .app-toast-container {
     position: fixed;
-    top: 1rem;
-    right: 1rem;
+    top: var(--sp-4);
+    right: var(--sp-4);
     display: flex;
     flex-direction: column;
-    gap: 0.6rem;
+    gap: var(--sp-2);
     z-index: 1100;
-    pointer-events: none; /* deja pasar clics fuera de las cards */
-    max-width: calc(100vw - 2rem);
-}
-.app-toast {
-    /* El cuerpo del toast NO debe capturar taps — bloquearía botones
-       debajo (ej: 'Agregar' en mobile). Solo los controles interactivos
-       (close / action) reactivan pointer-events. */
     pointer-events: none;
-    position: relative;
-    min-width: min(16rem, 100%);
-    max-width: 22rem;
-    padding: 0.75rem 1rem;
-    border-radius: var(--radius);
-    border-left: 4px solid currentColor;
-    box-shadow: var(--light-shadow);
-    background: var(--clr-white);
-    font-size: 0.85rem;
-    line-height: 1.4;
+    max-width: calc(100vw - var(--sp-7));
+}
+@media (max-width: 640px) {
+    .app-toast-container {
+        top: auto;
+        bottom: var(--sp-4);
+        left: var(--sp-3);
+        right: var(--sp-3);
+        max-width: none;
+    }
+}
+/* Anim slide-from-right (design es estático, mantenemos esta del legacy). */
+.app-toast {
+    pointer-events: none;
     transform: translateX(120%);
     opacity: 0;
-    transition: transform 250ms ease-out, opacity 200ms ease-out;
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
+    transition: transform 250ms var(--ease-out), opacity 200ms var(--ease-out);
 }
 .app-toast.is-visible {
     transform: translateX(0);
@@ -238,78 +236,8 @@ con mayor especificidad y haría invisibles nuestras notificaciones.
     transform: translateX(120%);
     opacity: 0;
 }
-.app-toast-message {
-    margin: 0;
-    color: inherit;
-    word-break: break-word;
-    flex: 1;
-    min-width: 0;
-}
-.app-toast-action {
-    pointer-events: auto;
-    margin-left: 0.5rem;
-    padding: 0.25rem 0.6rem;
-    background: transparent;
-    border: 1px solid currentColor;
-    border-radius: 0.3rem;
-    color: inherit;
-    font: inherit;
-    font-weight: 600;
-    font-size: 0.8rem;
-    cursor: pointer;
-    transition: background-color 0.15s linear, color 0.15s linear;
-    flex: none;
-}
-.app-toast-action:hover {
-    background: currentColor;
-    color: var(--clr-white);
-}
-.app-toast-action:focus-visible {
-    outline: none;
-    box-shadow: 0 0 0 2px currentColor;
-}
-.app-toast-close {
-    pointer-events: auto;
-    width: 1.5rem;
-    height: 1.5rem;
-    padding: 0;
-    flex: none;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: transparent;
-    border: none;
-    border-radius: 0.3rem;
-    cursor: pointer;
-    color: inherit;
-    opacity: 0.6;
-    transition: opacity 0.15s linear, background-color 0.15s linear;
-}
-.app-toast-close:hover {
-    opacity: 1;
-    background: rgba(0, 0, 0, 0.06);
-}
-.app-toast-close:focus-visible {
-    outline: none;
-    opacity: 1;
-    box-shadow: 0 0 0 2px currentColor;
-}
-.app-toast-close .icon {
-    display: block;
-}
-/* Paleta por tipo. El border-left toma el color del texto via currentColor. */
-.app-toast-success {
-    background: #d4edda;
-    color: #155724;
-}
-.app-toast-danger {
-    background: #f8d7da;
-    color: #721c24;
-}
-.app-toast-warning {
-    background: #fff3cd;
-    color: #856404;
-}
+.app-toast-action,
+.app-toast-close { pointer-events: auto; }
 
 .grocery-form h3 {
   color: var(--clr-primary-1);
@@ -846,39 +774,10 @@ Combobox custom (reemplaza al <select> nativo)
 Confirm modal
 ===============
 */
-.confirm-modal {
-    position: fixed;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(34, 34, 34, 0.45);
-    z-index: 1000;
-    padding: 1rem;
-}
-.confirm-modal[hidden] {
-    display: none;
-}
-.confirm-modal-dialog {
-    background: var(--clr-white);
-    border-radius: var(--radius);
-    box-shadow: var(--dark-shadow);
-    padding: 1.5rem;
-    max-width: 22rem;
-    width: 100%;
-    text-align: center;
-}
-.confirm-modal-text {
-    color: var(--clr-grey-1);
-    margin-bottom: 1.25rem;
-    font-size: 0.95rem;
-}
-.confirm-modal-actions {
-    display: flex;
-    justify-content: center;
-    gap: 0.75rem;
-}
-/* .confirm-btn-* ahora usan .btn .btn--secondary / .btn--danger-filled. */
+/* Modal: estilos vienen de .modal-backdrop y .modal en components.css.
+   Solo conservamos el toggle hidden (HTML attribute). */
+.confirm-modal[hidden] { display: none; }
+.confirm-modal-text { text-align: center; }
 
 /*
 ===============
