@@ -131,6 +131,7 @@ class TaskManager {
         });
         this.pageSizeCombo.setValue(String(this.pageSize));
         this.setSubmitMode('add');
+        this._mountStaticIcons();
         this.setupEventListeners();
         this.renderTasks();
         this._startElapsedTicker();
@@ -181,6 +182,15 @@ class TaskManager {
         // cada tarea, para mantener coherencia visual del verbo.
         DOM.submitIcon.replaceChildren(createIcon(isEdit ? 'pencil' : 'plus', { size: 16, className: 'icon' }));
         DOM.submitLabel.textContent = isEdit ? 'Editar' : 'Agregar';
+    }
+
+    _mountStaticIcons() {
+        // Inyecta iconos en botones del header que viven en HTML estático
+        // (no se rebindean en cada renderTasks).
+        const clearIconSlot = DOM.clearBtn?.querySelector('.bulk-btn-icon');
+        if (clearIconSlot && !clearIconSlot.firstChild) {
+            clearIconSlot.appendChild(createIcon('trash', { size: 14 }));
+        }
     }
 
     setupEventListeners() {
