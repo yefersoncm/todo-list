@@ -113,28 +113,10 @@
 
         <div class="filters-container">
             <span id="filterLabel" class="filter-label">Mostrar</span>
-            <div class="combo" id="taskFilter">
-                <button
-                    type="button"
-                    class="combo-toggle"
-                    aria-haspopup="listbox"
-                    aria-expanded="false"
-                    aria-labelledby="filterLabel"
-                >
-                    <span class="combo-toggle-label">Todas</span>
-                    <span class="combo-arrow" aria-hidden="true">▾</span>
-                </button>
-                <ul
-                    class="combo-listbox"
-                    role="listbox"
-                    tabindex="-1"
-                    aria-labelledby="filterLabel"
-                    hidden
-                >
-                    <li role="option" data-value="all" aria-selected="true" id="opt-all">Todas</li>
-                    <li role="option" data-value="done" aria-selected="false" id="opt-done">Hechas</li>
-                    <li role="option" data-value="pending" aria-selected="false" id="opt-pending">Pendientes</li>
-                </ul>
+            <div class="filter-tabs" id="taskFilter" role="tablist" aria-labelledby="filterLabel">
+                <button type="button" class="filter-tab is-active" role="tab" aria-selected="true" data-value="all">Todas</button>
+                <button type="button" class="filter-tab" role="tab" aria-selected="false" data-value="pending">Pendientes</button>
+                <button type="button" class="filter-tab" role="tab" aria-selected="false" data-value="done">Hechas</button>
             </div>
         </div>
     </section>

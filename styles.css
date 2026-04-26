@@ -634,8 +634,45 @@ Paginación
 }
 
 .filter-label {
-    color: var(--clr-grey-3);
-    font-size: 0.85rem;
+    color: var(--fg-muted);
+    font-size: var(--fs-sm);
+}
+
+/* Filter tabs (Fase 7F): segmented control que reemplaza al combo
+   "Mostrar". Estructura: contenedor + 3 tabs (Todas / Pendientes / Hechas). */
+.filter-tabs {
+    display: inline-flex;
+    gap: 2px;
+    padding: 2px;
+    background: var(--bg-surface-2);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-md);
+}
+.filter-tab {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 28px;
+    padding: 0 var(--sp-3);
+    border: none;
+    background: transparent;
+    color: var(--fg-muted);
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-medium);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color var(--dur-fast) var(--ease-out),
+                color var(--dur-fast) var(--ease-out);
+}
+.filter-tab:hover { color: var(--fg-default); }
+.filter-tab.is-active {
+    background: var(--bg-surface);
+    color: var(--fg-default);
+    box-shadow: var(--shadow-flat);
+    font-weight: var(--fw-semibold);
+}
+@media (pointer: coarse) {
+    .filter-tab { height: 36px; padding: 0 var(--sp-4); }
 }
 
 /*

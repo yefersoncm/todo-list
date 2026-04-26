@@ -118,8 +118,12 @@ class TaskManager {
         this.currentPage = 1;
         this.collapsedParents = loadCollapsed();
         this.toast = new ToastManager(DOM.toastContainer);
-        this.filter = new Combobox(DOM.taskFilterRoot, {
-            onChange: () => this.handleFilterChange(),
+        // Filter ahora son tabs (Fase 7F): click en cualquier .filter-tab
+        // setea filterMode y actualiza aria-selected.
+        DOM.taskFilterRoot.addEventListener('click', (e) => {
+            const tab = e.target.closest('.filter-tab');
+            if (!tab) return;
+            this._setFilterTab(tab.dataset.value);
         });
         this.sortByCombo = new Combobox(DOM.sortByRoot, {
             onChange: (value) => this.handleSortChange(value),
@@ -260,9 +264,17 @@ class TaskManager {
         });
     }
 
-    handleFilterChange() {
-        this.filterMode = this.filter.value; // 'all' | 'done' | 'pending'
+    _setFilterTab(value) {
+        if (!['all', 'done', 'pending'].includes(value)) return;
+        if (this.filterMode === value) return;
+        this.filterMode = value;
         this.currentPage = 1;
+        // Actualiza aria-selected y .is-active en los 3 tabs.
+        DOM.taskFilterRoot.querySelectorAll('.filter-tab').forEach(t => {
+            const active = t.dataset.value === value;
+            t.classList.toggle('is-active', active);
+            t.setAttribute('aria-selected', active ? 'true' : 'false');
+        });
         this.renderTasks();
     }
 
