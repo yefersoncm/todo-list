@@ -74,17 +74,6 @@ export class TaskStore {
     isEmpty() {
         return this.tasks.length === 0;
     }
-
-    static daysSinceCreation(timestamp, now = new Date()) {
-        const ts = parseInt(timestamp);
-        if (!ts || isNaN(ts)) return 'N/A';
-        const created = new Date(ts);
-        created.setHours(0, 0, 0, 0);
-        const today = new Date(now.getTime());
-        today.setHours(0, 0, 0, 0);
-        const diff = Math.abs(today.getTime() - created.getTime());
-        return Math.floor(diff / (1000 * 60 * 60 * 24));
-    }
 }
 
 export class LocalStorageAdapter {

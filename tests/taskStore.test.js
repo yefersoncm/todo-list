@@ -111,27 +111,3 @@ describe('TaskStore — orden', () => {
     });
 });
 
-describe('TaskStore.daysSinceCreation', () => {
-    test('hoy → 0', () => {
-        const now = new Date('2026-04-25T12:00:00Z');
-        const ts = new Date('2026-04-25T08:00:00Z').getTime();
-        assert.equal(TaskStore.daysSinceCreation(ts, now), 0);
-    });
-
-    test('un día atrás → 1', () => {
-        const now = new Date('2026-04-25T12:00:00Z');
-        const ts = new Date('2026-04-24T08:00:00Z').getTime();
-        assert.equal(TaskStore.daysSinceCreation(ts, now), 1);
-    });
-
-    test('siete días atrás → 7', () => {
-        const now = new Date('2026-04-25T12:00:00Z');
-        const ts = new Date('2026-04-18T08:00:00Z').getTime();
-        assert.equal(TaskStore.daysSinceCreation(ts, now), 7);
-    });
-
-    test('timestamp inválido → "N/A"', () => {
-        assert.equal(TaskStore.daysSinceCreation(null), 'N/A');
-        assert.equal(TaskStore.daysSinceCreation('abc'), 'N/A');
-    });
-});

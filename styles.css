@@ -548,14 +548,17 @@ Combobox custom (reemplaza al <select> nativo)
     align-items: center;
     gap: 0.25rem;
 }
-/* Indicador de antigüedad — metadata, no acción. */
+/* Indicador de tiempo transcurrido — metadata, no acción.
+   --elapsed-min-width lo setea JS al ancho del texto más largo de la
+   lista, así todas las filas alinean a la misma columna. */
 .task-days-old {
     color: var(--clr-grey-6);
     font-size: 0.75rem;
     font-style: italic;
     letter-spacing: 0.5px;
-    min-width: 3rem;
     text-align: right;
+    white-space: nowrap;
+    min-width: var(--elapsed-min-width, 0);
 }
 
 /*
