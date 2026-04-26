@@ -424,7 +424,9 @@ class TaskManager {
         deleteBtn.addEventListener('click', this.handleDeleteItem.bind(this));
         editBtn.addEventListener('click', this.handleEditItem.bind(this));
 
-        DOM.list.insertBefore(element, DOM.list.firstChild);
+        // Append: el orden de la lista en el DOM debe coincidir con el
+        // orden del array `items` que ya viene ordenado por _filteredTasks.
+        DOM.list.appendChild(element);
     }
 
     // ****** UTILIDADES **********
