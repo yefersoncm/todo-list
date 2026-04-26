@@ -10,7 +10,43 @@ const DOM = {
     checkBoxCompletadas: document.querySelector('#checkBoxCompletadas'),
     checkBoxNoCompletadas: document.querySelector('#checkBoxNoCompletadas'),
     taskCountDisplay: document.querySelector('.task-count'),
+    confirmModal: document.getElementById('confirmModal'),
+    confirmModalText: document.getElementById('confirmModalText'),
 };
+
+// Modal de confirmación que reemplaza al confirm() nativo.
+// Devuelve una promesa que resuelve a true/false.
+function confirmDialog(message) {
+    return new Promise(resolve => {
+        DOM.confirmModalText.textContent = message;
+        DOM.confirmModal.hidden = false;
+
+        const onClick = (e) => {
+            const action = e.target.dataset.action;
+            if (action !== 'ok' && action !== 'cancel') return;
+            cleanup();
+            resolve(action === 'ok');
+        };
+        const onKey = (e) => {
+            if (e.key === 'Escape') { cleanup(); resolve(false); }
+            else if (e.key === 'Enter') { cleanup(); resolve(true); }
+        };
+        const onBackdrop = (e) => {
+            if (e.target === DOM.confirmModal) { cleanup(); resolve(false); }
+        };
+
+        function cleanup() {
+            DOM.confirmModal.hidden = true;
+            DOM.confirmModal.removeEventListener('click', onClick);
+            DOM.confirmModal.removeEventListener('click', onBackdrop);
+            document.removeEventListener('keydown', onKey);
+        }
+
+        DOM.confirmModal.addEventListener('click', onClick);
+        DOM.confirmModal.addEventListener('click', onBackdrop);
+        document.addEventListener('keydown', onKey);
+    });
+}
 
 // ****** CLASE/MÓDULO PARA GESTIÓN DE TAREAS **********
 class TaskManager {
@@ -49,14 +85,13 @@ class TaskManager {
         this.setBackToDefault();
     }
 
-    handleClearItems() {
+    async handleClearItems() {
         if (this.tasks.length === 0) {
             this.displayAlert("La lista ya está vacía", "danger");
             return;
         }
-        if (!confirm("¿Estás seguro de que quieres limpiar toda la lista?")) {
-            return;
-        }
+        const ok = await confirmDialog("¿Estás seguro de que quieres limpiar toda la lista?");
+        if (!ok) return;
         this.clearAllTasks();
         this.displayAlert("Lista vacía", "danger");
     }
@@ -92,12 +127,11 @@ class TaskManager {
         this.displayAlert(isDone ? 'Tarea marcada como hecha' : 'Tarea pendiente', isDone ? 'success' : 'warning');
     }
 
-    handleDeleteItem(e) {
+    async handleDeleteItem(e) {
         const element = e.currentTarget.closest('.grocery-item');
         const id = element.dataset.id;
-        if (!confirm("¿Estás seguro de que quieres eliminar esta tarea?")) {
-            return;
-        }
+        const ok = await confirmDialog("¿Estás seguro de que quieres eliminar esta tarea?");
+        if (!ok) return;
         this.removeTask(id);
         this.displayAlert("Item eliminado", "danger");
         this.setBackToDefault();
