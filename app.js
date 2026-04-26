@@ -527,6 +527,8 @@ class TaskManager {
     // ****** FUNCIONES DE RENDERIZADO **********
 
     renderTasks() {
+        // Limpia entradas obsoletas del Set de colapsados antes del render.
+        this._pruneCollapsedSet();
         // La paginación cuenta sólo PADRES; cada padre arrastra a sus subs.
         const filteredParents = this._filteredParents();
         const totalPages = Math.max(1, Math.ceil(filteredParents.length / this.pageSize));
@@ -552,6 +554,20 @@ class TaskManager {
         if (!DOM.bulkCollapseRoot) return;
         const hasAny = this._parentsWithSubs().length > 0;
         DOM.bulkCollapseRoot.hidden = !hasAny;
+    }
+
+    _pruneCollapsedSet() {
+        // Limpia entradas obsoletas: padres en el Set que ya no tienen
+        // subs (porque se movieron afuera o se borraron).
+        const valid = new Set(this._parentsWithSubs());
+        let changed = false;
+        for (const id of [...this.collapsedParents]) {
+            if (!valid.has(id)) {
+                this.collapsedParents.delete(id);
+                changed = true;
+            }
+        }
+        if (changed) saveCollapsed(this.collapsedParents);
     }
 
     _filteredParents() {
