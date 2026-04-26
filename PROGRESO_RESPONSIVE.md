@@ -16,8 +16,8 @@ Documento actualizado después de cada fase para proteger contra cortes de energ
 | # | Fase | Estado | Commit | Notas |
 |---|---|---|---|---|
 | 0 | Sacar Bootstrap | DONE | `dabd71b` | Eliminados `<link>`, `<script>`, `vendor/fallback.css` y regla `.form-check-label` huérfana. |
-| 1 | Layout fluido mobile-first | IN PROGRESS | — | clamp/min en widths, breakpoint 800→768, márgenes/paddings fluidos, indentación subs proporcional, bloque `@media (max-width: 480px)` con ajustes de gap/padding. |
-| 2 | Touch targets ≥44px | PENDING | — | |
+| 1 | Layout fluido mobile-first | DONE | `7980462` | clamp/min en widths, breakpoint 800→768, márgenes/paddings fluidos, indentación subs proporcional, bloque `@media (max-width: 480px)` con ajustes de gap/padding. |
+| 2 | Touch targets ≥44px | IN PROGRESS | — | Bloque `@media (pointer: coarse)` con min 2.75rem (44px) en chevron, edit/delete, toggle, paginación, combo-toggle, bulk, confirm, inputs. Iconos visuales sin cambios. |
 | 3 | DnD opción B | PENDING | — | |
 | 4 | Edición inline touch-friendly | PENDING | — | |
 | 5 | Hover → tap-friendly | PENDING | — | |
@@ -43,6 +43,18 @@ Documento actualizado después de cada fase para proteger contra cortes de energ
 
 ### Borrados
 - `vendor/fallback.css` (carpeta `vendor/` ya no existe).
+
+### Fase 2 — touch targets (sumado encima de fase 1)
+Bloque nuevo `@media (pointer: coarse)` al final de styles.css:
+- `.subtask-collapse-btn`, `.subtask-collapse-placeholder`, `.edit-btn`, `.delete-btn`, `.toggle-btn` → 2.75x2.75rem (44px).
+- `.page-num`, `.page-prev`, `.page-next` → min-width/height 2.75rem.
+- `.combo-toggle` → padding 0.65rem 0.75rem (alcanza ~44px height).
+- `.bulk-btn` → padding 0.55rem 0.85rem.
+- `.confirm-btn` → padding 0.65rem 1.15rem.
+- `.submit-btn`, inputs (`.search-input`, `.subtask-add-input`, `#grocery`) → min-height 2.75rem.
+- `.grocery-item .action-group` → gap 0.5rem (evita mis-taps).
+
+Desktop (mouse) sin cambios — los hit areas pequeños se mantienen.
 
 ## Cómo hacer rollback
 
