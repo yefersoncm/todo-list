@@ -364,22 +364,92 @@ Grocery List
     margin-top: 1.5rem;
 }
 
-.task-filter {
-    padding: 0.3rem 0.6rem;
+.filter-label {
+    color: var(--clr-grey-3);
+    font-size: 0.85rem;
+}
+
+/*
+===============
+Combobox custom (reemplaza al <select> nativo)
+===============
+*/
+.combo {
+    position: relative;
+    display: inline-block;
+    font-family: var(--ff-secondary);
+    font-size: 0.85rem;
+}
+.combo-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.35rem 0.7rem;
+    min-width: 8rem;
     border: 1px solid var(--clr-grey-9);
     border-radius: var(--radius);
     background: var(--clr-grey-10);
     color: var(--clr-grey-1);
-    font-family: var(--ff-secondary);
-    font-size: 0.85rem;
     cursor: pointer;
     transition: var(--transition);
+    font: inherit;
+    text-align: left;
+    justify-content: space-between;
 }
-.task-filter:focus,
-.task-filter:hover {
+.combo-toggle:hover {
+    background: var(--clr-white);
+    border-color: var(--clr-primary-7);
+}
+.combo-toggle:focus-visible {
     outline: none;
     border-color: var(--clr-primary-5);
+    box-shadow: 0 0 0 3px var(--clr-primary-10);
+}
+.combo-arrow {
+    color: var(--clr-grey-5);
+    font-size: 0.7rem;
+    transition: transform 0.2s ease;
+}
+.combo-toggle[aria-expanded="true"] .combo-arrow {
+    transform: rotate(180deg);
+}
+.combo-listbox {
+    position: absolute;
+    top: calc(100% + 0.35rem);
+    left: 0;
+    right: 0;
+    margin: 0;
+    padding: 0.25rem;
+    list-style: none;
     background: var(--clr-white);
+    border: 1px solid var(--clr-grey-9);
+    border-radius: var(--radius);
+    box-shadow: var(--light-shadow);
+    z-index: 50;
+}
+.combo-listbox:focus {
+    outline: none;
+}
+.combo-listbox[hidden] {
+    display: none;
+}
+.combo-listbox [role="option"] {
+    padding: 0.4rem 0.65rem;
+    border-radius: calc(var(--radius) - 0.15rem);
+    color: var(--clr-grey-1);
+    cursor: pointer;
+    transition: background 0.12s linear, color 0.12s linear;
+}
+.combo-listbox [role="option"].is-active {
+    background: var(--clr-primary-10);
+    color: var(--clr-primary-1);
+}
+.combo-listbox [role="option"][aria-selected="true"] {
+    color: var(--clr-primary-2);
+    font-weight: 600;
+}
+.combo-listbox [role="option"][aria-selected="true"].is-active {
+    background: var(--clr-primary-9);
 }
 
 /*

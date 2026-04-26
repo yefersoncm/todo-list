@@ -50,12 +50,30 @@
         </div>
 
         <div class="filters-container">
-            <label for="taskFilter" class="form-check-label">Mostrar</label>
-            <select id="taskFilter" class="task-filter">
-                <option value="all">Todas</option>
-                <option value="done">Hechas</option>
-                <option value="pending">Pendientes</option>
-            </select>
+            <span id="filterLabel" class="filter-label">Mostrar</span>
+            <div class="combo" id="taskFilter">
+                <button
+                    type="button"
+                    class="combo-toggle"
+                    aria-haspopup="listbox"
+                    aria-expanded="false"
+                    aria-labelledby="filterLabel"
+                >
+                    <span class="combo-toggle-label">Todas</span>
+                    <span class="combo-arrow" aria-hidden="true">▾</span>
+                </button>
+                <ul
+                    class="combo-listbox"
+                    role="listbox"
+                    tabindex="-1"
+                    aria-labelledby="filterLabel"
+                    hidden
+                >
+                    <li role="option" data-value="all" aria-selected="true" id="opt-all">Todas</li>
+                    <li role="option" data-value="done" aria-selected="false" id="opt-done">Hechas</li>
+                    <li role="option" data-value="pending" aria-selected="false" id="opt-pending">Pendientes</li>
+                </ul>
+            </div>
         </div>
     </section>
 
