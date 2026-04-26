@@ -239,6 +239,15 @@ con mayor especificidad y haría invisibles nuestras notificaciones.
 .app-toast-action,
 .app-toast-close { pointer-events: auto; }
 
+/* App chrome con toggles theme + density (Fase 7H). */
+.app-chrome {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-3);
+}
+.app-chrome .seg__btn .icon { display: block; }
+
 .grocery-form h3 {
   color: var(--clr-primary-1);
   margin-bottom: 1.5rem;

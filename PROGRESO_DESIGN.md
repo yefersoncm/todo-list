@@ -26,12 +26,12 @@ Archivos del diseño Claude generados externamente, copia local en
 |---|---|---|---|---|
 | 7A | Tokens + reset + tipografías nuevas | DONE | `f09eff8` | tokens.css y components.css copiados al repo. index.html carga Google Fonts (Inter Tight + JetBrains Mono) y los CSS en orden tokens → components → styles. |
 | 7B | `.btn` y `.field` aplicados | DONE | `2b592b7` | HTML: `.submit-btn` con `.btn .btn--primary`; `#grocery`, `.search-input`, `.subtask-add-input` con `.field`; `.bulk-btn`/`.bulk-btn-danger` con `.btn .btn--ghost/--danger .btn--sm`; `.confirm-btn-cancel/-ok` con `.btn--secondary/--danger-filled`. styles.css: eliminadas reglas legacy duplicadas (153 líneas borradas). |
-| 7C | `.toggle-check` con check-pop | IN PROGRESS | — | `_renderItem` emite `.toggle-check` en lugar de `.toggle-btn`; ícono fijo `check` (size 14) — el círculo sale del CSS border. Estilos legacy de `.grocery-item .toggle-btn` eliminados; overrides en touch/hover-none reemplazados con `.toggle-check`. |
-| 7D | Rename `.grocery-item` → `.task` + grid | PENDING | — | Toca `_renderItem` en app.js |
-| 7E | Toast + modal nuevo look | PENDING | — | |
-| 7F | Filter tabs en lugar de combo | PENDING | — | |
-| 7G | Mobile card-per-item | PENDING | — | |
-| 7H | Density + dark mode toggle | PENDING | — | |
+| 7C | `.toggle-check` con check-pop | DONE | `9d0510a` | `_renderItem` emite `.toggle-check`; ícono fijo `check` (size 14). Estilos legacy de `.grocery-item .toggle-btn` eliminados. |
+| 7D | Clases `.task` + `.task__*` (compat dual con legacy) | DONE | `cf0d412` | Clases dobles agregadas al DOM; CSS legacy de `.title`, `.edit-btn`, `.delete-btn`, `.grocery-item:hover` eliminado. |
+| 7E | Toast + modal nuevo look | DONE | `de4726d` | Clases dobles `.app-toast` + `.toast`, `.confirm-modal-dialog` + `.modal`. CSS legacy eliminado, anim slide-in conservada. |
+| 7F | Filter tabs en lugar de combo | DONE | `00dc183` | Combo del filtro reemplazado por `.filter-tabs` con 3 botones. Combobox eliminado, listener delegado en `_setFilterTab`. |
+| 7G | Mobile card-per-item | DONE | `9e8b67e` | En `(max-width: 480px)` cada item es card propia (border + bg + radius). Subs con guía vertical via `::before`. `.meta` con border-top divisor. |
+| 7H | Density + dark mode toggle | DONE | — | `.app-chrome` con 2 segmented controls. Persistencia localStorage `todo-list:theme` y `todo-list:density`. Default theme respeta `prefers-color-scheme`. Iconos `sun/moon/rows/align-justify` agregados a `icons.js`. |
 
 ## Mapeo de clases (referencia para 7D y siguientes)
 
