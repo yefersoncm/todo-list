@@ -260,6 +260,81 @@ class TaskManager {
         this.setSubmitMode('edit');
     }
 
+    // ----- Reordenamiento manual: drag-and-drop + teclado --------------------
+
+    _isManualReorderActive() {
+        // Sólo activamos drag/keyboard reorder cuando el sort es 'manual'
+        // y NO hay un filtro aplicado (mover entre items invisibles
+        // confundiría al usuario).
+        return this.sortBy === 'manual' && this.filterMode === 'all';
+    }
+
+    handleDragStart(e) {
+        const el = e.currentTarget;
+        this._draggingId = el.dataset.id;
+        el.classList.add('is-dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        // Algunos browsers requieren que escribamos algo a dataTransfer
+        // para que el drag sea válido; el id real lo guardamos en una
+        // propiedad de instancia porque dragover no permite leer
+        // dataTransfer en Chromium.
+        e.dataTransfer.setData('text/plain', el.dataset.id);
+    }
+
+    handleDragOver(e) {
+        if (!this._draggingId) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        const target = e.currentTarget;
+        if (target.dataset.id !== this._draggingId) {
+            target.classList.add('is-drop-target');
+        }
+    }
+
+    handleDragLeave(e) {
+        e.currentTarget.classList.remove('is-drop-target');
+    }
+
+    handleDrop(e) {
+        e.preventDefault();
+        e.currentTarget.classList.remove('is-drop-target');
+        const fromId = this._draggingId;
+        const toId = e.currentTarget.dataset.id;
+        this._draggingId = null;
+        if (!fromId || fromId === toId) return;
+        const fromIdx = this.store.tasks.findIndex(t => t.id === fromId);
+        const toIdx = this.store.tasks.findIndex(t => t.id === toId);
+        if (fromIdx < 0 || toIdx < 0) return;
+        this.store.move(fromIdx, toIdx);
+        this.renderTasks();
+    }
+
+    handleDragEnd(e) {
+        e.currentTarget.classList.remove('is-dragging');
+        // Limpieza defensiva: si dragend dispara sin drop (cancelado),
+        // dejamos los .is-drop-target colgados — los borramos todos.
+        DOM.list.querySelectorAll('.grocery-item.is-drop-target')
+            .forEach(el => el.classList.remove('is-drop-target'));
+        this._draggingId = null;
+    }
+
+    handleManualKeyDown(e) {
+        // Alt+ArrowUp/Down reordena la tarea enfocada.
+        if (!e.altKey) return;
+        if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+        e.preventDefault();
+        const id = e.currentTarget.dataset.id;
+        const idx = this.store.tasks.findIndex(t => t.id === id);
+        const newIdx = e.key === 'ArrowUp' ? idx - 1 : idx + 1;
+        if (newIdx < 0 || newIdx >= this.store.tasks.length) return;
+        this.store.move(idx, newIdx);
+        this.renderTasks();
+        // Mantén el foco en la tarea movida para que el usuario pueda
+        // seguir reordenando con Alt+arrow sin tabular de nuevo.
+        const moved = DOM.list.querySelector(`.grocery-item[data-id="${id}"]`);
+        if (moved) moved.focus();
+    }
+
     // ****** FUNCIONES DE RENDERIZADO **********
 
     renderTasks() {
@@ -375,6 +450,21 @@ class TaskManager {
         element.dataset.id = id;
         element.dataset.done = String(done);
         if (done) element.classList.add('done');
+
+        // Modo de reordenamiento manual: el item es draggable y enfocable
+        // por teclado (Alt+ArrowUp/Down). Sólo activo cuando sort=manual
+        // y sin filtro — mover entre items ocultos no es intuitivo.
+        if (this._isManualReorderActive()) {
+            element.draggable = true;
+            element.tabIndex = 0;
+            element.classList.add('is-draggable');
+            element.addEventListener('dragstart', this.handleDragStart.bind(this));
+            element.addEventListener('dragover', this.handleDragOver.bind(this));
+            element.addEventListener('dragleave', this.handleDragLeave.bind(this));
+            element.addEventListener('drop', this.handleDrop.bind(this));
+            element.addEventListener('dragend', this.handleDragEnd.bind(this));
+            element.addEventListener('keydown', this.handleManualKeyDown.bind(this));
+        }
 
         const elapsedText = formatElapsed(elapsedComponents(parseInt(id)));
 

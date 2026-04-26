@@ -419,6 +419,24 @@ Paginación
   flex: 1;
   min-width: 0;
 }
+/* Modo manual: cursor de agarre y feedback visual al arrastrar. */
+.grocery-item.is-draggable {
+  cursor: grab;
+}
+.grocery-item.is-draggable:active {
+  cursor: grabbing;
+}
+.grocery-item.is-dragging {
+  opacity: 0.4;
+}
+.grocery-item.is-drop-target {
+  background: var(--clr-primary-10);
+  box-shadow: inset 0 0 0 2px var(--clr-primary-5);
+}
+.grocery-item:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--clr-primary-10);
+}
 .grocery-item:hover {
   color: var(--clr-grey-5);
   background: var(--clr-grey-10);
