@@ -31,26 +31,42 @@ No requiere build. Cualquier servidor estático sirve:
 python3 -m http.server 8000
 # o
 npx serve .
+# o
+npm run serve
 ```
 
 Luego abre `http://localhost:8000` en el navegador.
 
-> Nota: abrir el `index.html` con `file://` también funciona, pero el viewport y algunos comportamientos del navegador se ven mejor servidos por HTTP.
+> Importante: ahora `app.js` se carga como módulo ES (`<script type="module">`), por lo que **no funciona abriendo `index.html` con `file://`** — los módulos requieren un servidor.
+
+## Tests
+
+La lógica de tareas está separada del DOM en `taskStore.js` y se prueba con el runner nativo de Node.
+
+```bash
+npm test
+# o
+node --test tests/*.test.js
+```
 
 ## Estructura
 
 ```
 todo-list/
-├── index.html      # Estructura
-├── styles.css      # Estilos custom + variables
-├── app.js          # Lógica (clase TaskManager)
+├── index.html              # Estructura
+├── styles.css              # Estilos custom + variables
+├── app.js                  # Capa UI (clase TaskManager, DOM)
+├── taskStore.js            # Lógica pura: TaskStore + adapters de storage
+├── package.json
+├── tests/
+│   └── taskStore.test.js   # Suite con node --test
+├── vendor/
+│   └── fallback.css        # Fallback de Bootstrap si el CDN falla
 ├── logo.svg
-└── *-svgrepo-*.svg # Iconos auxiliares
+└── *-svgrepo-*.svg         # Iconos auxiliares
 ```
 
 ## Roadmap / ideas
 
-- [ ] Tests unitarios sobre la lógica (separando `TaskStore` del DOM).
-- [ ] Fallback local para Bootstrap/FontAwesome si los CDN fallan.
 - [ ] Capturas de pantalla en este README.
 - [ ] Sincronización opcional entre dispositivos.
