@@ -1235,4 +1235,61 @@ crece es el padding / min-height para alcanzar el estándar 44x44.
   }
 }
 
+/*
+===============
+Sticky-hover fix en touch (Fase 5)
+===============
+En dispositivos sin hover real (`hover: none`) el `:hover` queda activo
+hasta el próximo tap en otro lado — los items y botones se ven
+"resaltados" sin razón. Aquí neutralizamos los cambios de fondo/borde/
+color/shadow del :hover para esos selectores, y reforzamos `:active`.
+*/
+@media (hover: none) {
+  .btn:hover,
+  .grocery-item:hover,
+  .grocery-item:hover .title,
+  .section-center:hover,
+  .search-input:hover,
+  .subtask-add-input:hover,
+  .combo-toggle:hover,
+  .subtask-collapse-btn:hover,
+  .bulk-btn:hover,
+  .bulk-btn-danger:hover,
+  .submit-btn:hover,
+  .page-num:hover,
+  .page-prev:hover,
+  .page-next:hover,
+  .grocery-item .toggle-btn:hover,
+  .edit-btn:hover,
+  .delete-btn:hover,
+  .touch-move-btn:hover,
+  .confirm-btn-cancel:hover,
+  .confirm-btn-ok:hover,
+  .app-toast-close:hover,
+  .done:hover {
+    background: revert;
+    border-color: revert;
+    color: revert;
+    box-shadow: revert;
+  }
+  /* :active da feedback inmediato al tap. */
+  .grocery-item:active {
+    background: var(--clr-grey-10);
+  }
+  .bulk-btn:active,
+  .submit-btn:active,
+  .page-num:active,
+  .page-prev:active,
+  .page-next:active,
+  .combo-toggle:active,
+  .edit-btn:active,
+  .delete-btn:active,
+  .subtask-collapse-btn:active,
+  .grocery-item .toggle-btn:active,
+  .touch-move-btn:active {
+    transform: scale(0.96);
+  }
+}
+
+
 

@@ -19,8 +19,8 @@ Documento actualizado después de cada fase para proteger contra cortes de energ
 | 1 | Layout fluido mobile-first | DONE | `7980462` | clamp/min en widths, breakpoint 800→768, márgenes/paddings fluidos, indentación subs proporcional, bloque `@media (max-width: 480px)` con ajustes de gap/padding. |
 | 2 | Touch targets ≥44px | DONE | `d156c05` | Bloque `@media (pointer: coarse)` con min 2.75rem (44px) en chevron, edit/delete, toggle, paginación, combo-toggle, bulk, confirm, inputs. Iconos visuales sin cambios. |
 | 3 | DnD opción B | DONE | `c6ba928` | Botones touch ↑/↓ (reorder en mismo scope) + ⬅ promote para subs. Reusan `moveToParent` y `store.move`. CSS oculta en pointer:fine, muestra en pointer:coarse. Promote-zone hide en touch. Disabled si sort != manual o no hay vecino. Tests 95/95 pasan. |
-| 4 | Edición inline touch-friendly | IN PROGRESS | — | `dblclick` solo se registra en pointer:fine. En touch el lápiz queda como único trigger. Helper nuevo `_isPrimaryTouch()`. Tests 95/95 pasan. |
-| 5 | Hover → tap-friendly | PENDING | — | |
+| 4 | Edición inline touch-friendly | DONE | `b84a539` | `dblclick` solo se registra en pointer:fine. En touch el lápiz queda como único trigger. Helper nuevo `_isPrimaryTouch()`. Tests 95/95 pasan. |
+| 5 | Hover → tap-friendly | IN PROGRESS | — | Bloque `@media (hover: none)` revierte fondo/borde/color/shadow de los `:hover` problemáticos (sticky-hover en touch). Refuerzo `:active` con `transform: scale(0.96)` para feedback inmediato al tap. |
 | 6 | QA cross-viewport | PENDING | — | 320, 375, 412, 768, 1024, 1440. |
 
 ## Cambios concretos por archivo (acumulados)
@@ -76,6 +76,18 @@ Desktop (mouse) sin cambios — los hit areas pequeños se mantienen.
 - En `_renderItem`, el `addEventListener('dblclick', ...)` sobre el título
   solo se registra cuando NO es primary touch. En touch, el lápiz es el único
   trigger de edición.
+
+### Fase 5 — Hover → tap-friendly
+- `styles.css`: bloque nuevo `@media (hover: none)` al final.
+  - Neutraliza los `:hover` problemáticos (sticky en touch) usando `revert`
+    en `background`, `border-color`, `color`, `box-shadow`.
+  - Selectores cubiertos: `.btn`, `.grocery-item` (+title), `.section-center`,
+    `.search-input`, `.subtask-add-input`, `.combo-toggle`,
+    `.subtask-collapse-btn`, `.bulk-btn`, `.bulk-btn-danger`, `.submit-btn`,
+    paginación, `.toggle-btn`, `.edit-btn`, `.delete-btn`, `.touch-move-btn`,
+    `.confirm-btn-cancel`, `.confirm-btn-ok`, `.app-toast-close`, `.done`.
+  - `:active` con `transform: scale(0.96)` en los botones principales para
+    feedback inmediato al tap.
 
 ## Cómo hacer rollback
 
