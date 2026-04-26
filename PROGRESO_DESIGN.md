@@ -31,7 +31,7 @@ Archivos del diseño Claude generados externamente, copia local en
 | 7E | Toast + modal nuevo look | DONE | `de4726d` | Clases dobles `.app-toast` + `.toast`, `.confirm-modal-dialog` + `.modal`. CSS legacy eliminado, anim slide-in conservada. |
 | 7F | Filter tabs en lugar de combo | DONE | `00dc183` | Combo del filtro reemplazado por `.filter-tabs` con 3 botones. Combobox eliminado, listener delegado en `_setFilterTab`. |
 | 7G | Mobile card-per-item | DONE | `9e8b67e` | En `(max-width: 480px)` cada item es card propia (border + bg + radius). Subs con guía vertical via `::before`. `.meta` con border-top divisor. |
-| 7H | Density + dark mode toggle | DONE | — | `.app-chrome` con 2 segmented controls. Persistencia localStorage `todo-list:theme` y `todo-list:density`. Default theme respeta `prefers-color-scheme`. Iconos `sun/moon/rows/align-justify` agregados a `icons.js`. |
+| 7H | Density + dark mode toggle | DONE | `0a0917e` | `.app-chrome` con 2 segmented controls. Persistencia localStorage `todo-list:theme` y `todo-list:density`. Default theme respeta `prefers-color-scheme`. Iconos `sun/moon/rows/align-justify` agregados a `icons.js`. |
 
 ## Mapeo de clases (referencia para 7D y siguientes)
 
