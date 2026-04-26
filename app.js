@@ -185,35 +185,51 @@ class TaskManager {
         const element = document.createElement('article');
         element.classList.add('grocery-item');
         element.dataset.id = id;
-        element.dataset.done = done;
+        element.dataset.done = String(done);
+        if (done) element.classList.add('done');
 
         // Calcular días transcurridos usando el ID como timestamp
-        const daysOld = this.getDaysSinceCreation(parseInt(creationTimestamp)); // Asegurarse de que sea un número
+        const daysOld = this.getDaysSinceCreation(parseInt(creationTimestamp));
         const daysText = daysOld === 0 ? 'Hoy' : (daysOld === 1 ? '1 día' : `${daysOld} días`);
 
-        element.innerHTML = `
-            <p class="title">${value}</p>
-            <div class="btn-container form-check form-switch">
-                <input class="form-check-input" type="checkbox" ${done ? "checked" : ""}>
-                <button type="button" class="edit-btn">
-                    <i class="fas fa-edit"></i>
-                </button>
-                <button type="button" class="delete-btn">
-                    <i class="fas fa-trash"></i>
-                </button>
-                <span class="task-days-old">${daysText}</span>
-            </div>
-        `;
+        // Construimos los nodos en lugar de usar innerHTML para evitar XSS:
+        // 'value' viene del input del usuario y se asigna por textContent.
+        const title = document.createElement('p');
+        title.classList.add('title');
+        title.textContent = value;
 
-        if (done) {
-            element.classList.add('done');
-        } else {
-            element.classList.remove('done');
-        }
+        const btnContainer = document.createElement('div');
+        btnContainer.className = 'btn-container form-check form-switch';
 
-        element.querySelector('.delete-btn').addEventListener('click', this.handleDeleteItem.bind(this));
-        element.querySelector('.edit-btn').addEventListener('click', this.handleEditItem.bind(this));
-        element.querySelector('.form-check-input').addEventListener('change', this.handleMarkTaskAsDone.bind(this));
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.className = 'form-check-input';
+        checkbox.checked = !!done;
+
+        const editBtn = document.createElement('button');
+        editBtn.type = 'button';
+        editBtn.className = 'edit-btn';
+        const editIcon = document.createElement('i');
+        editIcon.className = 'fas fa-edit';
+        editBtn.appendChild(editIcon);
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.type = 'button';
+        deleteBtn.className = 'delete-btn';
+        const deleteIcon = document.createElement('i');
+        deleteIcon.className = 'fas fa-trash';
+        deleteBtn.appendChild(deleteIcon);
+
+        const daysSpan = document.createElement('span');
+        daysSpan.className = 'task-days-old';
+        daysSpan.textContent = daysText;
+
+        btnContainer.append(checkbox, editBtn, deleteBtn, daysSpan);
+        element.append(title, btnContainer);
+
+        deleteBtn.addEventListener('click', this.handleDeleteItem.bind(this));
+        editBtn.addEventListener('click', this.handleEditItem.bind(this));
+        checkbox.addEventListener('change', this.handleMarkTaskAsDone.bind(this));
 
         DOM.list.insertBefore(element, DOM.list.firstChild);
     }
