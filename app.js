@@ -197,6 +197,12 @@ class TaskManager {
             DOM.promoteZone.addEventListener('dragleave', this.handlePromoteDragLeave.bind(this));
             DOM.promoteZone.addEventListener('drop', this.handlePromoteDrop.bind(this));
         }
+        // Delegación de drag en el contenedor de la lista: dragover/leave/drop
+        // se resuelven desde aquí, calculando target lógico (item específico
+        // o gap entre bloques) según geometría.
+        DOM.list.addEventListener('dragover', this.handleListDragOver.bind(this));
+        DOM.list.addEventListener('dragleave', this.handleListDragLeave.bind(this));
+        DOM.list.addEventListener('drop', this.handleListDrop.bind(this));
     }
 
     // ****** MANEJADORES DE EVENTOS **********
@@ -330,83 +336,362 @@ class TaskManager {
         const task = this.store.tasks.find(t => t.id === id);
         this._draggingId = id;
         this._draggingIsSub = task ? task.parentId !== null : false;
-        el.classList.add('is-dragging');
+        // setData ANTES de cualquier cambio de DOM. Firefox lo exige; en
+        // Chrome además, modificar el DOM dentro de dragstart puede
+        // cancelar el drag silenciosamente — diferimos esos cambios al
+        // siguiente frame para que Chrome haya capturado la "drag image"
+        // antes de que cambie el layout.
         e.dataTransfer.effectAllowed = 'move';
-        // Algunos browsers requieren que escribamos algo a dataTransfer
-        // para que el drag sea válido; el id real lo guardamos en una
-        // propiedad de instancia porque dragover no permite leer
-        // dataTransfer en Chromium.
         e.dataTransfer.setData('text/plain', id);
-        // Mostrar el promote zone sólo cuando arrastramos una sub.
-        if (this._draggingIsSub && DOM.promoteZone) {
-            DOM.promoteZone.hidden = false;
-        }
-    }
-
-    handleDragOver(e) {
-        if (!this._draggingId) return;
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
-        const target = e.currentTarget;
-        if (target.dataset.id === this._draggingId) return;
-        // Source = sub → siempre nest. Source = parent → reorder.
-        if (this._draggingIsSub) {
-            target.classList.add('is-drop-nest');
-        } else {
-            target.classList.add('is-drop-target');
-        }
-    }
-
-    handleDragLeave(e) {
-        e.currentTarget.classList.remove('is-drop-target', 'is-drop-nest');
-    }
-
-    handleDrop(e) {
-        e.preventDefault();
-        e.currentTarget.classList.remove('is-drop-target', 'is-drop-nest');
-        const fromId = this._draggingId;
-        const toId = e.currentTarget.dataset.id;
-        const wasSub = this._draggingIsSub;
-        this._draggingId = null;
-        this._draggingIsSub = false;
-        if (!fromId || fromId === toId) return;
-
-        if (wasSub) {
-            // Sub → re-parent. El target puede ser un padre (nestear ahí)
-            // o una sub (entonces nesteamos al padre de esa sub).
-            const targetTask = this.store.tasks.find(t => t.id === toId);
-            if (!targetTask) return;
-            const newParentId = targetTask.parentId === null ? toId : targetTask.parentId;
-            const ok = this.store.moveToParent(fromId, newParentId);
-            if (ok) {
-                this.currentPage = 1;
-                this.renderTasks();
-                this.displayAlert('Subtarea movida', 'success');
+        e.dataTransfer.setData('application/x-task-id', id);
+        requestAnimationFrame(() => {
+            el.classList.add('is-dragging');
+            if (this._draggingIsSub && DOM.promoteZone) {
+                DOM.promoteZone.hidden = false;
             }
-        } else {
-            // Parent → reorder. move() opera sobre índices de la lista
-            // de PADRES, no de tasks completo (importante con subs intercaladas).
-            const parents = this.store.tasks.filter(t => t.parentId === null);
-            const fromIdx = parents.findIndex(p => p.id === fromId);
-            const toIdx = parents.findIndex(p => p.id === toId);
-            if (fromIdx < 0 || toIdx < 0) return;
-            this.store.move(fromIdx, toIdx);
-            this.renderTasks();
-        }
+        });
     }
 
     handleDragEnd(e) {
         e.currentTarget.classList.remove('is-dragging');
-        // Limpieza defensiva: si dragend dispara sin drop (cancelado),
-        // dejamos los .is-drop-target/.is-drop-nest colgados — borramos.
-        DOM.list.querySelectorAll('.grocery-item.is-drop-target, .grocery-item.is-drop-nest')
-            .forEach(el => el.classList.remove('is-drop-target', 'is-drop-nest'));
+        this._clearDragVisuals();
         if (DOM.promoteZone) {
             DOM.promoteZone.classList.remove('is-drop-target');
             DOM.promoteZone.hidden = true;
         }
         this._draggingId = null;
         this._draggingIsSub = false;
+        this._cancelExpandTimer();
+        this._currentDropAction = null;
+    }
+
+    // ----- Drag delegado al contenedor: resolver target lógico ---------------
+
+    /**
+     * Resuelve la acción de drop según los 6 casos de la tabla:
+     *  Origen × Target → { type, parentId, beforeId, blockEl?, indicatorRect? }
+     * type ∈ 'reorder' | 'nest-end' | 'nest-before' | 'promote' | 'invalid'
+     */
+    _resolveDropAction(e) {
+        if (!this._draggingId || !this._isManualReorderActive()) {
+            return { type: 'invalid' };
+        }
+        const draggingId = this._draggingId;
+        const isSubOrigin = this._draggingIsSub;
+
+        const itemEl = e.target.closest('.grocery-item');
+        const overItem = itemEl && itemEl.dataset.id !== draggingId ? itemEl : null;
+
+        // ----- Hover sobre un ITEM ------------------------------------------
+        if (overItem) {
+            const overIsSub = overItem.classList.contains('is-subtask');
+            const rect = overItem.getBoundingClientRect();
+            const isUpperHalf = e.clientY < rect.top + rect.height / 2;
+
+            if (!isSubOrigin && !overIsSub) {
+                // CASO 1: Task → Task. Reorder según mitad sup/inf.
+                const beforeId = isUpperHalf
+                    ? overItem.dataset.id
+                    : this._nextParentIdAfter(overItem.dataset.id);
+                return {
+                    type: 'reorder',
+                    parentId: null,
+                    beforeId,
+                    indicatorRect: this._lineRectFor(overItem, isUpperHalf ? 'top' : 'bottom'),
+                };
+            }
+
+            if (!isSubOrigin && overIsSub) {
+                // CASO 2: Task → Subtask. Reorder respecto al BLOQUE del padre.
+                const parentId = overItem.dataset.parentId;
+                const block = this._blockOf(parentId);
+                if (!block) return { type: 'invalid' };
+                const blockTop = block.parentEl.getBoundingClientRect().top;
+                const blockBottom = block.lastEl.getBoundingClientRect().bottom;
+                const upper = e.clientY < (blockTop + blockBottom) / 2;
+                const beforeId = upper ? parentId : this._nextParentIdAfter(parentId);
+                return {
+                    type: 'reorder',
+                    parentId: null,
+                    beforeId,
+                    blockEl: block,
+                    indicatorRect: this._lineRectForBlock(block, upper ? 'top' : 'bottom'),
+                };
+            }
+
+            if (isSubOrigin && !overIsSub) {
+                // CASO 4: Subtask → Task (fila padre). Default: al final del bloque.
+                // Auto-expand si está colapsado.
+                const parentId = overItem.dataset.id;
+                if (this.collapsedParents.has(parentId)) {
+                    this._scheduleAutoExpand(parentId);
+                } else {
+                    this._cancelExpandTimer();
+                }
+                const block = this._blockOf(parentId);
+                if (!block) return { type: 'invalid' };
+                return {
+                    type: 'nest-end',
+                    parentId,
+                    beforeId: null,
+                    blockEl: block,
+                    indicatorRect: this._lineRectForBlock(block, 'bottom'),
+                };
+            }
+
+            if (isSubOrigin && overIsSub) {
+                // CASO 5: Subtask → Subtask. Re-parent o reorder según mitad.
+                const parentId = overItem.dataset.parentId;
+                const block = this._blockOf(parentId);
+                if (!block) return { type: 'invalid' };
+                const beforeId = isUpperHalf
+                    ? overItem.dataset.id
+                    : this._nextSubIdAfter(parentId, overItem.dataset.id);
+                return {
+                    type: 'nest-before',
+                    parentId,
+                    beforeId,
+                    blockEl: block,
+                    indicatorRect: this._lineRectFor(overItem, isUpperHalf ? 'top' : 'bottom'),
+                };
+            }
+        }
+
+        // ----- Hover en GAP (espacio entre bloques o áreas vacías) ----------
+        // Calcula entre qué dos PADRES cae el cursor verticalmente.
+        const parentEls = [...DOM.list.querySelectorAll('.grocery-item:not(.is-subtask)')];
+        let beforeParentId = null;
+        for (const el of parentEls) {
+            if (el.dataset.id === draggingId) continue;
+            const rect = el.getBoundingClientRect();
+            if (e.clientY < rect.top) {
+                beforeParentId = el.dataset.id;
+                break;
+            }
+        }
+
+        if (isSubOrigin) {
+            // CASO 6: Subtask en gap → promote en esa posición.
+            return {
+                type: 'promote',
+                parentId: null,
+                beforeId: beforeParentId,
+                indicatorRect: this._gapLineRect(beforeParentId),
+            };
+        }
+        // CASO 1 (en gap entre bloques): Task → reorder en esa posición.
+        return {
+            type: 'reorder',
+            parentId: null,
+            beforeId: beforeParentId,
+            indicatorRect: this._gapLineRect(beforeParentId),
+        };
+    }
+
+    handleListDragOver(e) {
+        if (!this._draggingId) return;
+        const action = this._resolveDropAction(e);
+        // Solo aceptamos el drop (preventDefault) si la acción es válida.
+        // Cambiar dropEffect dinámicamente entre 'move' y 'none' confunde
+        // a Chrome y a veces cancela el drag silenciosamente.
+        if (action.type === 'invalid') {
+            this._currentDropAction = action;
+            this._clearDragVisuals();
+            this._hideIndicator();
+            return;
+        }
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        this._currentDropAction = action;
+        this._clearDragVisuals();
+
+        if (action.blockEl) {
+            action.blockEl.parentEl.classList.add('is-block-target');
+            for (const subEl of action.blockEl.subEls) subEl.classList.add('is-block-target');
+        }
+        if (action.indicatorRect) {
+            this._showIndicator(action.indicatorRect);
+        } else {
+            this._hideIndicator();
+        }
+    }
+
+    handleListDragLeave(e) {
+        // Solo limpiar si realmente salimos del contenedor (no de un hijo).
+        if (e.target !== DOM.list) return;
+        const rect = DOM.list.getBoundingClientRect();
+        if (e.clientX >= rect.left && e.clientX <= rect.right
+            && e.clientY >= rect.top && e.clientY <= rect.bottom) return;
+        this._clearDragVisuals();
+        this._hideIndicator();
+        this._cancelExpandTimer();
+    }
+
+    handleListDrop(e) {
+        // Fallback: si _draggingId quedó null por orden inusual de eventos
+        // (Chrome a veces dispara dragend antes que drop), recuperamos el
+        // id desde dataTransfer.
+        let fromId = this._draggingId;
+        if (!fromId && e.dataTransfer) {
+            fromId = e.dataTransfer.getData('application/x-task-id')
+                  || e.dataTransfer.getData('text/plain');
+        }
+        if (!fromId) return;
+        e.preventDefault();
+        const action = this._currentDropAction || this._resolveDropAction(e);
+        this._draggingId = null;
+        this._draggingIsSub = false;
+        this._currentDropAction = null;
+        this._clearDragVisuals();
+        this._hideIndicator();
+        this._cancelExpandTimer();
+
+        if (!action || action.type === 'invalid') return;
+
+        let ok = false;
+        let msg = '';
+        if (action.type === 'reorder') {
+            ok = this.store.moveToParent(fromId, null, action.beforeId);
+            msg = 'Tarea reordenada';
+        } else if (action.type === 'nest-end' || action.type === 'nest-before') {
+            ok = this.store.moveToParent(fromId, action.parentId, action.beforeId);
+            msg = 'Subtarea movida';
+        } else if (action.type === 'promote') {
+            ok = this.store.moveToParent(fromId, null, action.beforeId);
+            msg = 'Promovida a tarea principal';
+        }
+        if (ok) {
+            this.currentPage = 1;
+            this.renderTasks();
+            this.displayAlert(msg, 'success');
+        }
+    }
+
+    // ----- Helpers de drag ---------------------------------------------------
+
+    _blockOf(parentId) {
+        const parentEl = DOM.list.querySelector(
+            `.grocery-item[data-id="${parentId}"]:not(.is-subtask)`
+        );
+        if (!parentEl) return null;
+        const subEls = [...DOM.list.querySelectorAll(
+            `.grocery-item.is-subtask[data-parent-id="${parentId}"]:not(.is-collapsed)`
+        )];
+        const lastEl = subEls[subEls.length - 1] || parentEl;
+        return { parentEl, subEls, lastEl };
+    }
+
+    _nextParentIdAfter(parentId) {
+        const parents = [...DOM.list.querySelectorAll('.grocery-item:not(.is-subtask)')];
+        const idx = parents.findIndex(el => el.dataset.id === parentId);
+        if (idx < 0 || idx === parents.length - 1) return null;
+        return parents[idx + 1].dataset.id;
+    }
+
+    _nextSubIdAfter(parentId, subId) {
+        const subs = [...DOM.list.querySelectorAll(
+            `.grocery-item.is-subtask[data-parent-id="${parentId}"]`
+        )];
+        const idx = subs.findIndex(el => el.dataset.id === subId);
+        if (idx < 0 || idx === subs.length - 1) return null;
+        return subs[idx + 1].dataset.id;
+    }
+
+    _ensureIndicator() {
+        if (this._dropIndicator) return this._dropIndicator;
+        const el = document.createElement('div');
+        el.className = 'drop-indicator';
+        el.setAttribute('aria-hidden', 'true');
+        // Lo agregamos al BODY (position: fixed) en vez de dentro del list.
+        // Así no queda como descendiente del contenedor de drop y nunca
+        // aparece como `e.target` durante dragover (incluso aunque tenga
+        // pointer-events: none, algunos browsers se confunden).
+        document.body.appendChild(el);
+        this._dropIndicator = el;
+        return el;
+    }
+
+    _showIndicator(rect) {
+        if (!rect) return this._hideIndicator();
+        const el = this._ensureIndicator();
+        // rect.top/left ya están en coordenadas de viewport (clientRect),
+        // y el elemento es position: fixed, así que se aplican directo.
+        el.style.top = `${rect.top}px`;
+        el.style.left = `${rect.left}px`;
+        el.style.width = `${rect.width}px`;
+        el.classList.add('is-visible');
+    }
+
+    _hideIndicator() {
+        if (!this._dropIndicator) return;
+        this._dropIndicator.classList.remove('is-visible');
+    }
+
+    _lineRectFor(itemEl, edge) {
+        const rect = itemEl.getBoundingClientRect();
+        return {
+            top: edge === 'top' ? rect.top - 2 : rect.bottom - 1,
+            left: rect.left,
+            width: rect.width,
+        };
+    }
+
+    _lineRectForBlock(block, edge) {
+        const top = block.parentEl.getBoundingClientRect();
+        const bottom = block.lastEl.getBoundingClientRect();
+        return {
+            top: edge === 'top' ? top.top - 2 : bottom.bottom - 1,
+            left: top.left,
+            width: top.width,
+        };
+    }
+
+    _gapLineRect(beforeParentId) {
+        // Línea horizontal en el espacio entre bloques. Si beforeParentId es
+        // null, la línea va al final de la lista.
+        const listRect = DOM.list.getBoundingClientRect();
+        if (beforeParentId === null) {
+            const parents = DOM.list.querySelectorAll('.grocery-item:not(.is-subtask)');
+            const lastParent = parents[parents.length - 1];
+            if (!lastParent) return { top: listRect.top, left: listRect.left, width: listRect.width };
+            const block = this._blockOf(lastParent.dataset.id);
+            const bottom = block ? block.lastEl.getBoundingClientRect().bottom : lastParent.getBoundingClientRect().bottom;
+            return { top: bottom + 1, left: listRect.left, width: listRect.width };
+        }
+        const targetEl = DOM.list.querySelector(
+            `.grocery-item[data-id="${beforeParentId}"]:not(.is-subtask)`
+        );
+        if (!targetEl) return null;
+        const rect = targetEl.getBoundingClientRect();
+        return { top: rect.top - 2, left: listRect.left, width: listRect.width };
+    }
+
+    _clearDragVisuals() {
+        DOM.list.querySelectorAll('.grocery-item.is-block-target')
+            .forEach(el => el.classList.remove('is-block-target'));
+        DOM.list.querySelectorAll('.grocery-item.is-drop-target, .grocery-item.is-drop-nest')
+            .forEach(el => el.classList.remove('is-drop-target', 'is-drop-nest'));
+    }
+
+    _scheduleAutoExpand(parentId) {
+        if (this._expandTimer && this._expandTimerParentId === parentId) return;
+        this._cancelExpandTimer();
+        this._expandTimerParentId = parentId;
+        this._expandTimer = setTimeout(() => {
+            this._expandTimer = null;
+            this._expandTimerParentId = null;
+            if (this._expandParent(parentId)) {
+                this.renderTasks();
+            }
+        }, 500);
+    }
+
+    _cancelExpandTimer() {
+        if (this._expandTimer) {
+            clearTimeout(this._expandTimer);
+            this._expandTimer = null;
+            this._expandTimerParentId = null;
+        }
     }
 
     // Listeners del promote zone (sólo recibe drops de subs).
@@ -682,15 +967,13 @@ class TaskManager {
         if (done) element.classList.add('done');
 
         // Drag-and-drop en modo manual sin filtro:
-        //   - Padres son draggables (reorder + soporte para teclado Alt+↑/↓).
-        //   - Subs son draggables (solo drop entre niveles: re-parent o promote).
+        //   - dragstart/dragend van en cada item (cycle del drag).
+        //   - dragover/dragleave/drop están delegados al contenedor (.grocery-list)
+        //     para resolver gaps entre bloques con geometría.
         if (this._isManualReorderActive()) {
             element.draggable = true;
             element.classList.add('is-draggable');
             element.addEventListener('dragstart', this.handleDragStart.bind(this));
-            element.addEventListener('dragover', this.handleDragOver.bind(this));
-            element.addEventListener('dragleave', this.handleDragLeave.bind(this));
-            element.addEventListener('drop', this.handleDrop.bind(this));
             element.addEventListener('dragend', this.handleDragEnd.bind(this));
             // Teclado de reordenamiento sólo aplica a padres.
             if (!isSubtask) {
@@ -749,16 +1032,14 @@ class TaskManager {
         meta.append(actionGroup, daysSpan);
 
         // Padres llevan input inline para agregar subtareas, y un
-        // chevron al inicio si tienen al menos una sub.
+        // chevron al inicio si tienen al menos una sub. Cuando NO tienen
+        // subs, en su lugar va un placeholder del mismo tamaño para
+        // mantener alineación de columnas entre tareas con/sin chevron.
         if (!isSubtask) {
             const hasSubs = this.store.subsOf(id).length > 0;
-            const subToggle = hasSubs ? this._buildSubtaskCollapseBtn(id) : null;
+            const subSlot = hasSubs ? this._buildSubtaskCollapseBtn(id) : this._buildSubtaskCollapsePlaceholder();
             const subForm = this._buildSubtaskAddForm(id);
-            if (subToggle) {
-                element.append(subToggle, toggleBtn, title, subForm, meta);
-            } else {
-                element.append(toggleBtn, title, subForm, meta);
-            }
+            element.append(subSlot, toggleBtn, title, subForm, meta);
         } else {
             element.append(toggleBtn, title, meta);
         }
@@ -795,6 +1076,13 @@ class TaskManager {
             this.displayAlert('Subtarea agregada', 'success');
         });
         return form;
+    }
+
+    _buildSubtaskCollapsePlaceholder() {
+        const span = document.createElement('span');
+        span.className = 'subtask-collapse-placeholder';
+        span.setAttribute('aria-hidden', 'true');
+        return span;
     }
 
     _buildSubtaskCollapseBtn(parentId) {
