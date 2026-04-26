@@ -324,7 +324,7 @@ Paginación
 .pagination {
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-end;
     gap: 0.5rem;
     margin: 1rem 0 0.5rem;
     flex-wrap: wrap;
