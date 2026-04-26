@@ -48,18 +48,20 @@ export class ToastManager {
 
     _buildToast(id, text, type, options = {}) {
         const el = document.createElement('div');
-        el.className = `app-toast app-toast-${type}`;
+        // Clases dobles: app-toast* para compat JS legacy + .toast .toast--* del rediseño.
+        const designVariant = { success: 'success', danger: 'danger', warning: 'warning', info: 'info' }[type] || 'info';
+        el.className = `app-toast app-toast-${type} toast toast--${designVariant}`;
         el.setAttribute('role', 'status');
         el.setAttribute('aria-live', 'polite');
         el.dataset.toastId = String(id);
 
         const message = document.createElement('p');
-        message.className = 'app-toast-message';
+        message.className = 'app-toast-message toast__msg';
         message.textContent = text;
 
         const closeBtn = document.createElement('button');
         closeBtn.type = 'button';
-        closeBtn.className = 'app-toast-close';
+        closeBtn.className = 'app-toast-close toast__close';
         closeBtn.setAttribute('aria-label', 'Cerrar notificación');
         closeBtn.appendChild(createIcon('x', { size: 14 }));
         closeBtn.addEventListener('click', () => this._dismiss(id));
@@ -68,7 +70,7 @@ export class ToastManager {
         if (options.action && typeof options.action.onClick === 'function') {
             const actionBtn = document.createElement('button');
             actionBtn.type = 'button';
-            actionBtn.className = 'app-toast-action';
+            actionBtn.className = 'app-toast-action toast__action';
             actionBtn.textContent = options.action.label || 'Deshacer';
             actionBtn.addEventListener('click', () => {
                 options.action.onClick();
