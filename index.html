@@ -18,8 +18,8 @@
         <form class="grocery-form">
             <h3>Todo List</h3>
             <div class="form-control1">
-                <input type="text" id="grocery" placeholder="ejemplo: Ir al Gym">
-                <button type="submit" class="submit-btn">
+                <input type="text" id="grocery" class="field" placeholder="ejemplo: Ir al Gym">
+                <button type="submit" class="submit-btn btn btn--primary">
                     <span class="submit-icon" aria-hidden="true"></span>
                     <span class="submit-label">Agregar</span>
                 </button>
@@ -28,16 +28,16 @@
 
         <div class="grocery-container">
             <div class="search-row">
-                <input type="search" id="searchInput" class="search-input" placeholder="Buscar tareas…" aria-label="Buscar tareas por texto" autocomplete="off">
+                <input type="search" id="searchInput" class="search-input field" placeholder="Buscar tareas…" aria-label="Buscar tareas por texto" autocomplete="off">
             </div>
             <div class="task-count-row">
                 <p class="task-count"></p>
                 <div class="task-count-controls">
                     <div class="bulk-collapse" id="bulkCollapse" hidden>
-                        <button type="button" class="bulk-btn bulk-collapse-all" aria-label="Colapsar todas las tareas con subtareas">Colapsar todo</button>
-                        <button type="button" class="bulk-btn bulk-expand-all" aria-label="Expandir todas las tareas con subtareas">Expandir todo</button>
+                        <button type="button" class="bulk-btn bulk-collapse-all btn btn--ghost btn--sm" aria-label="Colapsar todas las tareas con subtareas">Colapsar todo</button>
+                        <button type="button" class="bulk-btn bulk-expand-all btn btn--ghost btn--sm" aria-label="Expandir todas las tareas con subtareas">Expandir todo</button>
                     </div>
-                    <button type="button" class="bulk-btn bulk-btn-danger clear-btn" aria-label="Limpiar toda la lista de tareas">
+                    <button type="button" class="bulk-btn bulk-btn-danger clear-btn btn btn--danger btn--sm" aria-label="Limpiar toda la lista de tareas">
                         <span class="bulk-btn-icon" aria-hidden="true"></span>
                         <span class="bulk-btn-label">Limpiar lista</span>
                     </button>
@@ -145,8 +145,8 @@
         <div class="confirm-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="confirmModalText">
             <p class="confirm-modal-text" id="confirmModalText"></p>
             <div class="confirm-modal-actions">
-                <button type="button" class="confirm-btn confirm-btn-cancel" data-action="cancel">Cancelar</button>
-                <button type="button" class="confirm-btn confirm-btn-ok" data-action="ok">Aceptar</button>
+                <button type="button" class="confirm-btn confirm-btn-cancel btn btn--secondary" data-action="cancel">Cancelar</button>
+                <button type="button" class="confirm-btn confirm-btn-ok btn btn--danger-filled" data-action="ok">Aceptar</button>
             </div>
         </div>
     </div>

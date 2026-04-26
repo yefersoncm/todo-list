@@ -1323,7 +1323,7 @@ class TaskManager {
 
         const input = document.createElement('input');
         input.type = 'text';
-        input.className = 'subtask-add-input';
+        input.className = 'subtask-add-input field';
         input.placeholder = '+ Subtarea';
         input.setAttribute('aria-label', 'Agregar subtarea');
 

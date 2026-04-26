@@ -316,62 +316,17 @@ con mayor especificidad y haría invisibles nuestras notificaciones.
   margin-bottom: 1.5rem;
   text-align: center;
 }
+/* Form principal: input + botón con gap (Fase 7B).
+   Los estilos del input vienen de .field y los del botón de .btn--primary
+   en components.css. Esta regla solo controla el layout del form. */
 .form-control1 {
   display: flex;
   justify-content: center;
+  gap: var(--sp-2);
 }
-#grocery {
-  padding: 0.25rem;
-  padding-left: 1rem;
-  background: var(--clr-grey-10);
-  border-top-left-radius: var(--radius);
-  border-bottom-left-radius: var(--radius);
-  border-color: transparent;
-  font-size: 1rem;
-  /* flex: 1 1 auto para que se encoja en mobile y no fuerce overflow. */
-  flex: 1 1 auto;
-  min-width: 0;
-  color: var(--clr-grey-5);
-}
-
-
-#grocery::placeholder {
-  font-family: var(--ff-secondary);
-  color: var(--clr-grey-5);
-}
-.submit-btn {
-  background: var(--clr-primary-8);
-  border: none;
-  /* Ancho fluido: holgado para 'Editar' en desktop, compacto en mobile.
-     flex: none para que no se encoja por el flex container. */
-  flex: none;
-  width: clamp(5.5rem, 24vw, 7.5rem);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.4rem;
-  padding: 0.25rem 0.5rem;
-  text-transform: capitalize;
-  letter-spacing: 2px;
-  border-top-right-radius: var(--radius);
-  border-bottom-right-radius: var(--radius);
-  color: var(--clr-grey-1);
-  cursor: pointer;
-  transition: var(--transition);
-  font-size: 0.85rem;
-}
-.submit-btn:hover {
-  background: var(--clr-primary-5);
-  color: var(--clr-white);
-}
-.submit-btn:active {
-  transform: scale(0.96);
-  background: var(--clr-primary-3);
-}
-.submit-btn:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 3px var(--clr-primary-10);
-}
+.form-control1 #grocery { flex: 1 1 auto; min-width: 0; }
+/* .submit-btn queda como hook JS sin estilos propios — los estilos vienen
+   de .btn .btn--primary en components.css. */
 .submit-icon {
   display: inline-flex;
   align-items: center;
@@ -394,31 +349,7 @@ con mayor especificidad y haría invisibles nuestras notificaciones.
 .search-row {
     margin-bottom: 0.75rem;
 }
-.search-input {
-    width: 100%;
-    padding: 0.45rem 0.75rem;
-    border: 1px solid var(--clr-grey-9);
-    border-radius: var(--radius);
-    background: var(--clr-grey-10);
-    color: var(--clr-grey-1);
-    font: inherit;
-    font-size: 0.85rem;
-    transition: var(--transition);
-}
-.search-input::placeholder {
-    color: var(--clr-grey-6);
-    font-style: italic;
-}
-.search-input:hover {
-    background: var(--clr-white);
-    border-color: var(--clr-primary-7);
-}
-.search-input:focus {
-    outline: none;
-    background: var(--clr-white);
-    border-color: var(--clr-primary-5);
-    box-shadow: 0 0 0 3px var(--clr-primary-10);
-}
+/* .search-input ahora hereda todos los estilos de .field (components.css). */
 /* Cabecera del listado: contador a la izquierda, controles a la derecha. */
 .task-count-row {
     display: flex;
@@ -620,26 +551,7 @@ Paginación
 .bulk-collapse[hidden] {
   display: none;
 }
-.bulk-btn {
-  background: transparent;
-  border: 1px solid var(--clr-grey-9);
-  border-radius: var(--radius);
-  padding: 0.25rem 0.6rem;
-  color: var(--clr-grey-3);
-  font-family: var(--ff-secondary);
-  font-size: 0.75rem;
-  cursor: pointer;
-  transition: var(--transition);
-}
-.bulk-btn:hover {
-  background: var(--clr-primary-10);
-  border-color: var(--clr-primary-7);
-  color: var(--clr-primary-2);
-}
-.bulk-btn:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 3px var(--clr-primary-10);
-}
+/* .bulk-btn usa .btn .btn--ghost / .btn--danger / .btn--sm desde HTML. */
 /* Contador "(X/Y)" en el título del padre. */
 .subtask-counter {
   margin-left: 0.4rem;
@@ -652,30 +564,10 @@ Paginación
 .subtask-add-form {
   flex: 0 0 auto;
 }
+/* .subtask-add-input usa .field; aquí solo el width fluido especifico. */
 .subtask-add-input {
   width: clamp(7rem, 28vw, 9rem);
-  padding: 0.3rem 0.6rem;
-  border: 1px solid var(--clr-grey-9);
-  border-radius: var(--radius);
-  background: var(--clr-grey-10);
-  color: var(--clr-grey-1);
-  font-family: var(--ff-secondary);
   font-size: 0.8rem;
-  transition: var(--transition);
-}
-.subtask-add-input::placeholder {
-  color: var(--clr-grey-6);
-  font-style: italic;
-}
-.subtask-add-input:hover {
-  background: var(--clr-white);
-  border-color: var(--clr-primary-7);
-}
-.subtask-add-input:focus {
-  outline: none;
-  background: var(--clr-white);
-  border-color: var(--clr-primary-5);
-  box-shadow: 0 0 0 3px var(--clr-primary-10);
 }
 
 /* Modo manual: cursor de agarre y feedback visual al arrastrar. */
@@ -819,25 +711,7 @@ Paginación
 .delete-btn .icon {
     display: block;
 }
-/* Variante 'danger' del .bulk-btn — para acciones destructivas globales
-   como 'Limpiar lista'. Outline rojo en reposo, fill al hover, icono
-   inline a la izquierda del texto. */
-.bulk-btn-danger {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  border-color: var(--clr-red-light);
-  color: var(--clr-red-dark);
-}
-.bulk-btn-danger:hover {
-  background: var(--clr-red-dark);
-  border-color: var(--clr-red-dark);
-  color: var(--clr-white);
-}
-.bulk-btn-danger:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 3px hsla(360, 71%, 66%, 0.35);
-}
+/* .bulk-btn-danger ahora usa .btn .btn--danger desde HTML. */
 .bulk-btn-icon {
   display: inline-flex;
   align-items: center;
@@ -1085,30 +959,7 @@ Confirm modal
     justify-content: center;
     gap: 0.75rem;
 }
-.confirm-btn {
-    border: none;
-    border-radius: var(--radius);
-    padding: 0.4rem 1rem;
-    font-size: 0.85rem;
-    letter-spacing: var(--spacing);
-    text-transform: capitalize;
-    cursor: pointer;
-    transition: var(--transition);
-}
-.confirm-btn-cancel {
-    background: var(--clr-grey-9);
-    color: var(--clr-grey-1);
-}
-.confirm-btn-cancel:hover {
-    background: var(--clr-grey-8);
-}
-.confirm-btn-ok {
-    background: var(--clr-red-light);
-    color: var(--clr-white);
-}
-.confirm-btn-ok:hover {
-    background: var(--clr-red-dark);
-}
+/* .confirm-btn-* ahora usan .btn .btn--secondary / .btn--danger-filled. */
 
 /*
 ===============
