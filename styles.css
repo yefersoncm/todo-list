@@ -291,26 +291,38 @@ Grocery List
   visibility: visible;
 }
 
-/* Cabecera del listado: contador a la izquierda, page-size a la derecha. */
+/* Cabecera del listado: contador a la izquierda, controles a la derecha. */
 .task-count-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 1rem;
     margin-bottom: 0.75rem;
+    flex-wrap: wrap;
 }
 .task-count-row .task-count {
     margin: 0;
     color: var(--clr-grey-3);
 }
+.task-count-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+.sort-control,
 .page-size-control {
     display: flex;
     align-items: center;
     gap: 0.5rem;
 }
+.sort-label,
 .page-size-label {
     color: var(--clr-grey-5);
     font-size: 0.8rem;
+}
+.combo-sort .combo-toggle {
+    min-width: 13rem;
 }
 .page-size-control .combo-toggle {
     min-width: 4.5rem;
