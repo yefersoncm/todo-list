@@ -1,4 +1,5 @@
 import { TaskStore, LocalStorageAdapter } from './taskStore.js';
+import { Combobox } from './combobox.js';
 
 // ****** SELECTORES DE ELEMENTOS **********
 const DOM = {
@@ -9,7 +10,7 @@ const DOM = {
     container: document.querySelector('.grocery-container'),
     list: document.querySelector('.grocery-list'),
     clearBtn: document.querySelector('.clear-btn'),
-    taskFilter: document.getElementById('taskFilter'),
+    taskFilterRoot: document.getElementById('taskFilter'),
     taskCountDisplay: document.querySelector('.task-count'),
     confirmModal: document.getElementById('confirmModal'),
     confirmModalText: document.getElementById('confirmModalText'),
@@ -55,6 +56,9 @@ class TaskManager {
         this.editElement = null;
         this.editFlag = false;
         this.editID = "";
+        this.filter = new Combobox(DOM.taskFilterRoot, {
+            onChange: () => this.handleFilterChange(),
+        });
         this.setupEventListeners();
         this.renderTasks();
     }
@@ -62,7 +66,6 @@ class TaskManager {
     setupEventListeners() {
         DOM.form.addEventListener('submit', this.handleAddItem.bind(this));
         DOM.clearBtn.addEventListener('click', this.handleClearItems.bind(this));
-        DOM.taskFilter.addEventListener('change', this.handleFilterChange.bind(this));
     }
 
     // ****** MANEJADORES DE EVENTOS **********
@@ -99,7 +102,7 @@ class TaskManager {
     }
 
     handleFilterChange() {
-        const value = DOM.taskFilter.value;
+        const value = this.filter.value;
         if (value === 'done') this.renderFilteredTasks(true);
         else if (value === 'pending') this.renderFilteredTasks(false);
         else this.renderTasks();
