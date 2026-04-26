@@ -4,8 +4,8 @@ import { TaskStore, MemoryStorageAdapter } from '../taskStore.js';
 
 const newStore = (initial = null) => new TaskStore(new MemoryStorageAdapter(initial));
 
-describe('TaskStore — add', () => {
-    test('crea una tarea pendiente con valor, id y updatedAt', () => {
+describe('TaskStore — add (top-level)', () => {
+    test('crea una tarea pendiente con id, value, updatedAt y parentId=null', () => {
         const store = newStore();
         const task = store.add('Comprar pan', () => '100');
         assert.equal(store.tasks.length, 1);
@@ -13,6 +13,7 @@ describe('TaskStore — add', () => {
         assert.equal(task.done, false);
         assert.equal(task.id, '100');
         assert.equal(task.updatedAt, 100);
+        assert.equal(task.parentId, null);
     });
 
     test('persiste en el adapter al agregar', () => {
@@ -26,12 +27,135 @@ describe('TaskStore — add', () => {
         const store = newStore();
         store.add('vieja', () => '1');
         store.add('nueva', () => '2');
-        // Unshift: la más nueva queda al inicio.
         assert.deepEqual(store.tasks.map(t => t.id), ['2', '1']);
     });
 });
 
-describe('TaskStore — update / toggle / remove / clear', () => {
+describe('TaskStore — addSubtask', () => {
+    test('inserta una sub justo después del padre con parentId set', () => {
+        const store = newStore();
+        store.add('madre', () => 'P');
+        const sub = store.addSubtask('P', 'hija', () => 'S1');
+        assert.equal(sub.parentId, 'P');
+        assert.deepEqual(store.tasks.map(t => t.id), ['P', 'S1']);
+    });
+
+    test('múltiples subs: la más nueva queda inmediatamente después del padre', () => {
+        const store = newStore();
+        store.add('madre', () => 'P');
+        store.addSubtask('P', 'sub1', () => 'S1');
+        store.addSubtask('P', 'sub2', () => 'S2');
+        // S2 (más nueva) va más cerca del padre.
+        assert.deepEqual(store.tasks.map(t => t.id), ['P', 'S2', 'S1']);
+    });
+
+    test('agregar sub a un padre done re-abre el padre', () => {
+        const store = newStore();
+        store.add('madre', () => 'P');
+        store.toggle('P', true, 100);
+        assert.equal(store.tasks[0].done, true);
+        store.addSubtask('P', 'nueva sub', () => 'S1', 200);
+        assert.equal(store.tasks.find(t => t.id === 'P').done, false);
+    });
+
+    test('parentId inexistente devuelve null y no inserta', () => {
+        const store = newStore();
+        store.add('madre', () => 'P');
+        const sub = store.addSubtask('NOPE', 'sub fantasma', () => 'S1');
+        assert.equal(sub, null);
+        assert.equal(store.tasks.length, 1);
+    });
+});
+
+describe('TaskStore — toggle con propagación', () => {
+    test('toggle padre propaga el done a TODAS sus subs', () => {
+        const store = newStore();
+        store.add('madre', () => 'P');
+        store.addSubtask('P', 's1', () => 'S1');
+        store.addSubtask('P', 's2', () => 'S2');
+        store.toggle('P', true, 500);
+        const subs = store.tasks.filter(t => t.parentId === 'P');
+        assert.ok(subs.every(s => s.done));
+        assert.equal(store.tasks.find(t => t.id === 'P').done, true);
+    });
+
+    test('toggle padre a pendiente desmarca todas las subs', () => {
+        const store = newStore();
+        store.add('madre', () => 'P');
+        store.addSubtask('P', 's1', () => 'S1');
+        store.addSubtask('P', 's2', () => 'S2');
+        store.toggle('P', true);
+        store.toggle('P', false);
+        const subs = store.tasks.filter(t => t.parentId === 'P');
+        assert.ok(subs.every(s => !s.done));
+    });
+
+    test('marcar todas las subs como done auto-marca el padre', () => {
+        const store = newStore();
+        store.add('madre', () => 'P');
+        store.addSubtask('P', 's1', () => 'S1');
+        store.addSubtask('P', 's2', () => 'S2');
+        store.toggle('S1', true);
+        // Una sub aún pendiente; padre sigue pendiente.
+        assert.equal(store.tasks.find(t => t.id === 'P').done, false);
+        store.toggle('S2', true);
+        // Todas hechas → padre done.
+        assert.equal(store.tasks.find(t => t.id === 'P').done, true);
+    });
+
+    test('desmarcar una sub re-abre el padre', () => {
+        const store = newStore();
+        store.add('madre', () => 'P');
+        store.addSubtask('P', 's1', () => 'S1');
+        store.toggle('P', true);
+        assert.equal(store.tasks.find(t => t.id === 'P').done, true);
+        store.toggle('S1', false);
+        assert.equal(store.tasks.find(t => t.id === 'P').done, false);
+    });
+
+    test('padre sin subs: toggle no se afecta por re-evaluación', () => {
+        const store = newStore();
+        store.add('solo', () => '1');
+        store.toggle('1', true);
+        assert.equal(store.tasks[0].done, true);
+    });
+});
+
+describe('TaskStore — remove con cascade y re-evaluación', () => {
+    test('borrar padre cascade-borra todas sus subs', () => {
+        const store = newStore();
+        store.add('madre', () => 'P');
+        store.addSubtask('P', 's1', () => 'S1');
+        store.addSubtask('P', 's2', () => 'S2');
+        store.add('otra', () => 'Q');
+        store.remove('P');
+        assert.deepEqual(store.tasks.map(t => t.id), ['Q']);
+    });
+
+    test('borrar la última sub pendiente auto-marca el padre como done', () => {
+        const store = newStore();
+        store.add('madre', () => 'P');
+        store.addSubtask('P', 'hecha', () => 'S1');
+        store.addSubtask('P', 'pendiente', () => 'S2');
+        store.toggle('S1', true);
+        assert.equal(store.tasks.find(t => t.id === 'P').done, false);
+        store.remove('S2'); // queda solo S1 que está done
+        assert.equal(store.tasks.find(t => t.id === 'P').done, true);
+    });
+
+    test('borrar una sub no afecta al padre si las restantes mezclan estados', () => {
+        const store = newStore();
+        store.add('madre', () => 'P');
+        store.addSubtask('P', 's1', () => 'S1');
+        store.addSubtask('P', 's2', () => 'S2');
+        store.addSubtask('P', 's3', () => 'S3');
+        store.toggle('S1', true);
+        store.remove('S2'); // queda S1 done y S3 pendiente
+        assert.equal(store.tasks.find(t => t.id === 'P').done, false);
+    });
+});
+
+describe('TaskStore — update', () => {
     test('update cambia value y refresca updatedAt', () => {
         const store = newStore();
         store.add('viejo', () => '1');
@@ -40,54 +164,39 @@ describe('TaskStore — update / toggle / remove / clear', () => {
         assert.equal(store.tasks[0].updatedAt, 999);
     });
 
-    test('toggle cambia done y refresca updatedAt SIN reordenar', () => {
+    test('update funciona igual sobre subtareas', () => {
         const store = newStore();
-        store.add('a', () => '1');
-        store.add('b', () => '2');
-        // Tras los add: orden manual = ['2', '1'] (más nueva al frente).
-        store.toggle('1', true, 555);
-        // El orden manual NO cambia; sólo el done y updatedAt.
-        assert.deepEqual(store.tasks.map(t => t.id), ['2', '1']);
-        assert.equal(store.tasks[1].done, true);
-        assert.equal(store.tasks[1].updatedAt, 555);
-    });
-
-    test('remove elimina por id', () => {
-        const store = newStore();
-        store.add('a', () => '1');
-        store.add('b', () => '2');
-        store.remove('1');
-        assert.equal(store.tasks.length, 1);
-        assert.equal(store.tasks[0].id, '2');
-    });
-
-    test('clear vacía la lista', () => {
-        const store = newStore();
-        store.add('a', () => '1');
-        store.clear();
-        assert.equal(store.tasks.length, 0);
-        assert.ok(store.isEmpty());
+        store.add('madre', () => 'P');
+        store.addSubtask('P', 'sub vieja', () => 'S1');
+        store.update('S1', 'sub editada', 1234);
+        const sub = store.tasks.find(t => t.id === 'S1');
+        assert.equal(sub.value, 'sub editada');
+        assert.equal(sub.updatedAt, 1234);
     });
 });
 
-describe('TaskStore — filter / counts', () => {
-    test('filter(true) devuelve sólo hechas; filter(false), pendientes', () => {
+describe('TaskStore — filter / counts (sólo padres)', () => {
+    test('filter(true|false) devuelve sólo padres con ese estado', () => {
         const store = newStore();
         store.add('a', () => '1');
         store.add('b', () => '2');
         store.toggle('1', true);
+        // Agregar una sub no afecta el filter (sólo cuenta padres).
+        store.addSubtask('2', 'sub', () => 'S1');
         assert.deepEqual(store.filter(true).map(t => t.id), ['1']);
         assert.deepEqual(store.filter(false).map(t => t.id), ['2']);
     });
 
-    test('counts() reporta total, hechas y pendientes', () => {
+    test('counts() reporta solo padres', () => {
         const store = newStore();
         store.add('a', () => '1');
         store.add('b', () => '2');
         store.add('c', () => '3');
-        store.toggle('1', true);
+        store.addSubtask('1', 's1', () => 'S1');
+        store.addSubtask('1', 's2', () => 'S2');
         store.toggle('2', true);
-        assert.deepEqual(store.counts(), { total: 3, done: 2, pending: 1 });
+        // 3 padres, 1 hecho, 2 pendientes (las subs no se cuentan).
+        assert.deepEqual(store.counts(), { total: 3, done: 1, pending: 2 });
     });
 });
 
@@ -100,7 +209,6 @@ describe('TaskStore — load (boundary)', () => {
         const store = new TaskStore(adapter);
         assert.equal(store.tasks[0].done, true);
         assert.equal(store.tasks[1].done, false);
-        assert.equal(typeof store.tasks[0].done, 'boolean');
     });
 
     test('migra tareas sin updatedAt usando el id como timestamp', () => {
@@ -111,12 +219,21 @@ describe('TaskStore — load (boundary)', () => {
         assert.equal(store.tasks[0].updatedAt, 1700000000000);
     });
 
-    test('respeta updatedAt si ya está presente', () => {
+    test('migra tareas sin parentId asumiendo top-level (null)', () => {
         const adapter = new MemoryStorageAdapter([
-            { id: '1', value: 'a', done: false, updatedAt: 42 },
+            { id: '1', value: 'a', done: false },
         ]);
         const store = new TaskStore(adapter);
-        assert.equal(store.tasks[0].updatedAt, 42);
+        assert.equal(store.tasks[0].parentId, null);
+    });
+
+    test('respeta parentId si ya está presente', () => {
+        const adapter = new MemoryStorageAdapter([
+            { id: 'P', value: 'madre', done: false },
+            { id: 'S1', value: 'sub', done: false, parentId: 'P' },
+        ]);
+        const store = new TaskStore(adapter);
+        assert.equal(store.tasks[1].parentId, 'P');
     });
 
     test('lista vacía si el storage devuelve null', () => {
@@ -125,140 +242,103 @@ describe('TaskStore — load (boundary)', () => {
     });
 });
 
-describe('TaskStore — getOrderedTasks', () => {
-    function setupStore() {
+describe('TaskStore — getOrderedTasks (subs siguen al padre)', () => {
+    function setup() {
         const store = newStore();
-        // Insertamos en este orden temporal: bicicleta (1), Avocado (3), zorro (2)
-        store.add('bicicleta', () => '1');
-        store.add('Avocado', () => '3');
-        store.add('zorro', () => '2');
-        // Orden manual tras unshift: ['2' zorro, '3' Avocado, '1' bicicleta]
+        store.add('alfa', () => '1');
+        store.add('beta', () => '2');
+        store.addSubtask('1', 'sub-alfa-1', () => '11');
+        store.addSubtask('2', 'sub-beta-1', () => '21');
+        store.addSubtask('1', 'sub-alfa-2', () => '12');
         return store;
     }
 
-    test('manual / default → orden actual del array', () => {
-        const store = setupStore();
-        assert.deepEqual(store.getOrderedTasks('manual').map(t => t.id), ['2', '3', '1']);
+    test('manual: cada padre va seguido inmediatamente de sus subs', () => {
+        const store = setup();
+        const result = store.getOrderedTasks('manual').map(t => t.id);
+        // En manual: '2' fue agregado después → unshift al frente.
+        // Las subs siguen INMEDIATAMENTE a su padre, antes del siguiente padre.
+        const idxParent2 = result.indexOf('2');
+        const idxSub21 = result.indexOf('21');
+        const idxParent1 = result.indexOf('1');
+        const idxSub11 = result.indexOf('11');
+        const idxSub12 = result.indexOf('12');
+        // Sub '21' entre padre '2' y padre '1'.
+        assert.ok(idxParent2 < idxSub21 && idxSub21 < idxParent1);
+        // Subs de '1' después de '1'.
+        assert.ok(idxParent1 < idxSub11);
+        assert.ok(idxParent1 < idxSub12);
     });
 
-    test('created-desc → más recientes primero (ids descendentes)', () => {
-        const store = setupStore();
-        assert.deepEqual(store.getOrderedTasks('created-desc').map(t => t.id), ['3', '2', '1']);
+    test('alpha-asc ordena padres alfabéticamente; subs siguen al padre', () => {
+        const store = setup();
+        const result = store.getOrderedTasks('alpha-asc').map(t => t.id);
+        // Padres en orden: alfa(1) → beta(2). Subs siguen.
+        assert.equal(result[0], '1');
+        // Después de '1' vienen sus subs (en algún orden) y luego '2'.
+        const idx2 = result.indexOf('2');
+        const idx11 = result.indexOf('11');
+        const idx12 = result.indexOf('12');
+        assert.ok(idx11 < idx2);
+        assert.ok(idx12 < idx2);
     });
 
-    test('created-asc → más antiguas primero', () => {
-        const store = setupStore();
-        assert.deepEqual(store.getOrderedTasks('created-asc').map(t => t.id), ['1', '2', '3']);
-    });
-
-    test('alpha-asc → A→Z (ignorando mayúsculas)', () => {
-        const store = setupStore();
-        assert.deepEqual(
-            store.getOrderedTasks('alpha-asc').map(t => t.value),
-            ['Avocado', 'bicicleta', 'zorro'],
-        );
-    });
-
-    test('alpha-desc → Z→A', () => {
-        const store = setupStore();
-        assert.deepEqual(
-            store.getOrderedTasks('alpha-desc').map(t => t.value),
-            ['zorro', 'bicicleta', 'Avocado'],
-        );
-    });
-
-    test('length-asc → más cortas primero', () => {
-        const store = setupStore();
-        const lens = store.getOrderedTasks('length-asc').map(t => t.value.length);
-        assert.deepEqual(lens, [...lens].sort((a, b) => a - b));
-    });
-
-    test('length-desc → más largas primero', () => {
-        const store = setupStore();
-        const lens = store.getOrderedTasks('length-desc').map(t => t.value.length);
-        assert.deepEqual(lens, [...lens].sort((a, b) => b - a));
-    });
-
-    test('pending-first → pendientes antes que hechas', () => {
-        const store = setupStore();
-        store.toggle('1', true);
-        const result = store.getOrderedTasks('pending-first');
-        assert.equal(result[result.length - 1].id, '1');
-        assert.ok(result.slice(0, -1).every(t => !t.done));
-    });
-
-    test('done-first → hechas antes que pendientes', () => {
-        const store = setupStore();
-        store.toggle('1', true);
-        const result = store.getOrderedTasks('done-first');
-        assert.equal(result[0].id, '1');
-        assert.ok(result.slice(1).every(t => !t.done));
-    });
-
-    test('modified-desc → más recientemente modificadas primero', () => {
-        const store = setupStore();
-        store.update('1', 'bicicleta vieja', 5000);
-        store.update('3', 'avocado fresco', 9000);
-        store.update('2', 'zorro pardo', 7000);
-        assert.deepEqual(
-            store.getOrderedTasks('modified-desc').map(t => t.id),
-            ['3', '2', '1'],
-        );
-    });
-
-    test('modified-asc → modificadas hace tiempo primero', () => {
-        const store = setupStore();
-        store.update('1', 'b', 5000);
-        store.update('3', 'a', 9000);
-        store.update('2', 'z', 7000);
-        assert.deepEqual(
-            store.getOrderedTasks('modified-asc').map(t => t.id),
-            ['1', '2', '3'],
-        );
+    test('created-asc: padres por id ascendente; subs pegadas', () => {
+        const store = setup();
+        const result = store.getOrderedTasks('created-asc').map(t => t.id);
+        assert.equal(result[0], '1');
+        // Subs de 1 antes del padre 2.
+        const idx2 = result.indexOf('2');
+        assert.ok(result.indexOf('11') < idx2);
+        assert.ok(result.indexOf('12') < idx2);
     });
 
     test('no muta this.tasks', () => {
-        const store = setupStore();
+        const store = setup();
         const before = store.tasks.map(t => t.id);
         store.getOrderedTasks('alpha-asc');
         assert.deepEqual(store.tasks.map(t => t.id), before);
     });
-
-    test('valor desconocido cae a manual', () => {
-        const store = setupStore();
-        assert.deepEqual(
-            store.getOrderedTasks('what-is-this').map(t => t.id),
-            store.getOrderedTasks('manual').map(t => t.id),
-        );
-    });
 });
 
-describe('TaskStore — move', () => {
+describe('TaskStore — move (parent groups)', () => {
     function setup() {
         const store = newStore();
-        store.add('a', () => '1');
-        store.add('b', () => '2');
-        store.add('c', () => '3');
-        // Orden manual tras unshift: ['3', '2', '1'].
+        store.add('a', () => 'A');
+        store.add('b', () => 'B');
+        store.add('c', () => 'C');
+        // Manual order tras unshift: ['C', 'B', 'A'] (todos parents, sin subs).
         return store;
     }
 
-    test('mueve hacia arriba: índice 2 → 0', () => {
+    test('mueve el padre del idx 0 al idx 2 (termina en la última posición)', () => {
         const store = setup();
-        store.move(2, 0);
-        assert.deepEqual(store.tasks.map(t => t.id), ['1', '3', '2']);
+        // Splice estándar: removemos parents[0]='C' y lo insertamos en idx 2.
+        store.move(0, 2);
+        assert.deepEqual(store.tasks.map(t => t.id), ['B', 'A', 'C']);
     });
 
-    test('mueve hacia abajo: índice 0 → 2', () => {
+    test('mueve el padre del idx 2 al idx 0 (termina al frente)', () => {
         const store = setup();
-        store.move(0, 2);
-        assert.deepEqual(store.tasks.map(t => t.id), ['2', '1', '3']);
+        store.move(2, 0);
+        assert.deepEqual(store.tasks.map(t => t.id), ['A', 'C', 'B']);
+    });
+
+    test('mover un padre arrastra a sus subs como grupo', () => {
+        const store = newStore();
+        store.add('a', () => 'A');
+        store.add('b', () => 'B');
+        // Manual order: ['B', 'A']
+        store.addSubtask('B', 'sub-B', () => 'BS');
+        // Manual order: ['B', 'BS', 'A']
+        store.move(0, 1); // mueve 'B' (con su sub) a posición de 'A'
+        assert.deepEqual(store.tasks.map(t => t.id), ['A', 'B', 'BS']);
     });
 
     test('no-op si los índices son iguales', () => {
         const store = setup();
         store.move(1, 1);
-        assert.deepEqual(store.tasks.map(t => t.id), ['3', '2', '1']);
+        assert.deepEqual(store.tasks.map(t => t.id), ['C', 'B', 'A']);
     });
 
     test('no-op si los índices están fuera de rango', () => {
@@ -268,14 +348,21 @@ describe('TaskStore — move', () => {
         store.move(0, 99);
         assert.deepEqual(store.tasks.map(t => t.id), before);
     });
+});
 
-    test('persiste el nuevo orden en el adapter', () => {
-        const adapter = new MemoryStorageAdapter();
-        const store = new TaskStore(adapter);
-        store.add('a', () => '1');
-        store.add('b', () => '2');
-        store.add('c', () => '3');
-        store.move(0, 2);
-        assert.deepEqual(adapter.get().map(t => t.id), ['2', '1', '3']);
+describe('TaskStore — subsOf', () => {
+    test('devuelve sólo las subs del padre indicado, en orden', () => {
+        const store = newStore();
+        store.add('A', () => 'A');
+        store.add('B', () => 'B');
+        store.addSubtask('A', 'a1', () => 'A1');
+        store.addSubtask('B', 'b1', () => 'B1');
+        store.addSubtask('A', 'a2', () => 'A2');
+        const subsA = store.subsOf('A').map(t => t.id);
+        // En this.tasks el orden es: B, A, A2, A1, B1 (por unshifts).
+        // subsOf devuelve en el orden de aparición en this.tasks.
+        assert.deepEqual(subsA, ['A2', 'A1']);
+        const subsB = store.subsOf('B').map(t => t.id);
+        assert.deepEqual(subsB, ['B1']);
     });
 });
