@@ -1170,14 +1170,26 @@ solo se ajustan paddings y gaps que en mobile sienten apretados.
   .task-days-old {
     display: none;
   }
-  /* El meta se alinea a la derecha en su línea propia. */
+  /* Layout en 3 líneas para tareas padre:
+       L1: título full-width
+       L2: chevron + toggle + input "+ subtarea" (al lado del toggle)
+       L3: action-group centrado
+     Subtareas: L1 título, L2 toggle (sin chevron ni form), L3 acciones
+     centradas. */
   .grocery-item .meta {
-    margin-left: auto;
-  }
-  /* Subtask add form (input "+ subtarea") también baja a su propia línea. */
-  .subtask-add-form {
     flex: 1 1 100%;
-    margin-top: 0.25rem;
+    margin-left: 0;
+    justify-content: center;
+  }
+  .grocery-item .action-group {
+    justify-content: center;
+  }
+  /* El input para agregar subtarea queda al lado del toggle, ocupando
+     el espacio restante de la línea. */
+  .subtask-add-form {
+    flex: 1 1 0;
+    min-width: 6rem;
+    margin-top: 0;
   }
   .subtask-add-input {
     width: 100%;
