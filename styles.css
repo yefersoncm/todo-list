@@ -542,7 +542,10 @@ Paginación
   transition: var(--transition);
   padding: 0.25rem 1rem;
   border-radius: var(--radius);
-  text-transform: capitalize;
+}
+/* Capitaliza SOLO la primera letra del título (no cada palabra). */
+.grocery-item .title::first-letter {
+  text-transform: uppercase;
 }
 .grocery-item .title {
   flex: 1;
@@ -772,7 +775,6 @@ Paginación
   color: var(--clr-grey-1);
   font: inherit;
   letter-spacing: 2px;
-  text-transform: capitalize;
   box-shadow: 0 0 0 3px var(--clr-primary-10);
 }
 .title-edit-input:focus {
