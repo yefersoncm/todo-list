@@ -350,6 +350,112 @@ describe('TaskStore — move (parent groups)', () => {
     });
 });
 
+describe('TaskStore — moveToParent (re-parent / promote / demote)', () => {
+    test('re-parent: una sub se mueve a otro padre', () => {
+        const store = newStore();
+        store.add('A', () => 'A');
+        store.add('B', () => 'B');
+        store.addSubtask('A', 'sub-A', () => 'SA');
+        const ok = store.moveToParent('SA', 'B');
+        assert.ok(ok);
+        const sub = store.tasks.find(t => t.id === 'SA');
+        assert.equal(sub.parentId, 'B');
+        const idxB = store.tasks.findIndex(t => t.id === 'B');
+        assert.equal(store.tasks[idxB + 1].id, 'SA');
+    });
+
+    test('promote: una sub se vuelve top-level (parentId=null) y queda al frente', () => {
+        const store = newStore();
+        store.add('A', () => 'A');
+        store.addSubtask('A', 'sub-A', () => 'SA');
+        const ok = store.moveToParent('SA', null);
+        assert.ok(ok);
+        const promoted = store.tasks.find(t => t.id === 'SA');
+        assert.equal(promoted.parentId, null);
+        assert.equal(store.tasks[0].id, 'SA');
+    });
+
+    test('demote: top-level SIN subs se vuelve sub de otro padre', () => {
+        const store = newStore();
+        store.add('A', () => 'A');
+        store.add('B', () => 'B');
+        const ok = store.moveToParent('A', 'B');
+        assert.ok(ok);
+        assert.equal(store.tasks.find(t => t.id === 'A').parentId, 'B');
+    });
+
+    test('rechaza demote de un padre CON subs (crearía subsub)', () => {
+        const store = newStore();
+        store.add('A', () => 'A');
+        store.add('B', () => 'B');
+        store.addSubtask('A', 'sub-A', () => 'SA');
+        const ok = store.moveToParent('A', 'B');
+        assert.equal(ok, false);
+        assert.equal(store.tasks.find(t => t.id === 'A').parentId, null);
+    });
+
+    test('rechaza moverse sobre sí mismo', () => {
+        const store = newStore();
+        store.add('A', () => 'A');
+        assert.equal(store.moveToParent('A', 'A'), false);
+    });
+
+    test('rechaza si el nuevo padre no existe', () => {
+        const store = newStore();
+        store.add('A', () => 'A');
+        store.addSubtask('A', 'sub', () => 'SA');
+        assert.equal(store.moveToParent('SA', 'NOPE'), false);
+    });
+
+    test('rechaza si el nuevo padre es una sub (no top-level)', () => {
+        const store = newStore();
+        store.add('A', () => 'A');
+        store.add('B', () => 'B');
+        store.addSubtask('A', 'sa', () => 'SA');
+        store.addSubtask('B', 'sb', () => 'SB');
+        assert.equal(store.moveToParent('SA', 'SB'), false);
+    });
+
+    test('no-op si la sub ya tiene ese padre', () => {
+        const store = newStore();
+        store.add('A', () => 'A');
+        store.addSubtask('A', 'sub', () => 'SA');
+        assert.equal(store.moveToParent('SA', 'A'), false);
+    });
+
+    test('promote re-evalúa al padre viejo (puede pasar a done)', () => {
+        const store = newStore();
+        store.add('A', () => 'A');
+        store.addSubtask('A', 'hecha', () => 'S1');
+        store.addSubtask('A', 'pendiente', () => 'S2');
+        store.toggle('S1', true);
+        assert.equal(store.tasks.find(t => t.id === 'A').done, false);
+        store.moveToParent('S2', null);
+        assert.equal(store.tasks.find(t => t.id === 'A').done, true);
+    });
+
+    test('re-parent re-evalúa al padre nuevo (puede re-abrir si estaba done)', () => {
+        const store = newStore();
+        store.add('A', () => 'A');
+        store.add('B', () => 'B');
+        store.addSubtask('B', 'sub-B', () => 'SB');
+        store.toggle('B', true);
+        assert.equal(store.tasks.find(t => t.id === 'B').done, true);
+        store.addSubtask('A', 'pendiente', () => 'SA');
+        store.moveToParent('SA', 'B');
+        assert.equal(store.tasks.find(t => t.id === 'B').done, false);
+    });
+
+    test('actualiza updatedAt en la tarea movida', () => {
+        const store = newStore();
+        store.add('A', () => 'A');
+        store.add('B', () => 'B');
+        store.addSubtask('A', 'sub', () => 'SA');
+        store.moveToParent('SA', 'B', 9999);
+        assert.equal(store.tasks.find(t => t.id === 'SA').updatedAt, 9999);
+    });
+});
+
 describe('TaskStore — subsOf', () => {
     test('devuelve sólo las subs del padre indicado, en orden', () => {
         const store = newStore();
