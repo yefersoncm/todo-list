@@ -27,6 +27,7 @@ Documento actualizado después de cada fase para proteger contra cortes de energ
 | 6.3 | Scroll horizontal por elapsed-time | DONE | — | `.grocery-item` y `.meta` con `min-width: 0` y `flex-shrink: 1` (era 0); `.task-days-old min-width: 0` en `(max-width: 768px)`. |
 | 6.4 | Chevrones ↑/↓ sin acción ocupando espacio | DONE | — | Antes se renderizaban siempre disabled si sort != manual. Ahora se omiten del DOM cuando no aplican (sort != manual o no hay vecino). Promote (⬅) sigue siempre visible en subs. |
 | 6.5 | Reordenar layout mobile en 3 líneas | DONE | — | L1 título, L2 chevron+toggle+input subtarea (compacto al lado), L3 action-group centrado. `.meta` con `flex: 1 1 100%` y `justify-content: center`. `.subtask-add-form` con `flex: 1 1 0; min-width: 6rem`. |
+| 6.6 | Header de lista (Colapsar/Expandir/Limpiar/Sort/PageSize) amontonado | DONE | — | En `(max-width: 480px)`: `.task-count-row` flex-column, contador centrado. Bulk-collapse en row propia con los 2 botones 50/50. Clear-btn row propia full-width. Sort y PageSize cada uno en row full-width con space-between. |
 
 ## Cambios concretos por archivo (acumulados)
 

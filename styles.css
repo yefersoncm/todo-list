@@ -1138,6 +1138,44 @@ solo se ajustan paddings y gaps que en mobile sienten apretados.
   .grocery-item .meta {
     gap: 0.4rem;
   }
+  /* Header del listado en columna: contador centrado, luego bulk-collapse,
+     limpiar, sort y page-size como rows full-width independientes. */
+  .task-count-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+  .task-count-row .task-count {
+    text-align: center;
+    margin: 0;
+  }
+  .task-count-controls {
+    justify-content: center;
+    gap: 0.5rem;
+  }
+  /* Colapsar + Expandir lado a lado en su propia row, cada uno la mitad. */
+  .bulk-collapse:not([hidden]) {
+    display: flex;
+    flex: 1 1 100%;
+    gap: 0.4rem;
+    justify-content: center;
+  }
+  .bulk-collapse > .bulk-btn {
+    flex: 1 1 0;
+    justify-content: center;
+  }
+  /* Limpiar lista en su propia row, full-width centrado. */
+  .task-count-controls > .clear-btn {
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+  /* Sort y Page-size cada uno en row full-width con label a la izquierda
+     y combo a la derecha. */
+  .sort-control,
+  .page-size-control {
+    flex: 1 1 100%;
+    justify-content: space-between;
+  }
   /* Toast a la parte inferior en mobile: arriba choca con el form de
      'Agregar' y aunque ya no bloquea taps (pointer-events:none), tapaba
      visualmente el botón. */
