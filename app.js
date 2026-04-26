@@ -3,6 +3,7 @@ import { Combobox } from './combobox.js';
 import { createIcon } from './icons.js';
 import { elapsedComponents, formatElapsed } from './elapsed.js';
 import { paginate, ELLIPSIS } from './pagination.js';
+import { ToastManager } from './toast.js';
 
 const PAGE_SIZE_KEY = 'todo-list:pageSize';
 const VALID_PAGE_SIZES = [10, 20, 50, 100];
@@ -13,7 +14,6 @@ const DEFAULT_SORT = 'created-desc';
 
 // ****** SELECTORES DE ELEMENTOS **********
 const DOM = {
-    alert: document.querySelector('.alert1'),
     form: document.querySelector('.grocery-form'),
     groceryInput: document.getElementById('grocery'),
     submitBtn: document.querySelector('.submit-btn'),
@@ -27,6 +27,7 @@ const DOM = {
     pageSizeRoot: document.getElementById('pageSize'),
     paginationNav: document.querySelector('.pagination'),
     taskCountDisplay: document.querySelector('.task-count'),
+    toastContainer: document.getElementById('toastContainer'),
     confirmModal: document.getElementById('confirmModal'),
     confirmModalText: document.getElementById('confirmModalText'),
 };
@@ -95,6 +96,7 @@ class TaskManager {
         this.sortBy = loadSortBy();
         this.pageSize = loadPageSize();
         this.currentPage = 1;
+        this.toast = new ToastManager(DOM.toastContainer);
         this.filter = new Combobox(DOM.taskFilterRoot, {
             onChange: () => this.handleFilterChange(),
         });
@@ -521,13 +523,10 @@ class TaskManager {
 
     // ****** UTILIDADES **********
 
-    displayAlert(text, action) {
-        DOM.alert.textContent = text;
-        DOM.alert.classList.add(`alert-${action}`);
-        setTimeout(() => {
-            DOM.alert.textContent = "";
-            DOM.alert.classList.remove(`alert-${action}`);
-        }, 1000);
+    displayAlert(text, type) {
+        // Delegado al ToastManager — el método se conserva como fachada
+        // para no tocar todos los call sites.
+        this.toast.show(text, type);
     }
 
     setBackToDefault() {
