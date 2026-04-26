@@ -64,7 +64,7 @@ class TaskManager {
     handleToggleDoneTasks() {
         if (DOM.checkBoxCompletadas.checked) {
             DOM.checkBoxNoCompletadas.checked = false;
-            this.renderFilteredTasks("true");
+            this.renderFilteredTasks(true);
         } else {
             this.renderTasks();
         }
@@ -73,7 +73,7 @@ class TaskManager {
     handleToggleUndoneTasks() {
         if (DOM.checkBoxNoCompletadas.checked) {
             DOM.checkBoxCompletadas.checked = false;
-            this.renderFilteredTasks("false");
+            this.renderFilteredTasks(false);
         } else {
             this.renderTasks();
         }
@@ -82,14 +82,13 @@ class TaskManager {
     handleMarkTaskAsDone(e) {
         const element = e.currentTarget.closest('.grocery-item');
         const id = element.dataset.id;
-        let isDone = element.dataset.done === "true";
-        isDone = !isDone;
+        const isDone = element.dataset.done !== "true";
 
         element.classList.toggle("done", isDone);
         element.dataset.done = String(isDone);
         e.currentTarget.checked = isDone;
 
-        this.updateTaskStatus(id, String(isDone));
+        this.updateTaskStatus(id, isDone);
         this.displayAlert(isDone ? 'Tarea marcada como hecha' : 'Tarea pendiente', isDone ? 'success' : 'warning');
     }
 
@@ -118,9 +117,8 @@ class TaskManager {
     addTask(value) {
         // El ID es el timestamp epoch, que ahora también representa la fecha de creación
         const id = new Date().getTime().toString();
-        const done = "false";
         // Ya no necesitamos la propiedad 'createdAt' separada
-        this.tasks.push({ id, value, done });
+        this.tasks.push({ id, value, done: false });
         this.sortAndSaveTasks();
         this.displayAlert("Item agregado a la lista", "success");
         this.renderTasks();
@@ -169,9 +167,9 @@ class TaskManager {
         this.updateTaskCount();
     }
 
-    renderFilteredTasks(status) {
+    renderFilteredTasks(showDone) {
         DOM.list.innerHTML = '';
-        const filteredTasks = this.tasks.filter(task => task.done === status);
+        const filteredTasks = this.tasks.filter(task => task.done === showDone);
         if (filteredTasks.length > 0) {
             // Pasamos 'item.id' como 'creationTimestamp' para el cálculo de días
             filteredTasks.forEach(item => this.createListItem(item.id, item.value, item.done, item.id));
@@ -179,7 +177,7 @@ class TaskManager {
         } else {
             DOM.container.classList.remove("show-container");
         }
-        this.updateTaskCount(status);
+        this.updateTaskCount(showDone);
     }
 
     // La función createListItem ahora usa 'creationTimestamp' (que es el ID)
@@ -196,7 +194,7 @@ class TaskManager {
         element.innerHTML = `
             <p class="title">${value}</p>
             <div class="btn-container form-check form-switch">
-                <input class="form-check-input" type="checkbox" ${done === "true" ? "checked" : ""}>
+                <input class="form-check-input" type="checkbox" ${done ? "checked" : ""}>
                 <button type="button" class="edit-btn">
                     <i class="fas fa-edit"></i>
                 </button>
@@ -207,7 +205,7 @@ class TaskManager {
             </div>
         `;
 
-        if (done === "true") {
+        if (done) {
             element.classList.add('done');
         } else {
             element.classList.remove('done');
@@ -262,15 +260,15 @@ class TaskManager {
     updateTaskCount(filterStatus = null) {
         if (!DOM.taskCountDisplay) return;
 
-        let totalTasks = this.tasks.length;
-        let completedTasks = this.tasks.filter(task => task.done === "true").length;
-        let uncompletedTasks = totalTasks - completedTasks;
+        const totalTasks = this.tasks.length;
+        const completedTasks = this.tasks.filter(task => task.done).length;
+        const uncompletedTasks = totalTasks - completedTasks;
 
         let displayText = `Total: ${totalTasks}`;
 
-        if (filterStatus === "true") {
+        if (filterStatus === true) {
             displayText = `Completadas: ${completedTasks}`;
-        } else if (filterStatus === "false") {
+        } else if (filterStatus === false) {
             displayText = `Pendientes: ${uncompletedTasks}`;
         }
 
@@ -280,14 +278,18 @@ class TaskManager {
     // ****** LOCAL STORAGE **********
 
     getLocalStorage() {
-        return localStorage.getItem("list")
-            ? JSON.parse(localStorage.getItem("list"))
-            : [];
+        const raw = localStorage.getItem("list");
+        if (!raw) return [];
+        // Boundary: normaliza done a booleano por si vienen registros antiguos como "true"/"false"
+        return JSON.parse(raw).map(item => ({
+            ...item,
+            done: item.done === true || item.done === "true",
+        }));
     }
 
     sortAndSaveTasks() {
-        let doneTasks = this.tasks.filter(item => item.done === "true");
-        let undoneTasks = this.tasks.filter(item => item.done === "false");
+        const doneTasks = this.tasks.filter(item => item.done);
+        const undoneTasks = this.tasks.filter(item => !item.done);
 
         // Ordena cada grupo por ID (timestamp) para mantener el orden de creación
         doneTasks.sort((a, b) => parseInt(a.id) - parseInt(b.id));
