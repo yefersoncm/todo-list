@@ -646,20 +646,9 @@ Paginación
 .promote-zone-label {
   font-style: italic;
 }
-.grocery-item:hover {
-  color: var(--clr-grey-5);
-  background: var(--clr-grey-10);
-}
-.grocery-item:hover .title {
-  color: var(--clr-grey-5);
-}
-.title {
-  margin-bottom: 0;
-  color: var(--clr-grey-1);
-  letter-spacing: 2px;
-  transition: var(--transition);
-  cursor: text;
-}
+/* .task ya define hover en components.css. .task__title cubre el title.
+   Solo conservamos cursor: text que el design no setea. */
+.title { cursor: text; }
 /* Input que reemplaza al .title cuando la fila entra en modo edición
    inline (doble-click o lápiz). Hereda el flex: 1 del .title para
    ocupar el mismo espacio horizontal. */
@@ -679,38 +668,7 @@ Paginación
 .title-edit-input:focus {
   outline: none;
 }
-.edit-btn,
-.delete-btn {
-    width: 2rem;
-    height: 2rem;
-    padding: 0;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: transparent;
-    border: none;
-    border-radius: 0.4rem;
-    cursor: pointer;
-    color: var(--clr-grey-5);
-    transition: var(--transition);
-}
-.edit-btn:hover {
-    color: var(--clr-primary-3);
-    background: var(--clr-primary-10);
-}
-.delete-btn:hover {
-    color: var(--clr-red-dark);
-    background: hsla(360, 67%, 44%, 0.08);
-}
-.edit-btn:focus-visible,
-.delete-btn:focus-visible {
-    outline: none;
-    box-shadow: 0 0 0 3px var(--clr-primary-10);
-}
-.edit-btn .icon,
-.delete-btn .icon {
-    display: block;
-}
+/* .edit-btn / .delete-btn ahora usan .btn-icon (+ --danger) desde HTML. */
 /* .bulk-btn-danger ahora usa .btn .btn--danger desde HTML. */
 .bulk-btn-icon {
   display: inline-flex;
