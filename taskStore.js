@@ -162,6 +162,24 @@ export class TaskStore {
     }
 
     /**
+     * Reemplaza this.tasks con un snapshot previo. Usado por la acción
+     * 'Deshacer' del clear. El snapshot debe ser un array compatible
+     * con load() (objetos con id/value/done/parentId/updatedAt).
+     */
+    restore(snapshot) {
+        if (!Array.isArray(snapshot)) return;
+        this.tasks = snapshot.map(t => ({ ...t }));
+        this.save();
+    }
+
+    /**
+     * Snapshot inmutable del estado actual de tareas (deep copy).
+     */
+    snapshot() {
+        return this.tasks.map(t => ({ ...t }));
+    }
+
+    /**
      * Mueve un padre (con sus subs como grupo) de fromParentIdx a
      * toParentIdx. Los índices se refieren a la lista de padres
      * (no a this.tasks). Semántica estándar de splice: el padre

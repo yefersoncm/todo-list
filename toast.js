@@ -21,20 +21,23 @@ export class ToastManager {
         this._idCounter = 0;
     }
 
-    show(text, type = 'success') {
+    /**
+     * options.action: { label, onClick } — agrega un botón inline al
+     * toast que ejecuta onClick y cierra. Útil para "Deshacer" tras
+     * acciones destructivas.
+     */
+    show(text, type = 'success', options = {}) {
         // Si ya hay 5 visibles, cerrar la más antigua primero.
         while (this.toasts.length >= MAX_TOASTS) {
             this._dismiss(this.toasts[0].id);
         }
 
         const id = ++this._idCounter;
-        const element = this._buildToast(id, text, type);
+        const element = this._buildToast(id, text, type, options);
 
         // Inserta arriba (más nueva primero en el DOM).
         this.container.insertBefore(element, this.container.firstChild);
 
-        // Forzamos un reflow para que la transición de entrada corra al
-        // pasar de estado inicial (off-screen) → 'is-visible'.
         // eslint-disable-next-line no-unused-expressions
         element.offsetHeight;
         element.classList.add('is-visible');
@@ -43,11 +46,8 @@ export class ToastManager {
         this.toasts.push({ id, element, timer });
     }
 
-    _buildToast(id, text, type) {
+    _buildToast(id, text, type, options = {}) {
         const el = document.createElement('div');
-        // Prefijo 'app-toast' para evitar colisión con la clase .toast de
-        // Bootstrap (cargado por CDN) que aplicaría opacity:0 con mayor
-        // especificidad que nuestra .is-visible.
         el.className = `app-toast app-toast-${type}`;
         el.setAttribute('role', 'status');
         el.setAttribute('aria-live', 'polite');
@@ -64,7 +64,19 @@ export class ToastManager {
         closeBtn.appendChild(createIcon('x', { size: 14 }));
         closeBtn.addEventListener('click', () => this._dismiss(id));
 
-        el.append(message, closeBtn);
+        el.append(message);
+        if (options.action && typeof options.action.onClick === 'function') {
+            const actionBtn = document.createElement('button');
+            actionBtn.type = 'button';
+            actionBtn.className = 'app-toast-action';
+            actionBtn.textContent = options.action.label || 'Deshacer';
+            actionBtn.addEventListener('click', () => {
+                options.action.onClick();
+                this._dismiss(id);
+            });
+            el.appendChild(actionBtn);
+        }
+        el.appendChild(closeBtn);
         return el;
     }
 

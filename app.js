@@ -244,10 +244,26 @@ class TaskManager {
         }
         const ok = await confirmDialog("¿Estás seguro de que quieres limpiar toda la lista?");
         if (!ok) return;
+        // Snapshot ANTES del clear para poder revertir si el usuario
+        // presiona 'Deshacer' en el toast (5s de ventana).
+        const tasksSnapshot = this.store.snapshot();
+        const collapsedSnapshot = new Set(this.collapsedParents);
         this.store.clear();
         this.currentPage = 1;
         this.renderTasks();
-        this.displayAlert("Lista vacía", "danger");
+        this.toast.show("Lista vacía", "danger", {
+            action: {
+                label: 'Deshacer',
+                onClick: () => {
+                    this.store.restore(tasksSnapshot);
+                    this.collapsedParents = collapsedSnapshot;
+                    saveCollapsed(this.collapsedParents);
+                    this.currentPage = 1;
+                    this.renderTasks();
+                    this.displayAlert('Lista restaurada', 'success');
+                },
+            },
+        });
     }
 
     handleFilterChange() {

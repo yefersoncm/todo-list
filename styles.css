@@ -221,7 +221,7 @@ con mayor especificidad y haría invisibles nuestras notificaciones.
     position: relative;
     min-width: 16rem;
     max-width: 22rem;
-    padding: 0.75rem 2.25rem 0.75rem 1rem; /* extra a la derecha para la X */
+    padding: 0.75rem 1rem;
     border-radius: var(--radius);
     border-left: 4px solid currentColor;
     box-shadow: var(--light-shadow);
@@ -231,6 +231,9 @@ con mayor especificidad y haría invisibles nuestras notificaciones.
     transform: translateX(120%);
     opacity: 0;
     transition: transform 250ms ease-out, opacity 200ms ease-out;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
 }
 .app-toast.is-visible {
     transform: translateX(0);
@@ -244,14 +247,36 @@ con mayor especificidad y haría invisibles nuestras notificaciones.
     margin: 0;
     color: inherit;
     word-break: break-word;
+    flex: 1;
+    min-width: 0;
+}
+.app-toast-action {
+    margin-left: 0.5rem;
+    padding: 0.25rem 0.6rem;
+    background: transparent;
+    border: 1px solid currentColor;
+    border-radius: 0.3rem;
+    color: inherit;
+    font: inherit;
+    font-weight: 600;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: background-color 0.15s linear, color 0.15s linear;
+    flex: none;
+}
+.app-toast-action:hover {
+    background: currentColor;
+    color: var(--clr-white);
+}
+.app-toast-action:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px currentColor;
 }
 .app-toast-close {
-    position: absolute;
-    top: 0.4rem;
-    right: 0.4rem;
     width: 1.5rem;
     height: 1.5rem;
     padding: 0;
+    flex: none;
     display: inline-flex;
     align-items: center;
     justify-content: center;
