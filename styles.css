@@ -515,6 +515,14 @@ Paginación
   margin-bottom: 0;
   pointer-events: none;
 }
+/* Placeholder invisible del mismo tamaño que el chevron, para que las
+   tareas SIN subs alineen con las que SÍ tienen chevron. */
+.subtask-collapse-placeholder {
+  display: inline-block;
+  width: 1.4rem;
+  height: 1.4rem;
+  flex: none;
+}
 /* Chevron del padre que toggla la visibilidad del grupo de subs. */
 .subtask-collapse-btn {
   width: 1.4rem;
@@ -607,6 +615,9 @@ Paginación
 }
 
 /* Modo manual: cursor de agarre y feedback visual al arrastrar. */
+.grocery-list {
+  position: relative;
+}
 .grocery-item.is-draggable {
   cursor: grab;
 }
@@ -616,12 +627,36 @@ Paginación
 .grocery-item.is-dragging {
   opacity: 0.4;
 }
+/* Resalta el bloque entero del padre destino cuando arrastramos algo
+   que va a "caer" en ese bloque (Casos 2, 4, 5). */
+.grocery-item.is-block-target {
+  background: var(--clr-primary-10);
+}
+.grocery-item.is-block-target:not(.is-subtask) {
+  box-shadow: inset 0 0 0 1px var(--clr-primary-7);
+}
+/* Indicador de línea de inserción: barra horizontal en coordenadas de
+   viewport (position: fixed). Vive en el body para no interferir con
+   la resolución de `e.target` dentro del contenedor de drop. */
+.drop-indicator {
+  position: fixed;
+  height: 3px;
+  background: var(--clr-primary-5);
+  border-radius: 2px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 100ms linear;
+  z-index: 1200;
+  box-shadow: 0 0 6px rgba(73, 166, 233, 0.4);
+}
+.drop-indicator.is-visible {
+  opacity: 1;
+}
+/* Legacy (compat con código anterior por si quedaron rastros). */
 .grocery-item.is-drop-target {
   background: var(--clr-primary-10);
   box-shadow: inset 0 0 0 2px var(--clr-primary-5);
 }
-/* Drop "nest": indica re-parent/demote (drag de una sub o padre vacío
-   cayendo sobre otro padre). Color verde para diferenciar del reorder. */
 .grocery-item.is-drop-nest {
   background: hsl(125, 71%, 92%);
   box-shadow: inset 0 0 0 2px var(--clr-green-dark);
