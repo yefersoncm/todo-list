@@ -620,9 +620,40 @@ Paginación
   background: var(--clr-primary-10);
   box-shadow: inset 0 0 0 2px var(--clr-primary-5);
 }
+/* Drop "nest": indica re-parent/demote (drag de una sub o padre vacío
+   cayendo sobre otro padre). Color verde para diferenciar del reorder. */
+.grocery-item.is-drop-nest {
+  background: hsl(125, 71%, 92%);
+  box-shadow: inset 0 0 0 2px var(--clr-green-dark);
+}
 .grocery-item:focus-visible {
   outline: none;
   box-shadow: 0 0 0 3px var(--clr-primary-10);
+}
+/* Promote zone: aparece sobre la lista cuando se arrastra una sub.
+   Drop ahí promueve la sub a tarea principal. */
+.promote-zone {
+  margin: 0 0 0.6rem 0;
+  padding: 0.6rem 1rem;
+  border: 2px dashed var(--clr-primary-7);
+  border-radius: var(--radius);
+  background: var(--clr-primary-10);
+  color: var(--clr-primary-2);
+  font-size: 0.8rem;
+  text-align: center;
+  letter-spacing: 0.5px;
+  transition: background 0.15s linear, border-color 0.15s linear;
+}
+.promote-zone[hidden] {
+  display: none;
+}
+.promote-zone.is-drop-target {
+  background: var(--clr-primary-9);
+  border-color: var(--clr-primary-5);
+  color: var(--clr-primary-1);
+}
+.promote-zone-label {
+  font-style: italic;
 }
 .grocery-item:hover {
   color: var(--clr-grey-5);
