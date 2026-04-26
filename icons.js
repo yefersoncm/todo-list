@@ -15,6 +15,8 @@ const PATHS = {
     check: '<polyline points="20 6 9 17 4 12"/>',
     circle: '<circle cx="12" cy="12" r="10"/>',
     'circle-check': '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
+    'chevron-left': '<path d="m15 18-6-6 6-6"/>',
+    'chevron-right': '<path d="m9 18 6-6-6-6"/>',
 };
 
 const SVG_NS = 'http://www.w3.org/2000/svg';

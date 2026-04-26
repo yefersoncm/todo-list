@@ -2,6 +2,11 @@ import { TaskStore, LocalStorageAdapter } from './taskStore.js';
 import { Combobox } from './combobox.js';
 import { createIcon } from './icons.js';
 import { elapsedComponents, formatElapsed } from './elapsed.js';
+import { paginate, ELLIPSIS } from './pagination.js';
+
+const PAGE_SIZE_KEY = 'todo-list:pageSize';
+const VALID_PAGE_SIZES = [10, 20, 50, 100];
+const DEFAULT_PAGE_SIZE = 10;
 
 // ****** SELECTORES DE ELEMENTOS **********
 const DOM = {
@@ -15,10 +20,21 @@ const DOM = {
     list: document.querySelector('.grocery-list'),
     clearBtn: document.querySelector('.clear-btn'),
     taskFilterRoot: document.getElementById('taskFilter'),
+    pageSizeRoot: document.getElementById('pageSize'),
+    paginationNav: document.querySelector('.pagination'),
     taskCountDisplay: document.querySelector('.task-count'),
     confirmModal: document.getElementById('confirmModal'),
     confirmModalText: document.getElementById('confirmModalText'),
 };
+
+function loadPageSize() {
+    const raw = parseInt(localStorage.getItem(PAGE_SIZE_KEY));
+    return VALID_PAGE_SIZES.includes(raw) ? raw : DEFAULT_PAGE_SIZE;
+}
+
+function savePageSize(size) {
+    localStorage.setItem(PAGE_SIZE_KEY, String(size));
+}
 
 // Modal de confirmación que reemplaza al confirm() nativo.
 function confirmDialog(message) {
@@ -62,9 +78,16 @@ class TaskManager {
         this.editID = "";
         this._elapsedProbe = null;     // span oculto para medir el texto más largo
         this._elapsedTicker = null;    // id del setInterval
+        this.filterMode = 'all';       // 'all' | 'done' | 'pending'
+        this.pageSize = loadPageSize();
+        this.currentPage = 1;
         this.filter = new Combobox(DOM.taskFilterRoot, {
             onChange: () => this.handleFilterChange(),
         });
+        this.pageSizeCombo = new Combobox(DOM.pageSizeRoot, {
+            onChange: (value) => this.handlePageSizeChange(parseInt(value)),
+        });
+        this.pageSizeCombo.setValue(String(this.pageSize));
         this.setSubmitMode('add');
         this.setupEventListeners();
         this.renderTasks();
@@ -140,6 +163,7 @@ class TaskManager {
             this.store.add(value);
             this.displayAlert("Item agregado a la lista", "success");
         }
+        this.currentPage = 1;
         this.renderTasks();
         this.setBackToDefault();
     }
@@ -152,15 +176,29 @@ class TaskManager {
         const ok = await confirmDialog("¿Estás seguro de que quieres limpiar toda la lista?");
         if (!ok) return;
         this.store.clear();
+        this.currentPage = 1;
         this.renderTasks();
         this.displayAlert("Lista vacía", "danger");
     }
 
     handleFilterChange() {
-        const value = this.filter.value;
-        if (value === 'done') this.renderFilteredTasks(true);
-        else if (value === 'pending') this.renderFilteredTasks(false);
-        else this.renderTasks();
+        this.filterMode = this.filter.value; // 'all' | 'done' | 'pending'
+        this.currentPage = 1;
+        this.renderTasks();
+    }
+
+    handlePageSizeChange(size) {
+        if (!VALID_PAGE_SIZES.includes(size)) return;
+        this.pageSize = size;
+        savePageSize(size);
+        this.currentPage = 1;
+        this.renderTasks();
+    }
+
+    handlePageClick(page) {
+        if (page === this.currentPage) return;
+        this.currentPage = page;
+        this.renderTasks();
     }
 
     handleMarkTaskAsDone(e) {
@@ -170,6 +208,7 @@ class TaskManager {
         const isDone = element.dataset.done !== "true";
 
         this.store.toggle(id, isDone);
+        this.currentPage = 1;
         this.renderTasks();
         this.displayAlert(isDone ? 'Tarea marcada como hecha' : 'Tarea pendiente', isDone ? 'success' : 'warning');
     }
@@ -180,6 +219,7 @@ class TaskManager {
         const ok = await confirmDialog("¿Estás seguro de que quieres eliminar esta tarea?");
         if (!ok) return;
         this.store.remove(id);
+        this.currentPage = 1;
         this.renderTasks();
         this.displayAlert("Item eliminado", "danger");
         this.setBackToDefault();
@@ -197,15 +237,23 @@ class TaskManager {
     // ****** FUNCIONES DE RENDERIZADO **********
 
     renderTasks() {
-        this._renderList(this.store.tasks);
-        this.updateTaskCount();
+        const filtered = this._filteredTasks();
+        const totalPages = Math.max(1, Math.ceil(filtered.length / this.pageSize));
+        // Si por borrado/filtro la página actual ya no existe, ajusta.
+        if (this.currentPage > totalPages) this.currentPage = totalPages;
+        const start = (this.currentPage - 1) * this.pageSize;
+        const pageItems = filtered.slice(start, start + this.pageSize);
+
+        this._renderList(pageItems);
+        this._renderPagination(totalPages);
+        this.updateTaskCount(filtered.length);
         this._updateElapsed();
     }
 
-    renderFilteredTasks(showDone) {
-        this._renderList(this.store.filter(showDone));
-        this.updateTaskCount(showDone);
-        this._updateElapsed();
+    _filteredTasks() {
+        if (this.filterMode === 'done') return this.store.filter(true);
+        if (this.filterMode === 'pending') return this.store.filter(false);
+        return this.store.tasks;
     }
 
     _renderList(items) {
@@ -216,6 +264,79 @@ class TaskManager {
         } else {
             DOM.container.classList.remove("show-container");
         }
+    }
+
+    _renderPagination(totalPages) {
+        const nav = DOM.paginationNav;
+        nav.replaceChildren();
+        if (totalPages <= 1) {
+            nav.hidden = true;
+            return;
+        }
+        nav.hidden = false;
+
+        // Anterior — sólo si current > 1.
+        if (this.currentPage > 1) {
+            nav.append(this._buildPageNav('prev', this.currentPage - 1));
+        }
+
+        const items = paginate(totalPages, this.currentPage);
+        const list = document.createElement('ul');
+        list.className = 'page-list';
+        for (const item of items) {
+            const li = document.createElement('li');
+            if (item === ELLIPSIS) {
+                li.className = 'page-ellipsis';
+                li.setAttribute('aria-hidden', 'true');
+                li.textContent = '…';
+            } else {
+                const isCurrent = item === this.currentPage;
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'page-num';
+                btn.textContent = String(item);
+                if (isCurrent) {
+                    btn.classList.add('is-current');
+                    btn.disabled = true;
+                    btn.setAttribute('aria-current', 'page');
+                } else {
+                    btn.setAttribute('aria-label', `Ir a la página ${item}`);
+                    btn.addEventListener('click', () => this.handlePageClick(item));
+                }
+                li.appendChild(btn);
+            }
+            list.appendChild(li);
+        }
+        nav.appendChild(list);
+
+        // Siguiente — sólo si current < totalPages.
+        if (this.currentPage < totalPages) {
+            nav.append(this._buildPageNav('next', this.currentPage + 1));
+        }
+    }
+
+    _buildPageNav(direction, targetPage) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `page-${direction}`;
+        const isPrev = direction === 'prev';
+        btn.setAttribute('aria-label', isPrev ? 'Página anterior' : 'Página siguiente');
+        if (isPrev) {
+            btn.append(createIcon('chevron-left', { size: 16 }));
+            btn.append(this._navLabel('Anterior'));
+        } else {
+            btn.append(this._navLabel('Siguiente'));
+            btn.append(createIcon('chevron-right', { size: 16 }));
+        }
+        btn.addEventListener('click', () => this.handlePageClick(targetPage));
+        return btn;
+    }
+
+    _navLabel(text) {
+        const span = document.createElement('span');
+        span.className = 'page-nav-label';
+        span.textContent = text;
+        return span;
     }
 
     createListItem(id, value, done) {
@@ -295,15 +416,12 @@ class TaskManager {
         this.setSubmitMode('add');
     }
 
-    updateTaskCount(filterStatus = null) {
+    updateTaskCount(filteredCount) {
         if (!DOM.taskCountDisplay) return;
-        const { total, done, pending } = this.store.counts();
-
-        let displayText = `Total: ${total}`;
-        if (filterStatus === true) displayText = `Completadas: ${done}`;
-        else if (filterStatus === false) displayText = `Pendientes: ${pending}`;
-
-        DOM.taskCountDisplay.textContent = `Tareas: ${displayText}`;
+        let label = 'Total';
+        if (this.filterMode === 'done') label = 'Completadas';
+        else if (this.filterMode === 'pending') label = 'Pendientes';
+        DOM.taskCountDisplay.textContent = `Tareas: ${label}: ${filteredCount}`;
     }
 }
 

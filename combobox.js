@@ -38,6 +38,20 @@ export class Combobox {
         return this.options[this.selectedIndex]?.dataset.value;
     }
 
+    /**
+     * Cambia la opción seleccionada por su data-value sin disparar onChange.
+     * Útil para inicializar el combobox desde estado persistido.
+     */
+    setValue(value) {
+        const idx = this.options.findIndex(o => o.dataset.value === value);
+        if (idx < 0 || idx === this.selectedIndex) return;
+        this.selectedIndex = idx;
+        this.options.forEach((opt, i) => {
+            opt.setAttribute('aria-selected', String(i === idx));
+        });
+        this._renderSelection();
+    }
+
     _bind() {
         this.toggle.addEventListener('click', () => this.isOpen ? this._close() : this._open());
         this.toggle.addEventListener('keydown', (e) => this._onToggleKeyDown(e));
