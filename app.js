@@ -7,8 +7,7 @@ const DOM = {
     container: document.querySelector('.grocery-container'),
     list: document.querySelector('.grocery-list'),
     clearBtn: document.querySelector('.clear-btn'),
-    checkBoxCompletadas: document.querySelector('#checkBoxCompletadas'),
-    checkBoxNoCompletadas: document.querySelector('#checkBoxNoCompletadas'),
+    taskFilter: document.getElementById('taskFilter'),
     taskCountDisplay: document.querySelector('.task-count'),
     confirmModal: document.getElementById('confirmModal'),
     confirmModalText: document.getElementById('confirmModalText'),
@@ -63,8 +62,7 @@ class TaskManager {
     setupEventListeners() {
         DOM.form.addEventListener('submit', this.handleAddItem.bind(this));
         DOM.clearBtn.addEventListener('click', this.handleClearItems.bind(this));
-        DOM.checkBoxCompletadas.addEventListener('change', this.handleToggleDoneTasks.bind(this));
-        DOM.checkBoxNoCompletadas.addEventListener('change', this.handleToggleUndoneTasks.bind(this));
+        DOM.taskFilter.addEventListener('change', this.handleFilterChange.bind(this));
     }
 
     // ****** MANEJADORES DE EVENTOS **********
@@ -96,22 +94,11 @@ class TaskManager {
         this.displayAlert("Lista vacía", "danger");
     }
 
-    handleToggleDoneTasks() {
-        if (DOM.checkBoxCompletadas.checked) {
-            DOM.checkBoxNoCompletadas.checked = false;
-            this.renderFilteredTasks(true);
-        } else {
-            this.renderTasks();
-        }
-    }
-
-    handleToggleUndoneTasks() {
-        if (DOM.checkBoxNoCompletadas.checked) {
-            DOM.checkBoxCompletadas.checked = false;
-            this.renderFilteredTasks(false);
-        } else {
-            this.renderTasks();
-        }
+    handleFilterChange() {
+        const value = DOM.taskFilter.value;
+        if (value === 'done') this.renderFilteredTasks(true);
+        else if (value === 'pending') this.renderFilteredTasks(false);
+        else this.renderTasks();
     }
 
     handleMarkTaskAsDone(e) {
@@ -285,8 +272,6 @@ class TaskManager {
         this.editID = '';
         this.editElement = null;
         DOM.submitBtn.textContent = "Agregar";
-        DOM.checkBoxCompletadas.checked = false;
-        DOM.checkBoxNoCompletadas.checked = false;
     }
 
     // `creationTimestamp` ahora es el ID de la tarea
