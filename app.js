@@ -244,7 +244,12 @@ class TaskManager {
     async handleDeleteItem(e) {
         const element = e.currentTarget.closest('.grocery-item');
         const id = element.dataset.id;
-        const ok = await confirmDialog("¿Estás seguro de que quieres eliminar esta tarea?");
+        const task = this.store.tasks.find(t => t.id === id);
+        const subs = task && task.parentId === null ? this.store.subsOf(id) : [];
+        const message = subs.length > 0
+            ? `Esta tarea tiene ${subs.length} subtarea${subs.length === 1 ? '' : 's'}. ¿Borrarla${subs.length === 1 ? '' : 's'} también?`
+            : '¿Estás seguro de que quieres eliminar esta tarea?';
+        const ok = await confirmDialog(message);
         if (!ok) return;
         this.store.remove(id);
         this.currentPage = 1;
@@ -340,33 +345,39 @@ class TaskManager {
     // ****** FUNCIONES DE RENDERIZADO **********
 
     renderTasks() {
-        const filtered = this._filteredTasks();
-        const totalPages = Math.max(1, Math.ceil(filtered.length / this.pageSize));
-        // Si por borrado/filtro la página actual ya no existe, ajusta.
+        // La paginación cuenta sólo PADRES; cada padre arrastra a sus subs.
+        const filteredParents = this._filteredParents();
+        const totalPages = Math.max(1, Math.ceil(filteredParents.length / this.pageSize));
         if (this.currentPage > totalPages) this.currentPage = totalPages;
         const start = (this.currentPage - 1) * this.pageSize;
-        const pageItems = filtered.slice(start, start + this.pageSize);
+        const pageParents = filteredParents.slice(start, start + this.pageSize);
+
+        // Expandimos cada padre con sus subs en orden.
+        const pageItems = [];
+        for (const parent of pageParents) {
+            pageItems.push(parent);
+            for (const sub of this.store.subsOf(parent.id)) pageItems.push(sub);
+        }
 
         this._renderList(pageItems);
         this._renderPagination(totalPages);
-        this.updateTaskCount(filtered.length);
+        this.updateTaskCount(filteredParents.length);
         this._updateElapsed();
     }
 
-    _filteredTasks() {
-        // Ordena primero según el modo activo, luego filtra. El sort
-        // produce una copia, así que filter sobre esa copia no muta el
-        // store. El orden se preserva en el resultado del filter.
+    _filteredParents() {
+        // Sort sólo aplica a padres; el filtro también sólo aplica a padres.
         const ordered = this.store.getOrderedTasks(this.sortBy);
-        if (this.filterMode === 'done') return ordered.filter(t => t.done);
-        if (this.filterMode === 'pending') return ordered.filter(t => !t.done);
-        return ordered;
+        const parents = ordered.filter(t => t.parentId === null);
+        if (this.filterMode === 'done') return parents.filter(t => t.done);
+        if (this.filterMode === 'pending') return parents.filter(t => !t.done);
+        return parents;
     }
 
     _renderList(items) {
         DOM.list.innerHTML = '';
         if (items.length > 0) {
-            items.forEach(item => this.createListItem(item.id, item.value, item.done));
+            items.forEach(item => this.createListItem(item));
             DOM.container.classList.add('show-container');
         } else {
             DOM.container.classList.remove("show-container");
@@ -446,17 +457,20 @@ class TaskManager {
         return span;
     }
 
-    createListItem(id, value, done) {
+    createListItem(task) {
+        const { id, value, done, parentId } = task;
+        const isSubtask = parentId !== null;
+
         const element = document.createElement('article');
         element.classList.add('grocery-item');
+        if (isSubtask) element.classList.add('is-subtask');
         element.dataset.id = id;
         element.dataset.done = String(done);
         if (done) element.classList.add('done');
 
-        // Modo de reordenamiento manual: el item es draggable y enfocable
-        // por teclado (Alt+ArrowUp/Down). Sólo activo cuando sort=manual
-        // y sin filtro — mover entre items ocultos no es intuitivo.
-        if (this._isManualReorderActive()) {
+        // Drag-and-drop sólo se habilita en padres (nunca subs) cuando
+        // sort=manual y sin filtro.
+        if (!isSubtask && this._isManualReorderActive()) {
             element.draggable = true;
             element.tabIndex = 0;
             element.classList.add('is-draggable');
@@ -470,7 +484,7 @@ class TaskManager {
 
         const elapsedText = formatElapsed(elapsedComponents(parseInt(id)));
 
-        // Botón de toggle (izquierda): círculo vacío / círculo con check.
+        // Toggle (izquierda).
         const toggleBtn = document.createElement('button');
         toggleBtn.type = 'button';
         toggleBtn.className = 'toggle-btn';
@@ -478,10 +492,20 @@ class TaskManager {
         toggleBtn.setAttribute('aria-label', done ? 'Marcar como pendiente' : 'Marcar como hecha');
         toggleBtn.appendChild(createIcon(done ? 'circle-check' : 'circle', { size: 22, className: 'toggle-icon' }));
 
-        // Título — value viene del input del usuario, se asigna por textContent (anti-XSS).
+        // Título + (opcional) contador de subs.
         const title = document.createElement('p');
         title.classList.add('title');
         title.textContent = value;
+        if (!isSubtask) {
+            const subs = this.store.subsOf(id);
+            if (subs.length > 0) {
+                const counter = document.createElement('span');
+                counter.className = 'subtask-counter';
+                const doneCount = subs.filter(s => s.done).length;
+                counter.textContent = ` (${doneCount}/${subs.length})`;
+                title.appendChild(counter);
+            }
+        }
 
         const editBtn = document.createElement('button');
         editBtn.type = 'button';
@@ -495,7 +519,6 @@ class TaskManager {
         deleteBtn.setAttribute('aria-label', 'Eliminar tarea');
         deleteBtn.appendChild(createIcon('trash'));
 
-        // Editar + eliminar agrupados como cluster de "meta-acciones".
         const actionGroup = document.createElement('div');
         actionGroup.className = 'action-group';
         actionGroup.append(editBtn, deleteBtn);
@@ -504,21 +527,48 @@ class TaskManager {
         daysSpan.className = 'task-days-old';
         daysSpan.textContent = elapsedText;
 
-        // Cluster derecho: acciones + metadata.
         const meta = document.createElement('div');
         meta.className = 'meta';
         meta.append(actionGroup, daysSpan);
 
-        // Layout de la fila: toggle | title | meta
-        element.append(toggleBtn, title, meta);
+        // Padres llevan input inline para agregar subtareas.
+        if (!isSubtask) {
+            const subForm = this._buildSubtaskAddForm(id);
+            element.append(toggleBtn, title, subForm, meta);
+        } else {
+            element.append(toggleBtn, title, meta);
+        }
 
         toggleBtn.addEventListener('click', this.handleMarkTaskAsDone.bind(this));
         deleteBtn.addEventListener('click', this.handleDeleteItem.bind(this));
         editBtn.addEventListener('click', this.handleEditItem.bind(this));
 
-        // Append: el orden de la lista en el DOM debe coincidir con el
-        // orden del array `items` que ya viene ordenado por _filteredTasks.
         DOM.list.appendChild(element);
+    }
+
+    _buildSubtaskAddForm(parentId) {
+        const form = document.createElement('form');
+        form.className = 'subtask-add-form';
+        form.dataset.parentId = parentId;
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'subtask-add-input';
+        input.placeholder = '+ Subtarea';
+        input.setAttribute('aria-label', 'Agregar subtarea');
+
+        form.appendChild(input);
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const value = input.value.trim();
+            if (!value) return;
+            this.store.addSubtask(parentId, value);
+            input.value = '';
+            this.currentPage = 1;
+            this.renderTasks();
+            this.displayAlert('Subtarea agregada', 'success');
+        });
+        return form;
     }
 
     // ****** UTILIDADES **********
