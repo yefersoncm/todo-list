@@ -1117,6 +1117,51 @@ solo se ajustan paddings y gaps que en mobile sienten apretados.
 
 /*
 ===============
+Touch move buttons (Fase 3 — DnD opción B)
+===============
+Botones ↑/↓/promote que reemplazan el drag-and-drop en touch. Se
+renderizan SIEMPRE pero el media query de pointer:fine los oculta.
+*/
+.touch-move-btn {
+    display: none;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 0.4rem;
+    cursor: pointer;
+    color: var(--clr-grey-5);
+    transition: background-color 0.15s linear, color 0.15s linear,
+                border-color 0.15s linear;
+}
+.touch-move-btn:hover:not(:disabled) {
+    color: var(--clr-primary-3);
+    background: var(--clr-primary-10);
+    border-color: var(--clr-primary-9);
+}
+.touch-move-btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--clr-primary-10);
+}
+.touch-move-btn:active:not(:disabled) {
+    transform: scale(0.94);
+}
+.touch-move-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+.touch-move-btn .icon {
+    display: block;
+}
+.touch-promote-btn {
+    color: var(--clr-primary-3);
+}
+
+/*
+===============
 Touch targets ≥44px (Fase 2)
 ===============
 Activamos áreas tappables grandes solo en dispositivos primary touch
@@ -1173,6 +1218,20 @@ crece es el padding / min-height para alcanzar el estándar 44x44.
   /* Espaciado entre acciones para evitar mis-taps. */
   .grocery-item .action-group {
     gap: 0.5rem;
+  }
+  /* Activación de los botones touch ↑/↓/promote (Fase 3). */
+  .touch-move-btn {
+    display: inline-flex;
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+  /* En touch, el cursor grab es engañoso (HTML5 drag no dispara). */
+  .grocery-item.is-draggable {
+    cursor: default;
+  }
+  /* La promote-zone es desktop-only — en touch usamos el botón ⬅. */
+  .promote-zone {
+    display: none !important;
   }
 }
 

@@ -933,6 +933,122 @@ class TaskManager {
         }
     }
 
+    /**
+     * Construye los botones touch (↑ ↓ ⬅) que reemplazan al drag-and-drop
+     * en dispositivos primary touch. CSS los oculta en pointer:fine, así que
+     * el render es uniforme; solo cambia la visibilidad.
+     *
+     * - ↑ subir / ↓ bajar: solo activos en sort manual + filtro 'all'.
+     *   Replican la misma lógica que handleManualKeyDown (top-level) y la
+     *   rama no-shift de handleSubKeyDown (sub).
+     * - ⬅ promote (solo subs): convierte la sub en top-level antes del
+     *   padre actual. Funciona en cualquier sort (no afecta el orden de
+     *   los padres, que se ordena por `_sortList`).
+     *
+     * Devuelve array de elementos para append; vacío si la tarea no
+     * permite ninguna acción touch.
+     */
+    _buildTouchMoveControls(task, isSubtask) {
+        const id = task.id;
+        const manualOk = this._isManualReorderActive();
+
+        // Calcula si hay vecino arriba/abajo en el scope correcto.
+        let canUp = false, canDown = false;
+        if (isSubtask) {
+            const siblings = this.store.subsOf(task.parentId);
+            const sIdx = siblings.findIndex(s => s.id === id);
+            canUp = sIdx > 0;
+            canDown = sIdx >= 0 && sIdx < siblings.length - 1;
+        } else {
+            const parents = this.store.tasks.filter(t => t.parentId === null);
+            const pIdx = parents.findIndex(p => p.id === id);
+            canUp = pIdx > 0;
+            canDown = pIdx >= 0 && pIdx < parents.length - 1;
+        }
+
+        const mkBtn = (iconName, label, onClick, enabled) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'touch-move-btn';
+            btn.setAttribute('aria-label', label);
+            btn.title = label;
+            btn.appendChild(createIcon(iconName, { size: 18 }));
+            if (!enabled) btn.disabled = true;
+            else btn.addEventListener('click', onClick);
+            return btn;
+        };
+
+        const upBtn = mkBtn(
+            'chevron-up',
+            manualOk ? 'Mover arriba' : 'Mover arriba (requiere orden manual)',
+            () => this._touchMove(id, 'up', isSubtask),
+            manualOk && canUp,
+        );
+        const downBtn = mkBtn(
+            'chevron-down',
+            manualOk ? 'Mover abajo' : 'Mover abajo (requiere orden manual)',
+            () => this._touchMove(id, 'down', isSubtask),
+            manualOk && canDown,
+        );
+
+        const out = [upBtn, downBtn];
+        if (isSubtask) {
+            const promoteBtn = mkBtn(
+                'chevron-left',
+                'Convertir en tarea principal',
+                () => this._touchPromote(id),
+                true,
+            );
+            promoteBtn.classList.add('touch-promote-btn');
+            out.push(promoteBtn);
+        }
+        return out;
+    }
+
+    _touchMove(id, direction, isSubtask) {
+        if (!this._isManualReorderActive()) return;
+        let ok = false;
+        if (isSubtask) {
+            const sub = this.store.tasks.find(t => t.id === id);
+            if (!sub) return;
+            const siblings = this.store.subsOf(sub.parentId);
+            const idx = siblings.findIndex(s => s.id === id);
+            if (direction === 'up') {
+                if (idx <= 0) return;
+                ok = this.store.moveToParent(id, sub.parentId, siblings[idx - 1].id);
+            } else {
+                if (idx < 0 || idx >= siblings.length - 1) return;
+                const beforeId = idx + 2 < siblings.length ? siblings[idx + 2].id : null;
+                ok = this.store.moveToParent(id, sub.parentId, beforeId);
+            }
+        } else {
+            const parents = this.store.tasks.filter(t => t.parentId === null);
+            const idx = parents.findIndex(p => p.id === id);
+            if (idx < 0) return;
+            const newIdx = direction === 'up' ? idx - 1 : idx + 1;
+            if (newIdx < 0 || newIdx >= parents.length) return;
+            this.store.move(idx, newIdx);
+            ok = true;
+        }
+        if (ok) {
+            this.renderTasks();
+            const moved = DOM.list.querySelector(`.grocery-item[data-id="${id}"]`);
+            if (moved) moved.focus?.();
+        }
+    }
+
+    _touchPromote(id) {
+        const sub = this.store.tasks.find(t => t.id === id);
+        if (!sub || sub.parentId === null) return;
+        const ok = this.store.moveToParent(id, null, sub.parentId);
+        if (ok) {
+            this.renderTasks();
+            this.displayAlert('Promovida a tarea principal', 'success');
+            const moved = DOM.list.querySelector(`.grocery-item[data-id="${id}"]`);
+            if (moved) moved.focus?.();
+        }
+    }
+
     // ****** FUNCIONES DE RENDERIZADO **********
 
     renderTasks() {
@@ -1158,7 +1274,11 @@ class TaskManager {
 
         const actionGroup = document.createElement('div');
         actionGroup.className = 'action-group';
-        actionGroup.append(editBtn, deleteBtn);
+        // Botones touch (Fase 3): siempre se renderizan; CSS los oculta en
+        // pointer:fine. Replican la lógica de handleManualKeyDown /
+        // handleSubKeyDown sin necesidad de teclado.
+        const touchControls = this._buildTouchMoveControls(task, isSubtask);
+        actionGroup.append(...touchControls, editBtn, deleteBtn);
 
         const daysSpan = document.createElement('span');
         daysSpan.className = 'task-days-old';
