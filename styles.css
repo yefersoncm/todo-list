@@ -1266,7 +1266,11 @@ solo se ajustan paddings y gaps que en mobile sienten apretados.
   .grocery-item:not(.is-subtask) > .subtask-collapse-placeholder { grid-area: chevron; justify-self: end; }
   .grocery-item:not(.is-subtask) > .meta { grid-area: actions; }
   /* Sub-card: grid 3-col en UNA SOLA ROW (estilo .m-sub del mockup):
-     toggle | title-block | meta. Sin row separada con border-top. */
+     toggle | title-block | meta. Sin row separada con border-top.
+     overflow: visible es necesario para que el conector ::before del
+     árbol se vea fuera del card (la regla legacy lo tenía hidden para
+     animar collapse — eso lo manejamos con max-height transition sin
+     necesidad de cortar contenido). */
   .grocery-item.is-subtask {
     background: var(--bg-surface);
     border: 1px solid var(--border-subtle);
@@ -1277,6 +1281,7 @@ solo se ajustan paddings y gaps que en mobile sienten apretados.
     grid-template-columns: auto 1fr auto;
     gap: var(--sp-2);
     align-items: center;
+    overflow: visible;
   }
   /* Sin border-top en .meta de sub — todo es una row. */
   .grocery-item.is-subtask > .meta {
