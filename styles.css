@@ -286,6 +286,14 @@ con mayor especificidad y haría invisibles nuestras notificaciones.
 /* Group titles (Fase 9E): solo visibles en mobile como labels de
    sección "Pendientes" / "Hechas" entre bloques de tareas. */
 .group-title { display: none; }
+/* FAB (Fase 9F) — solo visible en mobile, oculto en desktop. */
+.app-fab { display: none; }
+.newtask-modal[hidden] { display: none; }
+.newtask-modal__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
 /* Drawer backdrop (oculto en desktop por hidden attribute). */
 .app-drawer-backdrop {
   position: fixed;
@@ -930,6 +938,31 @@ solo se ajustan paddings y gaps que en mobile sienten apretados.
   }
   /* Footer (filter desktop) oculto en mobile — las pills lo reemplazan. */
   .app-footer { display: none; }
+  /* Form principal arriba: en mobile lo reemplaza el FAB + modal. */
+  .grocery-form { display: none; }
+  /* FAB visible en mobile. */
+  .app-fab {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    bottom: calc(var(--sp-5) + env(safe-area-inset-bottom, 0px));
+    right: var(--sp-4);
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: var(--accent-fg);
+    border: none;
+    cursor: pointer;
+    box-shadow: var(--shadow-overlay);
+    z-index: 95;
+    transition: transform var(--dur-fast) var(--ease-out),
+                background-color var(--dur-fast) var(--ease-out);
+  }
+  .app-fab:hover { background: var(--accent-hover); }
+  .app-fab:active { transform: scale(0.94); }
+  .app-fab .icon { display: block; }
   /* Group title visible: divisor decorativo entre Pendientes y Hechas. */
   .group-title {
     display: block;
