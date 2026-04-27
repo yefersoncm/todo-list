@@ -309,7 +309,12 @@ con mayor especificidad y haría invisibles nuestras notificaciones.
 }
 /* FAB (Fase 9F) — solo visible en mobile, oculto en desktop. */
 .app-fab { display: none; }
-/* Date picker custom: respeta dark/light via tokens semánticos. */
+/* Date picker custom: respeta dark/light via tokens semánticos.
+   z-index 1200 (mayor que el modal-backdrop 1000) para quedar encima
+   del modal "Nueva tarea" cuando se abre desde ahí. */
+.date-picker-modal {
+  z-index: 1200;
+}
 .date-picker-modal[hidden] { display: none; }
 .date-picker { width: 100%; max-width: 340px; }
 .date-picker__nav {
@@ -1299,6 +1304,11 @@ solo se ajustan paddings y gaps que en mobile sienten apretados.
     position: relative;
     padding-top: var(--sp-2);
     margin-bottom: var(--sp-3);
+  }
+  /* Cuando el padre está colapsado, el form '+ subtarea' también se oculta
+     (junto con las subs). Así no queda un input solitario flotando. */
+  .m-subs.is-collapsed > .subtask-add-form {
+    display: none;
   }
   .m-subs::before {
     content: "";
