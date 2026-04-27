@@ -251,14 +251,18 @@ con mayor especificidad y haría invisibles nuestras notificaciones.
 .app-toast-action,
 .app-toast-close { pointer-events: auto; }
 
-/* App chrome con toggles theme + density (Fase 7H). */
+/* App chrome con toggles theme + density (Fase 7H) y, en mobile (Fase 8A),
+   el título con stats. En desktop el título permanece oculto y solo se
+   muestran los toggles alineados a la derecha. */
 .app-chrome {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
   gap: var(--sp-2);
   margin-bottom: var(--sp-3);
 }
 .app-chrome .seg__btn .icon { display: block; }
+.app-title { display: none; }
 
 .grocery-form h3 {
   color: var(--clr-primary-1);
@@ -827,6 +831,35 @@ solo se ajustan paddings y gaps que en mobile sienten apretados.
   .section {
     padding: 1.5rem 0;
   }
+  /* Header mobile estilo m-top: título grande + stats + theme toggle a
+     la derecha. Density toggle se oculta (es de power-user, en mobile
+     reduce ruido visual). Hide del h3 'Todo List' del form. */
+  .app-chrome {
+    justify-content: space-between;
+    margin-bottom: var(--sp-4);
+  }
+  .app-title {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+    min-width: 0;
+  }
+  .app-title__main {
+    font-size: var(--fs-2xl);
+    font-weight: var(--fw-semibold);
+    letter-spacing: -0.015em;
+    line-height: 1.2;
+    color: var(--fg-default);
+  }
+  .app-title__sub {
+    font-size: var(--fs-xs);
+    color: var(--fg-muted);
+    font-family: var(--ff-mono);
+    letter-spacing: 0;
+  }
+  .app-chrome #densitySeg { display: none; }
+  .grocery-form h3 { display: none; }
   /* Cada item es su propia card en mobile (Fase 7G). */
   .grocery-item {
     background: var(--bg-surface);
