@@ -61,6 +61,7 @@ const DOM = {
     themeSeg: document.getElementById('themeSeg'),
     densitySeg: document.getElementById('densitySeg'),
     appTitleSub: document.getElementById('appTitleSub'),
+    appTitleMain: document.getElementById('appTitleMain'),
     appHamburger: document.getElementById('appHamburger'),
     appDrawerBackdrop: document.getElementById('appDrawerBackdrop'),
     taskCountRow: document.querySelector('.task-count-row'),
@@ -180,12 +181,13 @@ class TaskManager {
             onChange: (value) => this.handlePageSizeChange(parseInt(value)),
         });
         this.pageSizeCombo.setValue(String(this.pageSize));
-        this._mountStaticIcons();
-        this._setupChromeToggles();
-        this._setupFooterHeightTracker();
-        this._setupMobileDrawer();
-        this._setupMobileFab();
-        this._setupMobileBottomNav();
+        // Setups defensivos: un error en uno NO debe romper los siguientes.
+        this._safeRun('mountStaticIcons', () => this._mountStaticIcons());
+        this._safeRun('setupChromeToggles', () => this._setupChromeToggles());
+        this._safeRun('setupFooterHeightTracker', () => this._setupFooterHeightTracker());
+        this._safeRun('setupMobileDrawer', () => this._setupMobileDrawer());
+        this._safeRun('setupMobileFab', () => this._setupMobileFab());
+        this._safeRun('setupMobileBottomNav', () => this._setupMobileBottomNav());
         this.setupEventListeners();
         this.renderTasks();
         this._startElapsedTicker();
@@ -212,6 +214,14 @@ class TaskManager {
             if (!span) continue;
             const text = formatElapsed(elapsedComponents(parseInt(id), now));
             if (span.textContent !== text) span.textContent = text;
+        }
+    }
+
+    _safeRun(label, fn) {
+        try {
+            fn();
+        } catch (err) {
+            console.error(`[init:${label}]`, err);
         }
     }
 
@@ -1455,7 +1465,33 @@ class TaskManager {
             });
             DOM.container.classList.add('show-container');
         } else {
-            DOM.container.classList.remove("show-container");
+            // Empty state: cuando un filter (Hoy/Semana/Prioridad/Hechas/etc)
+            // devuelve cero matches Y la app NO está vacía, mostramos un mensaje.
+            // Si la app entera está vacía, ocultamos el container como antes.
+            const totalParents = this.store.tasks.filter(t => t.parentId === null).length;
+            if (totalParents === 0) {
+                DOM.container.classList.remove('show-container');
+            } else {
+                const empty = document.createElement('div');
+                empty.className = 'empty-state';
+                empty.textContent = this._emptyStateMessage();
+                DOM.list.appendChild(empty);
+                DOM.container.classList.add('show-container');
+            }
+        }
+    }
+
+    _emptyStateMessage() {
+        switch (this.filterMode) {
+            case 'today':    return 'No hay tareas con fecha de hoy.';
+            case 'week':     return 'No hay tareas para los próximos 7 días.';
+            case 'priority': return 'No hay tareas marcadas como prioritarias.';
+            case 'done':     return 'No hay tareas hechas.';
+            case 'pending':  return 'Todo terminado. No hay pendientes.';
+            default:
+                return this.searchQuery
+                    ? 'Sin resultados para tu búsqueda.'
+                    : 'No hay tareas para mostrar.';
         }
     }
 
@@ -1791,7 +1827,15 @@ class TaskManager {
         if (DOM.mToolbarCount) {
             DOM.mToolbarCount.innerHTML = `<strong>${filteredCount}</strong> tareas`;
         }
-        // Subtítulo del header mobile: "X de Y · DD mes" (Fase F1).
+        // Header mobile (Fase F1 + dinámico): título refleja el filter activo,
+        // subtítulo muestra "X de Y · DD mes" con stats globales y fecha.
+        if (DOM.appTitleMain) {
+            const titles = {
+                all: 'Todas', pending: 'Pendientes', done: 'Hechas',
+                today: 'Hoy', week: 'Esta semana', priority: 'Prioridad',
+            };
+            DOM.appTitleMain.textContent = titles[this.filterMode] || 'Tareas';
+        }
         if (DOM.appTitleSub) {
             const allParents = this.store.tasks.filter(t => t.parentId === null);
             const doneCount = allParents.filter(p => p.done).length;
