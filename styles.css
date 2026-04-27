@@ -1371,7 +1371,9 @@ solo se ajustan paddings y gaps que en mobile sienten apretados.
     background: var(--border-subtle);
     border-radius: 1px;
   }
-  /* Form "+ subtarea" como último item del wrapper, mismo estilo árbol. */
+  /* Form "+ subtarea" como último item del wrapper, mismo estilo árbol.
+     El connector usa la misma fórmula que el sub: left: -sp-5, width: sp-5
+     para llegar exactamente desde la guía vertical hasta el edge izq. */
   .m-subs > .subtask-add-form {
     margin-left: var(--sp-3);
     margin-top: var(--sp-1);
@@ -1380,9 +1382,9 @@ solo se ajustan paddings y gaps que en mobile sienten apretados.
   .m-subs > .subtask-add-form::before {
     content: "";
     position: absolute;
-    left: calc(var(--sp-3) * -1 - 2px);
+    left: calc(var(--sp-5) * -1);
     top: 50%;
-    width: var(--sp-3);
+    width: var(--sp-5);
     height: 2px;
     background: var(--border-subtle);
     border-radius: 1px;
@@ -1575,9 +1577,9 @@ renderizan SIEMPRE pero el media query de pointer:fine los oculta.
     display: block;
 }
 .touch-promote-btn {
-    /* Color igual al resto de iconos del action-group (heredado del
-     contexto), no accent — para que no destaque diferente. */
-    color: inherit;
+    /* Mismo color que .btn-icon (edit/delete): var(--fg-muted). El
+     'inherit' anterior heredaba del item que era más oscuro. */
+    color: var(--fg-muted);
     display: inline-flex;
 }
 
