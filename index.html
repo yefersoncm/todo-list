@@ -123,7 +123,11 @@
             <nav class="pagination" aria-label="Paginación" hidden></nav>
         </div>
 
-        <div class="filters-container">
+    </section>
+
+    <!-- Footer fijo: filtro siempre visible al pie de la pantalla. -->
+    <footer class="app-footer" role="contentinfo">
+        <div class="app-footer__inner">
             <span id="filterLabel" class="filter-label">Mostrar</span>
             <div class="filter-tabs" id="taskFilter" role="tablist" aria-labelledby="filterLabel">
                 <button type="button" class="filter-tab is-active" role="tab" aria-selected="true" data-value="all">Todas</button>
@@ -131,7 +135,7 @@
                 <button type="button" class="filter-tab" role="tab" aria-selected="false" data-value="done">Hechas</button>
             </div>
         </div>
-    </section>
+    </footer>
 
     <div class="app-toast-container" id="toastContainer" aria-live="polite" aria-atomic="false"></div>
 
