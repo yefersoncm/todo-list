@@ -8,11 +8,35 @@ import { ToastManager } from './toast.js';
 const PAGE_SIZE_KEY = 'todo-list:pageSize';
 const VALID_PAGE_SIZES = [10, 20, 50, 100];
 const DEFAULT_PAGE_SIZE = 10;
+// Umbral fijo para mostrar el buscador. Coincide con el pageSize mínimo
+// (la primera entrada de VALID_PAGE_SIZES) — NO con el pageSize actual.
+const SEARCH_VISIBILITY_THRESHOLD = VALID_PAGE_SIZES[0];
 
 const SORT_BY_KEY = 'todo-list:sortBy';
 const DEFAULT_SORT = 'created-desc';
 
 const COLLAPSED_KEY = 'todo-list:collapsedParents';
+const THEME_KEY = 'todo-list:theme';
+const DENSITY_KEY = 'todo-list:density';
+
+function loadTheme() {
+    const v = localStorage.getItem(THEME_KEY);
+    if (v === 'light' || v === 'dark') return v;
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+function applyTheme(theme) {
+    if (theme === 'dark') document.documentElement.dataset.theme = 'dark';
+    else document.documentElement.removeAttribute('data-theme');
+    localStorage.setItem(THEME_KEY, theme);
+}
+function loadDensity() {
+    return localStorage.getItem(DENSITY_KEY) === 'compact' ? 'compact' : 'comfy';
+}
+function applyDensity(density) {
+    if (density === 'compact') document.documentElement.dataset.density = 'compact';
+    else document.documentElement.removeAttribute('data-density');
+    localStorage.setItem(DENSITY_KEY, density);
+}
 
 // ****** SELECTORES DE ELEMENTOS **********
 const DOM = {
@@ -32,11 +56,14 @@ const DOM = {
     bulkExpandAllBtn: document.querySelector('.bulk-expand-all'),
     promoteZone: document.getElementById('promoteZone'),
     searchInput: document.getElementById('searchInput'),
+    searchRow: document.getElementById('searchRow'),
     paginationNav: document.querySelector('.pagination'),
     taskCountDisplay: document.querySelector('.task-count'),
     toastContainer: document.getElementById('toastContainer'),
     confirmModal: document.getElementById('confirmModal'),
     confirmModalText: document.getElementById('confirmModalText'),
+    themeSeg: document.getElementById('themeSeg'),
+    densitySeg: document.getElementById('densitySeg'),
 };
 
 function loadPageSize() {
@@ -118,8 +145,12 @@ class TaskManager {
         this.currentPage = 1;
         this.collapsedParents = loadCollapsed();
         this.toast = new ToastManager(DOM.toastContainer);
-        this.filter = new Combobox(DOM.taskFilterRoot, {
-            onChange: () => this.handleFilterChange(),
+        // Filter ahora son tabs (Fase 7F): click en cualquier .filter-tab
+        // setea filterMode y actualiza aria-selected.
+        DOM.taskFilterRoot.addEventListener('click', (e) => {
+            const tab = e.target.closest('.filter-tab');
+            if (!tab) return;
+            this._setFilterTab(tab.dataset.value);
         });
         this.sortByCombo = new Combobox(DOM.sortByRoot, {
             onChange: (value) => this.handleSortChange(value),
@@ -130,6 +161,7 @@ class TaskManager {
         });
         this.pageSizeCombo.setValue(String(this.pageSize));
         this._mountStaticIcons();
+        this._setupChromeToggles();
         this.setupEventListeners();
         this.renderTasks();
         this._startElapsedTicker();
@@ -188,6 +220,58 @@ class TaskManager {
         if (clearIconSlot && !clearIconSlot.firstChild) {
             clearIconSlot.appendChild(createIcon('trash', { size: 14 }));
         }
+    }
+
+    /**
+     * Setup de los toggles de tema (light/dark) y densidad (comfy/compact).
+     * Persistencia en localStorage. Aplica `data-theme` y `data-density`
+     * sobre <html> para que los tokens.css los lean.
+     */
+    _setupChromeToggles() {
+        if (!DOM.themeSeg || !DOM.densitySeg) return;
+
+        // Estado inicial.
+        const theme = loadTheme();
+        const density = loadDensity();
+        applyTheme(theme);
+        applyDensity(density);
+
+        // Iconos en los botones del seg de tema.
+        const sunBtn = DOM.themeSeg.querySelector('[data-theme="light"]');
+        const moonBtn = DOM.themeSeg.querySelector('[data-theme="dark"]');
+        sunBtn?.appendChild(createIcon('sun', { size: 14 }));
+        moonBtn?.appendChild(createIcon('moon', { size: 14 }));
+
+        // Iconos en los botones del seg de densidad.
+        const rowsBtn = DOM.densitySeg.querySelector('[data-density="comfy"]');
+        const tightBtn = DOM.densitySeg.querySelector('[data-density="compact"]');
+        rowsBtn?.appendChild(createIcon('rows', { size: 14 }));
+        tightBtn?.appendChild(createIcon('align-justify', { size: 14 }));
+
+        const setActive = (seg, attr, value) => {
+            seg.querySelectorAll('.seg__btn').forEach(b => {
+                b.classList.toggle('is-active', b.dataset[attr] === value);
+            });
+        };
+        setActive(DOM.themeSeg, 'theme', theme);
+        setActive(DOM.densitySeg, 'density', density);
+
+        DOM.themeSeg.addEventListener('click', (e) => {
+            const btn = e.target.closest('.seg__btn');
+            if (!btn) return;
+            const v = btn.dataset.theme;
+            if (v !== 'light' && v !== 'dark') return;
+            applyTheme(v);
+            setActive(DOM.themeSeg, 'theme', v);
+        });
+        DOM.densitySeg.addEventListener('click', (e) => {
+            const btn = e.target.closest('.seg__btn');
+            if (!btn) return;
+            const v = btn.dataset.density;
+            if (v !== 'comfy' && v !== 'compact') return;
+            applyDensity(v);
+            setActive(DOM.densitySeg, 'density', v);
+        });
     }
 
     setupEventListeners() {
@@ -260,9 +344,17 @@ class TaskManager {
         });
     }
 
-    handleFilterChange() {
-        this.filterMode = this.filter.value; // 'all' | 'done' | 'pending'
+    _setFilterTab(value) {
+        if (!['all', 'done', 'pending'].includes(value)) return;
+        if (this.filterMode === value) return;
+        this.filterMode = value;
         this.currentPage = 1;
+        // Actualiza aria-selected y .is-active en los 3 tabs.
+        DOM.taskFilterRoot.querySelectorAll('.filter-tab').forEach(t => {
+            const active = t.dataset.value === value;
+            t.classList.toggle('is-active', active);
+            t.setAttribute('aria-selected', active ? 'true' : 'false');
+        });
         this.renderTasks();
     }
 
@@ -401,6 +493,18 @@ class TaskManager {
         // y NO hay un filtro aplicado (mover entre items invisibles
         // confundiría al usuario).
         return this.sortBy === 'manual' && this.filterMode === 'all';
+    }
+
+    /**
+     * true si el dispositivo es primary touch (pointer: coarse). Coincide
+     * con el media query que el CSS usa para mostrar los botones touch.
+     * Usado para deshabilitar `dblclick` en mobile (Fase 4) y otros
+     * comportamientos hover/desktop-only.
+     */
+    _isPrimaryTouch() {
+        return typeof window !== 'undefined'
+            && typeof window.matchMedia === 'function'
+            && window.matchMedia('(pointer: coarse)').matches;
     }
 
     handleDragStart(e) {
@@ -933,6 +1037,114 @@ class TaskManager {
         }
     }
 
+    /**
+     * Construye los botones touch (↑ ↓ ⬅) que reemplazan al drag-and-drop
+     * en dispositivos primary touch. CSS los oculta en pointer:fine, así que
+     * el render es uniforme; solo cambia la visibilidad.
+     *
+     * - ↑ subir / ↓ bajar: solo activos en sort manual + filtro 'all'.
+     *   Replican la misma lógica que handleManualKeyDown (top-level) y la
+     *   rama no-shift de handleSubKeyDown (sub).
+     * - ⬅ promote (solo subs): convierte la sub en top-level antes del
+     *   padre actual. Funciona en cualquier sort (no afecta el orden de
+     *   los padres, que se ordena por `_sortList`).
+     *
+     * Devuelve array de elementos para append; vacío si la tarea no
+     * permite ninguna acción touch.
+     */
+    _buildTouchMoveControls(task, isSubtask) {
+        const id = task.id;
+        const manualOk = this._isManualReorderActive();
+
+        // Si el sort no es manual, los botones ↑/↓ no sirven — los omitimos
+        // para no ocupar espacio en mobile. El promote (⬅) sí queda en subs
+        // porque funciona en cualquier sort.
+        const out = [];
+
+        if (manualOk) {
+            // Calcula si hay vecino arriba/abajo en el scope correcto.
+            let canUp = false, canDown = false;
+            if (isSubtask) {
+                const siblings = this.store.subsOf(task.parentId);
+                const sIdx = siblings.findIndex(s => s.id === id);
+                canUp = sIdx > 0;
+                canDown = sIdx >= 0 && sIdx < siblings.length - 1;
+            } else {
+                const parents = this.store.tasks.filter(t => t.parentId === null);
+                const pIdx = parents.findIndex(p => p.id === id);
+                canUp = pIdx > 0;
+                canDown = pIdx >= 0 && pIdx < parents.length - 1;
+            }
+            if (canUp) out.push(this._makeTouchMoveBtn('chevron-up', 'Mover arriba',
+                () => this._touchMove(id, 'up', isSubtask)));
+            if (canDown) out.push(this._makeTouchMoveBtn('chevron-down', 'Mover abajo',
+                () => this._touchMove(id, 'down', isSubtask)));
+        }
+
+        if (isSubtask) {
+            const promoteBtn = this._makeTouchMoveBtn('chevron-left',
+                'Convertir en tarea principal', () => this._touchPromote(id));
+            promoteBtn.classList.add('touch-promote-btn');
+            out.push(promoteBtn);
+        }
+        return out;
+    }
+
+    _makeTouchMoveBtn(iconName, label, onClick) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'touch-move-btn';
+        btn.setAttribute('aria-label', label);
+        btn.title = label;
+        btn.appendChild(createIcon(iconName, { size: 18 }));
+        btn.addEventListener('click', onClick);
+        return btn;
+    }
+
+    _touchMove(id, direction, isSubtask) {
+        if (!this._isManualReorderActive()) return;
+        let ok = false;
+        if (isSubtask) {
+            const sub = this.store.tasks.find(t => t.id === id);
+            if (!sub) return;
+            const siblings = this.store.subsOf(sub.parentId);
+            const idx = siblings.findIndex(s => s.id === id);
+            if (direction === 'up') {
+                if (idx <= 0) return;
+                ok = this.store.moveToParent(id, sub.parentId, siblings[idx - 1].id);
+            } else {
+                if (idx < 0 || idx >= siblings.length - 1) return;
+                const beforeId = idx + 2 < siblings.length ? siblings[idx + 2].id : null;
+                ok = this.store.moveToParent(id, sub.parentId, beforeId);
+            }
+        } else {
+            const parents = this.store.tasks.filter(t => t.parentId === null);
+            const idx = parents.findIndex(p => p.id === id);
+            if (idx < 0) return;
+            const newIdx = direction === 'up' ? idx - 1 : idx + 1;
+            if (newIdx < 0 || newIdx >= parents.length) return;
+            this.store.move(idx, newIdx);
+            ok = true;
+        }
+        if (ok) {
+            this.renderTasks();
+            const moved = DOM.list.querySelector(`.grocery-item[data-id="${id}"]`);
+            if (moved) moved.focus?.();
+        }
+    }
+
+    _touchPromote(id) {
+        const sub = this.store.tasks.find(t => t.id === id);
+        if (!sub || sub.parentId === null) return;
+        const ok = this.store.moveToParent(id, null, sub.parentId);
+        if (ok) {
+            this.renderTasks();
+            this.displayAlert('Promovida a tarea principal', 'success');
+            const moved = DOM.list.querySelector(`.grocery-item[data-id="${id}"]`);
+            if (moved) moved.focus?.();
+        }
+    }
+
     // ****** FUNCIONES DE RENDERIZADO **********
 
     renderTasks() {
@@ -956,7 +1168,25 @@ class TaskManager {
         this._renderPagination(totalPages);
         this.updateTaskCount(filteredParents.length);
         this._updateBulkCollapseVisibility();
+        this._updateSearchVisibility();
         this._updateElapsed();
+    }
+
+    /**
+     * Muestra el buscador solo si hay más padres que SEARCH_VISIBILITY_THRESHOLD
+     * (10 — el pageSize mínimo). Es un umbral FIJO, NO se ajusta al
+     * pageSize actual: con pageSize=100 y 15 padres el buscador se ve.
+     * Si oculta, limpia el query activo para no dejar filtro fantasma.
+     */
+    _updateSearchVisibility() {
+        if (!DOM.searchRow) return;
+        const totalParents = this.store.tasks.filter(t => t.parentId === null).length;
+        const shouldShow = totalParents > SEARCH_VISIBILITY_THRESHOLD;
+        DOM.searchRow.hidden = !shouldShow;
+        if (!shouldShow && this.searchQuery) {
+            this.searchQuery = '';
+            if (DOM.searchInput) DOM.searchInput.value = '';
+        }
     }
 
     _updateBulkCollapseVisibility() {
@@ -1086,19 +1316,20 @@ class TaskManager {
         const isSubtask = parentId !== null;
 
         const element = document.createElement('article');
-        element.classList.add('grocery-item');
+        // Clases dobles: viejas (para selectores JS legacy) + nuevas (para
+        // CSS del rediseño). Fase 7D mantiene compat hasta que se
+        // refactoricen los selectores JS en otra pasada.
+        element.classList.add('grocery-item', 'task');
         if (isSubtask) {
-            element.classList.add('is-subtask');
+            element.classList.add('is-subtask', 'is-sub');
             element.dataset.parentId = parentId;
-            // Si el padre está colapsado, la sub se renderiza con
-            // .is-collapsed (max-height 0 → invisible vía CSS).
             if (this.collapsedParents.has(parentId)) {
                 element.classList.add('is-collapsed');
             }
         }
         element.dataset.id = id;
         element.dataset.done = String(done);
-        if (done) element.classList.add('done');
+        if (done) element.classList.add('done', 'is-done');
 
         // Drag-and-drop en modo manual sin filtro:
         //   - dragstart/dragend van en cada item (cycle del drag).
@@ -1119,25 +1350,31 @@ class TaskManager {
 
         const elapsedText = formatElapsed(elapsedComponents(parseInt(id)));
 
-        // Toggle (izquierda).
+        // Toggle (izquierda). El círculo sale del CSS border de .toggle-check;
+        // el SVG check es invisible cuando aria-pressed=false (color: transparent
+        // en components.css) y aparece animado al marcar.
         const toggleBtn = document.createElement('button');
         toggleBtn.type = 'button';
-        toggleBtn.className = 'toggle-btn';
+        toggleBtn.className = 'toggle-check';
         toggleBtn.setAttribute('aria-pressed', String(!!done));
         toggleBtn.setAttribute('aria-label', done ? 'Marcar como pendiente' : 'Marcar como hecha');
-        toggleBtn.appendChild(createIcon(done ? 'circle-check' : 'circle', { size: 22, className: 'toggle-icon' }));
+        toggleBtn.appendChild(createIcon('check', { size: 14, className: 'toggle-icon' }));
 
         // Título + (opcional) contador de subs.
         const title = document.createElement('p');
-        title.classList.add('title');
+        title.classList.add('title', 'task__title');
         title.textContent = value;
-        // Doble-click sobre el título activa edición inline.
-        title.addEventListener('dblclick', () => this._enterEditMode(element));
+        // Doble-click sobre el título activa edición inline. Solo en
+        // desktop: en touch el browser interpreta el doble-tap como zoom
+        // y el handler es poco confiable; ahí el lápiz es el único trigger.
+        if (!this._isPrimaryTouch()) {
+            title.addEventListener('dblclick', () => this._enterEditMode(element));
+        }
         if (!isSubtask) {
             const subs = this.store.subsOf(id);
             if (subs.length > 0) {
                 const counter = document.createElement('span');
-                counter.className = 'subtask-counter';
+                counter.className = 'subtask-counter task__counter';
                 const doneCount = subs.filter(s => s.done).length;
                 counter.textContent = ` (${doneCount}/${subs.length})`;
                 title.appendChild(counter);
@@ -1146,22 +1383,23 @@ class TaskManager {
 
         const editBtn = document.createElement('button');
         editBtn.type = 'button';
-        editBtn.className = 'edit-btn';
+        editBtn.className = 'edit-btn btn-icon btn-icon--sm';
         editBtn.setAttribute('aria-label', 'Editar tarea');
         editBtn.appendChild(createIcon('pencil'));
 
         const deleteBtn = document.createElement('button');
         deleteBtn.type = 'button';
-        deleteBtn.className = 'delete-btn';
+        deleteBtn.className = 'delete-btn btn-icon btn-icon--sm btn-icon--danger';
         deleteBtn.setAttribute('aria-label', 'Eliminar tarea');
         deleteBtn.appendChild(createIcon('trash'));
 
         const actionGroup = document.createElement('div');
-        actionGroup.className = 'action-group';
-        actionGroup.append(editBtn, deleteBtn);
+        actionGroup.className = 'action-group task__actions';
+        const touchControls = this._buildTouchMoveControls(task, isSubtask);
+        actionGroup.append(...touchControls, editBtn, deleteBtn);
 
         const daysSpan = document.createElement('span');
-        daysSpan.className = 'task-days-old';
+        daysSpan.className = 'task-days-old task__elapsed';
         daysSpan.textContent = elapsedText;
 
         const meta = document.createElement('div');
@@ -1195,7 +1433,7 @@ class TaskManager {
 
         const input = document.createElement('input');
         input.type = 'text';
-        input.className = 'subtask-add-input';
+        input.className = 'subtask-add-input field';
         input.placeholder = '+ Subtarea';
         input.setAttribute('aria-label', 'Agregar subtarea');
 
