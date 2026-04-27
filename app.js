@@ -1691,12 +1691,23 @@ class TaskManager {
      */
     _adjustTreeConnectors(wrap) {
         requestAnimationFrame(() => {
+            const parentItem = wrap.previousElementSibling;
             const children = [...wrap.children];
             children.forEach((child, i) => {
                 let connector;
                 if (i === 0) {
-                    // Hasta el top del wrapper (= bottom del padre).
-                    connector = child.offsetTop;
+                    // Distancia EXACTA desde el top del primer sub hasta
+                    // el bottom del padre item (usa rect del viewport para
+                    // incluir cualquier margin/padding entre ambos). La
+                    // línea llega justo a la línea inferior del card padre,
+                    // sin entrar.
+                    if (parentItem) {
+                        const childTop = child.getBoundingClientRect().top;
+                        const parentBottom = parentItem.getBoundingClientRect().bottom;
+                        connector = Math.max(0, childTop - parentBottom);
+                    } else {
+                        connector = child.offsetTop;
+                    }
                 } else {
                     const prev = children[i - 1];
                     const prevCenter = prev.offsetTop + prev.offsetHeight / 2;
