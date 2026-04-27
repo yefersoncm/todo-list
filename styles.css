@@ -429,10 +429,11 @@ Paginación
 .grocery-item .title {
   flex: 1;
   min-width: 0;
-  /* line-height: 1 = bbox = alto real del glyph. Sin esto, el line-height
-     default (1.5) crea espacio descendente que desfasa el texto 2-3px
-     respecto al centro del toggle-check de 22px. */
-  line-height: 1;
+  /* line-height igualada a la altura del toggle-check (22px) para que
+     ambos bbox sean idénticos y align-items:center los centre exacto.
+     line-height 1 daba bbox de 14px (solo glyph) que se centraba en el
+     row pero el cap-height del glyph queda arriba del centro óptico. */
+  line-height: 22px;
   align-self: center;
 }
 /* SVG del check en display:block para evitar offset por baseline inline. */
