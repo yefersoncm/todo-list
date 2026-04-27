@@ -21,9 +21,10 @@
         <div class="app-chrome">
             <!-- Hamburger (solo mobile): abre drawer con sort/pageSize/bulk/clear. -->
             <button type="button" class="app-hamburger" id="appHamburger" aria-label="Menú" aria-expanded="false"></button>
-            <!-- Título mobile (oculto en desktop). Se hidrata con stats vía JS. -->
+            <!-- Título mobile (oculto en desktop). El main y el sub se hidratan
+                 dinámicamente con el filter activo + stats. -->
             <div class="app-title">
-                <div class="app-title__main">Tareas</div>
+                <div class="app-title__main" id="appTitleMain">Tareas</div>
                 <div class="app-title__sub" id="appTitleSub"></div>
             </div>
             <div class="seg" id="themeSeg" role="group" aria-label="Tema">

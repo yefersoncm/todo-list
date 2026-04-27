@@ -298,6 +298,15 @@ con mayor especificidad y haría invisibles nuestras notificaciones.
 /* Group titles (Fase 9E): solo visibles en mobile como labels de
    sección "Pendientes" / "Hechas" entre bloques de tareas. */
 .group-title { display: none; }
+/* Empty state (cuando un filter no devuelve resultados pero la app
+   tiene tareas). Visible en cualquier viewport. */
+.empty-state {
+  padding: var(--sp-7) var(--sp-4);
+  text-align: center;
+  color: var(--fg-muted);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-normal);
+}
 /* FAB (Fase 9F) — solo visible en mobile, oculto en desktop. */
 .app-fab { display: none; }
 /* Bottom nav (Fase F10) — solo en mobile. */
@@ -971,6 +980,17 @@ solo se ajustan paddings y gaps que en mobile sienten apretados.
   }
   .app-chrome #densitySeg { display: none; }
   .grocery-form h3 { display: none; }
+  /* Theme toggle en mobile: tamaño touch (44px) y flex none para no
+     encogerse por el title con flex: 1 al lado. */
+  .app-chrome #themeSeg {
+    flex: none;
+    z-index: 1;
+  }
+  .app-chrome #themeSeg .seg__btn {
+    min-width: 36px;
+    height: 32px;
+    padding: 0 var(--sp-2);
+  }
   /* Pills filter en header (estilo m-pills del mockup): scroll horizontal,
      pill rounded por tab, gap entre tabs. Reemplaza al filter-tabs del
      footer (oculto en mobile via Fase 9C). */
