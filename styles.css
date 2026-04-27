@@ -1470,13 +1470,15 @@ solo se ajustan paddings y gaps que en mobile sienten apretados.
   }
   /* Barras .sep entre los actions de tareas padre (estilo m-task__actions
      del mockup). Línea fina vertical en el gap derecho de cada btn
-     menos el último. */
+     menos el último. Altura FIJA (no porcentual) para que todas las
+     barras sean idénticas independiente del alto del btn. */
   .grocery-item:not(.is-subtask) .action-group > .btn-icon:not(:last-child)::after {
     content: "";
     position: absolute;
     right: calc(var(--sp-2) * -0.5);
-    top: 22%;
-    bottom: 22%;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 18px;
     width: 1px;
     background: var(--border-subtle);
   }
