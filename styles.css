@@ -682,9 +682,18 @@ Paginación
 [data-theme="dark"] .app-footer {
     box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.4);
 }
-/* Espacio al final del body para que el footer no tape el último item. */
+/* Espacio al final del body para que el footer no tape el último contenido
+   (paginación, último item, etc.). Buffer generoso = footer-h + sp-5 (24px)
+   + safe-area. Antes era solo footer-h + safe-area, lo que dejaba la
+   paginación al ras del footer y en algunos browsers (mobile, scroll fino)
+   se veia tapada parcialmente. */
 body {
-    padding-bottom: calc(var(--footer-h) + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(var(--footer-h) + var(--sp-5) + env(safe-area-inset-bottom, 0px));
+}
+/* scroll-padding-bottom: si el browser auto-scrollea (focus en input,
+   anchor, etc.) que lo haga dejando aire para no quedar bajo el footer. */
+html {
+    scroll-padding-bottom: calc(var(--footer-h) + var(--sp-3) + env(safe-area-inset-bottom, 0px));
 }
 
 .filter-label {
