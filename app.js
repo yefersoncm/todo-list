@@ -2045,9 +2045,21 @@ class TaskManager {
             input.value = '';
             // Auto-expandir si estaba colapsado: si no, la sub nueva queda invisible.
             this._expandParent(parentId);
+            // Mantenemos el form abierto para agregar varias subs en serie.
+            this._showAddSubFor.add(parentId);
             this.currentPage = 1;
             this.renderTasks();
             this.displayAlert('Subtarea agregada', 'success');
+            // Re-focus en el input del form NUEVO (renderTasks reconstruye
+            // el DOM y el form anterior ya no existe). Sin esto el teclado
+            // mobile se cierra entre cada submit y agregar varias subs es
+            // tedioso.
+            requestAnimationFrame(() => {
+                const newInput = DOM.list.querySelector(
+                    `.m-subs[data-parent-id="${parentId}"] .subtask-add-input`
+                );
+                newInput?.focus();
+            });
         });
         return form;
     }
