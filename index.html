@@ -19,6 +19,8 @@
         <!-- App chrome: toggles de tema y densidad (Fase 7H). Iconos
              se montan en JS via createIcon. -->
         <div class="app-chrome">
+            <!-- Hamburger (solo mobile): abre drawer con sort/pageSize/bulk/clear. -->
+            <button type="button" class="app-hamburger" id="appHamburger" aria-label="Menú" aria-expanded="false"></button>
             <!-- Título mobile (oculto en desktop). Se hidrata con stats vía JS. -->
             <div class="app-title">
                 <div class="app-title__main">Tareas</div>
@@ -143,6 +145,9 @@
             </div>
         </div>
     </footer>
+
+    <!-- Backdrop del drawer mobile. -->
+    <div class="app-drawer-backdrop" id="appDrawerBackdrop" hidden></div>
 
     <div class="app-toast-container" id="toastContainer" aria-live="polite" aria-atomic="false"></div>
 

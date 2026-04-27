@@ -61,6 +61,9 @@ const DOM = {
     themeSeg: document.getElementById('themeSeg'),
     densitySeg: document.getElementById('densitySeg'),
     appTitleSub: document.getElementById('appTitleSub'),
+    appHamburger: document.getElementById('appHamburger'),
+    appDrawerBackdrop: document.getElementById('appDrawerBackdrop'),
+    taskCountRow: document.querySelector('.task-count-row'),
 };
 
 function loadPageSize() {
@@ -159,6 +162,7 @@ class TaskManager {
         this._mountStaticIcons();
         this._setupChromeToggles();
         this._setupFooterHeightTracker();
+        this._setupMobileDrawer();
         this.setupEventListeners();
         this.renderTasks();
         this._startElapsedTicker();
@@ -202,6 +206,40 @@ class TaskManager {
         if (clearIconSlot && !clearIconSlot.firstChild) {
             clearIconSlot.appendChild(createIcon('trash', { size: 14 }));
         }
+        // Hamburger icon (menu) — solo se ve en mobile vía CSS.
+        if (DOM.appHamburger && !DOM.appHamburger.firstChild) {
+            DOM.appHamburger.appendChild(createIcon('menu', { size: 22 }));
+        }
+    }
+
+    /**
+     * Drawer mobile (hamburger): el .task-count-row se reposiciona como
+     * panel fixed slide-from-left en mobile. Click en hamburger toggle
+     * la clase .is-open, que activa el slide. Backdrop + Esc cierran.
+     */
+    _setupMobileDrawer() {
+        if (!DOM.appHamburger || !DOM.taskCountRow || !DOM.appDrawerBackdrop) return;
+        const open = () => {
+            DOM.taskCountRow.classList.add('is-open');
+            DOM.appDrawerBackdrop.hidden = false;
+            requestAnimationFrame(() => DOM.appDrawerBackdrop.classList.add('is-open'));
+            DOM.appHamburger.setAttribute('aria-expanded', 'true');
+        };
+        const close = () => {
+            DOM.taskCountRow.classList.remove('is-open');
+            DOM.appDrawerBackdrop.classList.remove('is-open');
+            DOM.appHamburger.setAttribute('aria-expanded', 'false');
+            // Espera fin de transición para hidden=true (evita flash).
+            setTimeout(() => { DOM.appDrawerBackdrop.hidden = true; }, 220);
+        };
+        DOM.appHamburger.addEventListener('click', () => {
+            const isOpen = DOM.taskCountRow.classList.contains('is-open');
+            isOpen ? close() : open();
+        });
+        DOM.appDrawerBackdrop.addEventListener('click', close);
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && DOM.taskCountRow.classList.contains('is-open')) close();
+        });
     }
 
     /**
