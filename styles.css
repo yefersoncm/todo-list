@@ -429,6 +429,15 @@ Paginación
 .grocery-item .title {
   flex: 1;
   min-width: 0;
+  /* line-height tight aproxima el bbox al alto real del glyph; con
+     align-items:center del flex padre, el texto queda visualmente
+     centrado con el toggle-check en lugar de quedar 1-2px arriba por
+     el espacio descendente del line-height 1.5 default. */
+  line-height: var(--lh-tight);
+  /* align-self: center refuerza el centrado en flex-wrap (mobile)
+     donde el title está en su propia row pero la sub-row con toggle
+     puede cambiar de altura. */
+  align-self: center;
 }
 /* Subtareas: indentación pura, sin línea conectora.
    max-height + transition para animar collapse/expand. */
@@ -890,6 +899,8 @@ solo se ajustan paddings y gaps que en mobile sienten apretados.
     padding: 0 0.25rem;
     word-break: break-word;
     letter-spacing: 1px;
+    /* line-height más holgado para títulos que wrappean en 2 líneas. */
+    line-height: var(--lh-snug);
   }
   /* La sub mantiene su indentación pero el title también va arriba. */
   .grocery-item.is-subtask .title {
