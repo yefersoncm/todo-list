@@ -50,6 +50,13 @@
             <div class="search-row" id="searchRow">
                 <input type="search" id="searchInput" class="search-input field" placeholder="Buscar tareas…" aria-label="Buscar tareas por texto" autocomplete="off">
             </div>
+            <!-- Pills mobile: copia del filter-tabs del footer, visible solo
+                 en mobile via CSS. El JS sincroniza ambos sets via data-filter-tabs. -->
+            <div class="filter-tabs m-pills" data-filter-tabs role="tablist" aria-label="Filtro mobile">
+                <button type="button" class="filter-tab is-active" role="tab" aria-selected="true" data-value="all">Todas</button>
+                <button type="button" class="filter-tab" role="tab" aria-selected="false" data-value="pending">Pendientes</button>
+                <button type="button" class="filter-tab" role="tab" aria-selected="false" data-value="done">Hechas</button>
+            </div>
             <div class="task-count-row">
                 <p class="task-count"></p>
                 <div class="task-count-controls">
@@ -138,7 +145,7 @@
     <footer class="app-footer" role="contentinfo">
         <div class="app-footer__inner">
             <span id="filterLabel" class="filter-label">Mostrar</span>
-            <div class="filter-tabs" id="taskFilter" role="tablist" aria-labelledby="filterLabel">
+            <div class="filter-tabs" id="taskFilter" data-filter-tabs role="tablist" aria-labelledby="filterLabel">
                 <button type="button" class="filter-tab is-active" role="tab" aria-selected="true" data-value="all">Todas</button>
                 <button type="button" class="filter-tab" role="tab" aria-selected="false" data-value="pending">Pendientes</button>
                 <button type="button" class="filter-tab" role="tab" aria-selected="false" data-value="done">Hechas</button>

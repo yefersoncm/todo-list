@@ -144,12 +144,14 @@ class TaskManager {
         this.currentPage = 1;
         this.collapsedParents = loadCollapsed();
         this.toast = new ToastManager(DOM.toastContainer);
-        // Filter ahora son tabs (Fase 7F): click en cualquier .filter-tab
-        // setea filterMode y actualiza aria-selected.
-        DOM.taskFilterRoot.addEventListener('click', (e) => {
-            const tab = e.target.closest('.filter-tab');
-            if (!tab) return;
-            this._setFilterTab(tab.dataset.value);
+        // Filter tabs: hay 2 sets en el DOM (footer desktop + header mobile,
+        // ambos con [data-filter-tabs]). Listener delegado en cada uno.
+        document.querySelectorAll('[data-filter-tabs]').forEach(root => {
+            root.addEventListener('click', (e) => {
+                const tab = e.target.closest('.filter-tab');
+                if (!tab) return;
+                this._setFilterTab(tab.dataset.value);
+            });
         });
         this.sortByCombo = new Combobox(DOM.sortByRoot, {
             onChange: (value) => this.handleSortChange(value),
@@ -393,8 +395,9 @@ class TaskManager {
         if (this.filterMode === value) return;
         this.filterMode = value;
         this.currentPage = 1;
-        // Actualiza aria-selected y .is-active en los 3 tabs.
-        DOM.taskFilterRoot.querySelectorAll('.filter-tab').forEach(t => {
+        // Actualiza aria-selected y .is-active en TODOS los sets de tabs
+        // (footer desktop + header mobile via data-filter-tabs).
+        document.querySelectorAll('[data-filter-tabs] .filter-tab').forEach(t => {
             const active = t.dataset.value === value;
             t.classList.toggle('is-active', active);
             t.setAttribute('aria-selected', active ? 'true' : 'false');

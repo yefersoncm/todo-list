@@ -280,6 +280,9 @@ con mayor especificidad y haría invisibles nuestras notificaciones.
 .app-hamburger:hover { background: var(--bg-surface-2); }
 .app-hamburger:active { transform: scale(0.96); }
 .app-hamburger .icon { display: block; }
+/* Pills mobile ocultas en desktop por default. Se muestran en mobile
+   via override en @media (max-width: 480px). */
+.filter-tabs.m-pills { display: none; }
 /* Drawer backdrop (oculto en desktop por hidden attribute). */
 .app-drawer-backdrop {
   position: fixed;
@@ -891,6 +894,37 @@ solo se ajustan paddings y gaps que en mobile sienten apretados.
   }
   .app-chrome #densitySeg { display: none; }
   .grocery-form h3 { display: none; }
+  /* Pills filter en header (estilo m-pills del mockup): scroll horizontal,
+     pill rounded por tab, gap entre tabs. Reemplaza al filter-tabs del
+     footer (oculto en mobile via Fase 9C). */
+  .filter-tabs.m-pills {
+    display: flex;
+    gap: var(--sp-2);
+    margin: var(--sp-3) 0 var(--sp-2);
+    padding: 2px 0;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .filter-tabs.m-pills::-webkit-scrollbar { display: none; }
+  .filter-tabs.m-pills .filter-tab {
+    flex: none;
+    height: 32px;
+    padding: 0 var(--sp-3);
+    border-radius: 999px;
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-surface);
+    color: var(--fg-muted);
+    font-weight: var(--fw-medium);
+    box-shadow: none;
+  }
+  .filter-tabs.m-pills .filter-tab.is-active {
+    background: var(--accent);
+    color: var(--accent-fg);
+    border-color: var(--accent);
+  }
   /* Hamburger visible en mobile. */
   .app-hamburger {
     display: inline-flex;
