@@ -8,9 +8,6 @@ import { ToastManager } from './toast.js';
 const PAGE_SIZE_KEY = 'todo-list:pageSize';
 const VALID_PAGE_SIZES = [10, 20, 50, 100];
 const DEFAULT_PAGE_SIZE = 10;
-// Umbral fijo para mostrar el buscador. Coincide con el pageSize mínimo
-// (la primera entrada de VALID_PAGE_SIZES) — NO con el pageSize actual.
-const SEARCH_VISIBILITY_THRESHOLD = VALID_PAGE_SIZES[0];
 
 const SORT_BY_KEY = 'todo-list:sortBy';
 const DEFAULT_SORT = 'created-desc';
@@ -56,7 +53,6 @@ const DOM = {
     bulkExpandAllBtn: document.querySelector('.bulk-expand-all'),
     promoteZone: document.getElementById('promoteZone'),
     searchInput: document.getElementById('searchInput'),
-    searchRow: document.getElementById('searchRow'),
     paginationNav: document.querySelector('.pagination'),
     taskCountDisplay: document.querySelector('.task-count'),
     toastContainer: document.getElementById('toastContainer'),
@@ -1178,25 +1174,7 @@ class TaskManager {
         this._renderPagination(totalPages);
         this.updateTaskCount(filteredParents.length);
         this._updateBulkCollapseVisibility();
-        this._updateSearchVisibility();
         this._updateElapsed();
-    }
-
-    /**
-     * Muestra el buscador solo si hay más padres que SEARCH_VISIBILITY_THRESHOLD
-     * (10 — el pageSize mínimo). Es un umbral FIJO, NO se ajusta al
-     * pageSize actual: con pageSize=100 y 15 padres el buscador se ve.
-     * Si oculta, limpia el query activo para no dejar filtro fantasma.
-     */
-    _updateSearchVisibility() {
-        if (!DOM.searchRow) return;
-        const totalParents = this.store.tasks.filter(t => t.parentId === null).length;
-        const shouldShow = totalParents > SEARCH_VISIBILITY_THRESHOLD;
-        DOM.searchRow.hidden = !shouldShow;
-        if (!shouldShow && this.searchQuery) {
-            this.searchQuery = '';
-            if (DOM.searchInput) DOM.searchInput.value = '';
-        }
     }
 
     _updateBulkCollapseVisibility() {
