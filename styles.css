@@ -404,11 +404,17 @@ Paginación
 .grocery-item {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  margin-bottom: 0.5rem;
-  transition: var(--transition);
-  padding: 0.25rem 1rem;
-  border-radius: var(--radius);
+  /* Tokens de densidad: --row-h, --row-py, --row-px, --row-gap se
+     contraen cuando data-density="compact" en <html>. Esto hace que el
+     toggle de densidad realmente reduzca la altura del item completo. */
+  gap: var(--row-gap);
+  min-height: var(--row-h);
+  padding: var(--row-py) var(--row-px);
+  margin-bottom: var(--sp-1);
+  border-radius: var(--r-md);
+  transition: background-color var(--dur-fast) var(--ease-out),
+              min-height var(--dur-base) var(--ease-out),
+              padding var(--dur-base) var(--ease-out);
   /* min-width: 0 evita que un hijo con nowrap (.task-days-old con
      min-width calculado por JS) fuerce overflow horizontal del viewport. */
   min-width: 0;
