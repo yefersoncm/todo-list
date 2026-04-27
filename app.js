@@ -1447,22 +1447,52 @@ class TaskManager {
         if (items.length > 0) {
             // Group titles temporales (Fase F8): cuando filter='all' o
             // 'pending', subdivide pendientes por urgencia según dueDate.
-            // Hechas queda en su propio grupo al final.
+            // Subs van dentro de un wrapper .m-subs que renderiza una guía
+            // vertical en árbol (Fase F-tree) y al final el form
+            // "+ subtarea".
             let lastGroup = null;
+            let currentSubsWrap = null;
+            let currentParentId = null;
             const showGroups = ['all', 'pending'].includes(this.filterMode);
+
+            const closeSubsWrap = () => {
+                if (currentSubsWrap && currentParentId) {
+                    // Append el form "+ subtarea" como último elemento del wrapper.
+                    currentSubsWrap.appendChild(this._buildSubtaskAddForm(currentParentId));
+                    DOM.list.appendChild(currentSubsWrap);
+                }
+                currentSubsWrap = null;
+                currentParentId = null;
+            };
+
             items.forEach(item => {
-                if (showGroups && item.parentId === null) {
-                    const group = this._groupOf(item);
-                    if (group !== lastGroup) {
-                        const title = document.createElement('div');
-                        title.className = 'group-title';
-                        title.textContent = group;
-                        DOM.list.appendChild(title);
-                        lastGroup = group;
+                if (item.parentId === null) {
+                    closeSubsWrap();
+                    if (showGroups) {
+                        const group = this._groupOf(item);
+                        if (group !== lastGroup) {
+                            const title = document.createElement('div');
+                            title.className = 'group-title';
+                            title.textContent = group;
+                            DOM.list.appendChild(title);
+                            lastGroup = group;
+                        }
+                    }
+                    DOM.list.appendChild(this.createListItem(item));
+                    currentParentId = item.id;
+                    currentSubsWrap = document.createElement('div');
+                    currentSubsWrap.className = 'm-subs';
+                    currentSubsWrap.dataset.parentId = item.id;
+                } else {
+                    if (currentSubsWrap) {
+                        currentSubsWrap.appendChild(this.createListItem(item));
+                    } else {
+                        // Fallback: sub sin padre visible — al list directo.
+                        DOM.list.appendChild(this.createListItem(item));
                     }
                 }
-                this.createListItem(item);
             });
+            closeSubsWrap();
             DOM.container.classList.add('show-container');
         } else {
             // Empty state: cuando un filter (Hoy/Semana/Prioridad/Hechas/etc)
@@ -1739,15 +1769,14 @@ class TaskManager {
         meta.className = 'meta';
         meta.append(actionGroup);
 
-        // Padres llevan input inline para agregar subtareas, y un
-        // chevron al inicio si tienen al menos una sub. Cuando NO tienen
-        // subs, en su lugar va un placeholder del mismo tamaño para
-        // mantener alineación de columnas entre tareas con/sin chevron.
+        // Padres llevan un chevron al inicio si tienen subs (placeholder
+        // si no). El input para agregar subtarea NO va más dentro del
+        // padre — se renderiza después de las subs como sibling vía
+        // _renderList (estilo .m-subs del mockup).
         if (!isSubtask) {
             const hasSubs = this.store.subsOf(id).length > 0;
             const subSlot = hasSubs ? this._buildSubtaskCollapseBtn(id) : this._buildSubtaskCollapsePlaceholder();
-            const subForm = this._buildSubtaskAddForm(id);
-            element.append(subSlot, toggleBtn, titleBlock, subForm, meta);
+            element.append(subSlot, toggleBtn, titleBlock, meta);
         } else {
             element.append(toggleBtn, titleBlock, meta);
         }
@@ -1756,7 +1785,7 @@ class TaskManager {
         deleteBtn.addEventListener('click', this.handleDeleteItem.bind(this));
         editBtn.addEventListener('click', this.handleEditItem.bind(this));
 
-        DOM.list.appendChild(element);
+        return element;
     }
 
     _buildSubtaskAddForm(parentId) {
