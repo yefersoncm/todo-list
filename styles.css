@@ -300,6 +300,8 @@ con mayor especificidad y haría invisibles nuestras notificaciones.
 .group-title { display: none; }
 /* FAB (Fase 9F) — solo visible en mobile, oculto en desktop. */
 .app-fab { display: none; }
+/* Bottom nav (Fase F10) — solo en mobile. */
+.m-bottom { display: none; }
 .newtask-modal[hidden] { display: none; }
 .newtask-modal__form {
   display: flex;
@@ -329,6 +331,18 @@ con mayor especificidad y haría invisibles nuestras notificaciones.
 /* Botón star (priority) — diferente a edit/delete: amarillo cuando activo. */
 .priority-btn.is-priority { color: var(--warning); }
 .priority-btn.is-priority svg { fill: currentColor; }
+/* Botón calendar (due-btn) — accent cuando ya tiene fecha asignada. */
+.due-btn.is-due { color: var(--accent); }
+/* Star inline al lado del título cuando priority. */
+.task__priority-mark {
+  color: var(--warning);
+  fill: var(--warning);
+  margin-left: 0.25rem;
+  vertical-align: middle;
+}
+/* Item con due-date hoy: borde left amarillo. Item overdue: rojo. */
+.task.is-due-today { border-left: 3px solid var(--warning); }
+.task.is-overdue { border-left: 3px solid var(--danger); }
 /* Due-date badge en items con dueDate (mobile + desktop). */
 .task__due-badge {
   display: inline-flex;
@@ -1013,13 +1027,47 @@ solo se ajustan paddings y gaps que en mobile sienten apretados.
     flex: 1;
   }
   .m-toolbar .btn { flex: none; height: 32px; padding: 0 var(--sp-3); }
-  /* FAB visible en mobile. */
+  /* Bottom nav visible en mobile (Fase F10). Flex item del body al final.
+     Como body es flex column con overflow hidden (app shell), queda fijo
+     en el bottom del viewport. */
+  .m-bottom {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    background: var(--bg-surface);
+    border-top: 1px solid var(--border-subtle);
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.04);
+    flex: 0 0 auto;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    z-index: 80;
+  }
+  .m-bottom-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    height: 56px;
+    background: transparent;
+    border: none;
+    color: var(--fg-muted);
+    font-size: 10px;
+    font-family: var(--ff-mono);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-caps);
+    cursor: pointer;
+    transition: color var(--dur-fast) var(--ease-out);
+  }
+  .m-bottom-btn:active { transform: scale(0.97); }
+  .m-bottom-btn.is-active { color: var(--accent); }
+  .m-bottom-btn__icon { display: inline-flex; }
+  .m-bottom-btn__icon .icon { width: 20px; height: 20px; display: block; }
+  /* FAB sube para no chocar con el bottom nav. */
   .app-fab {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     position: fixed;
-    bottom: calc(var(--sp-5) + env(safe-area-inset-bottom, 0px));
+    bottom: calc(72px + env(safe-area-inset-bottom, 0px));
     right: var(--sp-4);
     width: 56px;
     height: 56px;
