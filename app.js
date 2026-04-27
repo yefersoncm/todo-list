@@ -1622,6 +1622,7 @@ class TaskManager {
                     }
                     if (currentSubsWrap.children.length > 0) {
                         DOM.list.appendChild(currentSubsWrap);
+                        this._adjustGuideBottom(currentSubsWrap);
                     }
                 }
                 currentSubsWrap = null;
@@ -1678,6 +1679,29 @@ class TaskManager {
                 DOM.container.classList.add('show-container');
             }
         }
+    }
+
+    /**
+     * Ajusta la guía vertical del árbol .m-subs::before para que termine
+     * exactamente en el centro del ÚLTIMO child (sub o form). Setea la
+     * variable CSS --guide-bottom con el offset desde el bottom del
+     * wrapper hasta el centro del último child.
+     *
+     * Reemplaza al trick previo de tapar con bg-surface (que el usuario
+     * no quiso). Este approach es exacto: la guía termina justo donde
+     * sale el connector horizontal del último elemento, sin colgante.
+     */
+    _adjustGuideBottom(wrap) {
+        requestAnimationFrame(() => {
+            const last = wrap.lastElementChild;
+            if (!last) return;
+            const wrapH = wrap.offsetHeight;
+            const lastTop = last.offsetTop;
+            const lastH = last.offsetHeight;
+            const lastCenter = lastTop + lastH / 2;
+            const bottom = Math.max(0, wrapH - lastCenter);
+            wrap.style.setProperty('--guide-bottom', `${bottom}px`);
+        });
     }
 
     _emptyStateMessage() {

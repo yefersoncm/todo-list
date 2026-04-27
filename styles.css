@@ -1316,29 +1316,15 @@ solo se ajustan paddings y gaps que en mobile sienten apretados.
      colapsadas. */
   .m-subs.is-collapsed > .subtask-add-form { display: none; }
   .m-subs.is-collapsed.is-add-expanded > .subtask-add-form { display: flex; }
-  /* Trick: tapar la guía vertical después del último child del wrapper
-     para que el árbol no quede como una "T rotada". El ::after del
-     último child cubre la guía desde su centro hacia abajo. Usa
-     bg-surface (color del wrapper-padre) para esconder los pixels. */
-  .m-subs > *:last-child {
-    position: relative;
-  }
-  .m-subs > *:last-child::after {
-    content: "";
-    position: absolute;
-    left: calc(var(--sp-5) * -1 - 1px);
-    top: calc(50% + 1px);
-    bottom: -100px;
-    width: 4px;
-    background: var(--bg-surface);
-    z-index: 1;
-  }
   .m-subs::before {
     content: "";
     position: absolute;
     left: calc(var(--sp-3) * -1);
     top: 0;
-    bottom: 12px;
+    /* --guide-bottom lo setea JS al renderizar (offset desde el bottom
+       del wrapper hasta el centro del último child). Default 50% de
+       fallback si JS no corre. */
+    bottom: var(--guide-bottom, 50%);
     width: 2px;
     background: var(--border-subtle);
     border-radius: 1px;
