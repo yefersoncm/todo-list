@@ -643,13 +643,39 @@ Paginación
 
 /* ... (Tu código CSS existente) ... */
 
-/* New filter container for better layout control */
-.filters-container {
+/* Footer fijo con el filtro Mostrar/Todas/Pendientes/Hechas siempre
+   visible al pie de la pantalla. */
+.app-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 90;
+    background: var(--bg-surface);
+    border-top: 1px solid var(--border-subtle);
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.04);
+    padding: var(--sp-3) var(--sp-4);
+    /* Respeto de safe-area en iPhone con notch (no rompe en otros). */
+    padding-bottom: calc(var(--sp-3) + env(safe-area-inset-bottom, 0px));
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+.app-footer__inner {
+    max-width: var(--container-max);
+    margin: 0 auto;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.75rem;
-    margin-top: 1.5rem;
+    gap: var(--sp-3);
+    flex-wrap: wrap;
+}
+[data-theme="dark"] .app-footer {
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.4);
+}
+/* Espacio al final del body para que el footer no tape el último item.
+   Aproximación generosa: alto del footer + safe-area. */
+body {
+    padding-bottom: calc(var(--sp-7) + env(safe-area-inset-bottom, 0px));
 }
 
 .filter-label {
