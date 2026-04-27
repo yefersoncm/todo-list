@@ -1240,10 +1240,6 @@ solo se ajustan paddings y gaps que en mobile sienten apretados.
   .task__actions {
     opacity: 1 !important;
   }
-  .task-count-row,
-  .task-count-controls {
-    gap: 0.5rem;
-  }
   .pagination {
     justify-content: center;
     gap: 0.35rem;
@@ -1252,43 +1248,41 @@ solo se ajustan paddings y gaps que en mobile sienten apretados.
   .grocery-item .meta {
     gap: 0.4rem;
   }
-  /* Header del listado en columna: contador centrado, luego bulk-collapse,
-     limpiar, sort y page-size como rows full-width independientes. */
-  .task-count-row {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.5rem;
+  /* Drawer: organización de cada control en columna limpia.
+     El .task-count-controls hereda flex column de la regla del drawer
+     (linea 1159). Aquí solo aseguramos que cada child ocupe ancho
+     completo y que sub-grupos (bulk-collapse, sort, page-size) no
+     entren en conflicto con flex 1 1 100% de cuando estaba inline. */
+  .task-count-row.is-open .task-count-controls > * {
+    width: 100%;
   }
-  .task-count-row .task-count {
-    text-align: center;
-    margin: 0;
-  }
-  .task-count-controls {
-    justify-content: center;
-    gap: 0.5rem;
-  }
-  /* Colapsar + Expandir lado a lado en su propia row, cada uno la mitad. */
-  .bulk-collapse:not([hidden]) {
+  .task-count-row.is-open .bulk-collapse:not([hidden]) {
     display: flex;
-    flex: 1 1 100%;
-    gap: 0.4rem;
-    justify-content: center;
+    gap: var(--sp-2);
+    width: 100%;
   }
-  .bulk-collapse > .bulk-btn {
+  .task-count-row.is-open .bulk-collapse > .bulk-btn {
     flex: 1 1 0;
     justify-content: center;
   }
-  /* Limpiar lista en su propia row, full-width centrado. */
-  .task-count-controls > .clear-btn {
-    flex: 1 1 100%;
+  .task-count-row.is-open .clear-btn {
+    width: 100%;
     justify-content: center;
   }
-  /* Sort y Page-size cada uno en row full-width con label a la izquierda
-     y combo a la derecha. */
-  .sort-control,
-  .page-size-control {
-    flex: 1 1 100%;
+  .task-count-row.is-open .sort-control,
+  .task-count-row.is-open .page-size-control {
+    display: flex;
+    align-items: center;
     justify-content: space-between;
+    gap: var(--sp-2);
+    width: 100%;
+  }
+  .task-count-row.is-open .sort-control .combo,
+  .task-count-row.is-open .page-size-control .combo {
+    flex: 1;
+  }
+  .task-count-row.is-open .combo-toggle {
+    width: 100%;
   }
   /* Toast en mobile: bottom + arriba del footer fijo (no lo tapa). */
   .app-toast-container {
@@ -1298,13 +1292,9 @@ solo se ajustan paddings y gaps que en mobile sienten apretados.
     left: 1rem;
     align-items: flex-end;
   }
-  /* El item se vuelve flex-wrap para que el title tenga línea propia
-     cuando los botones touch (toggle + ↑ ↓ ⬅ edit delete) no le dejan
-     espacio. La metadata de tiempo se oculta — secundaria. */
-  .grocery-item {
-    flex-wrap: wrap;
-    row-gap: 0.35rem;
-  }
+  /* (Las reglas .grocery-item flex-wrap/row-gap se eliminaron — el item
+     en mobile es grid puro vía .grocery-item:not(.is-subtask) y .is-subtask
+     definidas más abajo en este mismo bloque.) */
   /* En mobile el title-block es columna: title arriba, elapsed debajo
      (estilo m-task__head del mockup). */
   .task__title-block {
@@ -1332,16 +1322,12 @@ solo se ajustan paddings y gaps que en mobile sienten apretados.
     flex-basis: auto;
   }
   /* En mobile el elapsed compacto cabe (3-5 chars), no se oculta. */
-  /* Layout en 3 líneas para tareas padre:
-       L1: título full-width
-       L2: chevron + toggle + input "+ subtarea" (al lado del toggle)
-       L3: action-group centrado
-     Subtareas: L1 título, L2 toggle (sin chevron ni form), L3 acciones
-     centradas. */
+  /* meta es grid-area 'actions' — solo necesita centrar su contenido
+     (el .action-group). La regla flex:1 1 100% legacy se eliminó. */
   .grocery-item .meta {
-    flex: 1 1 100%;
     margin-left: 0;
     justify-content: center;
+    display: flex;
   }
   .grocery-item .action-group {
     justify-content: center;
