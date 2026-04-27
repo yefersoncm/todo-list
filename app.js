@@ -64,6 +64,7 @@ const DOM = {
     confirmModalText: document.getElementById('confirmModalText'),
     themeSeg: document.getElementById('themeSeg'),
     densitySeg: document.getElementById('densitySeg'),
+    appTitleSub: document.getElementById('appTitleSub'),
 };
 
 function loadPageSize() {
@@ -1492,11 +1493,19 @@ class TaskManager {
     }
 
     updateTaskCount(filteredCount) {
-        if (!DOM.taskCountDisplay) return;
-        let label = 'Total';
-        if (this.filterMode === 'done') label = 'Completadas';
-        else if (this.filterMode === 'pending') label = 'Pendientes';
-        DOM.taskCountDisplay.textContent = `Tareas: ${label}: ${filteredCount}`;
+        if (DOM.taskCountDisplay) {
+            let label = 'Total';
+            if (this.filterMode === 'done') label = 'Completadas';
+            else if (this.filterMode === 'pending') label = 'Pendientes';
+            DOM.taskCountDisplay.textContent = `Tareas: ${label}: ${filteredCount}`;
+        }
+        // Subtítulo del header mobile: "X de Y" donde X = padres hechos
+        // (sobre el TOTAL real, no sobre el filtrado).
+        if (DOM.appTitleSub) {
+            const allParents = this.store.tasks.filter(t => t.parentId === null);
+            const doneCount = allParents.filter(p => p.done).length;
+            DOM.appTitleSub.textContent = `${doneCount} de ${allParents.length}`;
+        }
     }
 }
 

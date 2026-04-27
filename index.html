@@ -19,6 +19,11 @@
         <!-- App chrome: toggles de tema y densidad (Fase 7H). Iconos
              se montan en JS via createIcon. -->
         <div class="app-chrome">
+            <!-- Título mobile (oculto en desktop). Se hidrata con stats vía JS. -->
+            <div class="app-title">
+                <div class="app-title__main">Tareas</div>
+                <div class="app-title__sub" id="appTitleSub"></div>
+            </div>
             <div class="seg" id="themeSeg" role="group" aria-label="Tema">
                 <button type="button" class="seg__btn" data-theme="light" aria-label="Tema claro" title="Claro"></button>
                 <button type="button" class="seg__btn" data-theme="dark" aria-label="Tema oscuro" title="Oscuro"></button>
