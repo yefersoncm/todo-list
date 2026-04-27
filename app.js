@@ -75,6 +75,14 @@ const DOM = {
     mCollapseAll: document.getElementById('mCollapseAll'),
     mExpandAll: document.getElementById('mExpandAll'),
     mBottomNav: document.getElementById('mBottomNav'),
+    newTaskDateBtn: document.getElementById('newTaskDateBtn'),
+    datePickerModal: document.getElementById('datePickerModal'),
+    datePickerMonth: document.getElementById('datePickerMonth'),
+    datePickerPrev: document.getElementById('datePickerPrev'),
+    datePickerNext: document.getElementById('datePickerNext'),
+    datePickerGrid: document.getElementById('datePickerGrid'),
+    datePickerOk: document.getElementById('datePickerOk'),
+    datePickerClear: document.getElementById('datePickerClear'),
 };
 
 function loadPageSize() {
@@ -163,6 +171,9 @@ class TaskManager {
         this.pageSize = loadPageSize();
         this.currentPage = 1;
         this.collapsedParents = loadCollapsed();
+        // Set transitorio (no persistido) de IDs de padres con el form
+        // "+ subtarea" expandido. Toggle desde el botón addsub-btn.
+        this._showAddSubFor = new Set();
         this.toast = new ToastManager(DOM.toastContainer);
         // Filter tabs: hay 2 sets en el DOM (footer desktop + header mobile,
         // ambos con [data-filter-tabs]). Listener delegado en cada uno.
@@ -188,6 +199,7 @@ class TaskManager {
         this._safeRun('setupMobileDrawer', () => this._setupMobileDrawer());
         this._safeRun('setupMobileFab', () => this._setupMobileFab());
         this._safeRun('setupMobileBottomNav', () => this._setupMobileBottomNav());
+        this._safeRun('setupDatePicker', () => this._setupDatePicker());
         this.setupEventListeners();
         this.renderTasks();
         this._startElapsedTicker();
@@ -298,6 +310,105 @@ class TaskManager {
     }
 
     /**
+     * Date picker custom (modal con calendario propio). Respeta dark/light
+     * mode porque usa tokens semánticos. Reemplaza al <input type='date'>
+     * nativo que no se puede estilear.
+     */
+    _setupDatePicker() {
+        if (!DOM.datePickerModal || !DOM.datePickerGrid) return;
+        this._dpView = new Date();   // mes/año mostrado.
+        this._dpSelected = null;     // YYYY-MM-DD del día seleccionado.
+        this._dpOnConfirm = null;    // callback al hacer Aceptar.
+
+        const close = () => {
+            DOM.datePickerModal.hidden = true;
+            this._dpOnConfirm = null;
+        };
+
+        DOM.datePickerPrev.appendChild(createIcon('chevron-left', { size: 18 }));
+        DOM.datePickerNext.appendChild(createIcon('chevron-right', { size: 18 }));
+        DOM.datePickerPrev.addEventListener('click', () => {
+            this._dpView.setMonth(this._dpView.getMonth() - 1);
+            this._renderDatePicker();
+        });
+        DOM.datePickerNext.addEventListener('click', () => {
+            this._dpView.setMonth(this._dpView.getMonth() + 1);
+            this._renderDatePicker();
+        });
+        DOM.datePickerGrid.addEventListener('click', (e) => {
+            const cell = e.target.closest('[data-date]');
+            if (!cell) return;
+            this._dpSelected = cell.dataset.date;
+            this._renderDatePicker();
+        });
+        DOM.datePickerOk.addEventListener('click', () => {
+            const cb = this._dpOnConfirm;
+            const value = this._dpSelected;
+            close();
+            if (cb) cb(value);
+        });
+        DOM.datePickerClear.addEventListener('click', () => {
+            const cb = this._dpOnConfirm;
+            close();
+            if (cb) cb(null);
+        });
+        DOM.datePickerModal.addEventListener('click', (e) => {
+            if (e.target === DOM.datePickerModal) close();
+            const action = e.target.closest('[data-action]')?.dataset.action;
+            if (action === 'cancel') close();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !DOM.datePickerModal.hidden) close();
+        });
+    }
+
+    _openDatePicker(currentValue, onConfirm) {
+        if (!DOM.datePickerModal) return;
+        this._dpSelected = currentValue || null;
+        // View arranca en el mes del valor actual, o en el mes presente.
+        if (currentValue) {
+            const [y, m] = currentValue.split('-').map(Number);
+            this._dpView = new Date(y, m - 1, 1);
+        } else {
+            const t = new Date();
+            this._dpView = new Date(t.getFullYear(), t.getMonth(), 1);
+        }
+        this._dpOnConfirm = onConfirm;
+        this._renderDatePicker();
+        DOM.datePickerModal.hidden = false;
+    }
+
+    _renderDatePicker() {
+        const view = this._dpView;
+        const monthNames = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+        DOM.datePickerMonth.textContent = `${monthNames[view.getMonth()]} ${view.getFullYear()}`;
+        DOM.datePickerGrid.innerHTML = '';
+        // Días en el mes y day-of-week del primero (lun=0..dom=6).
+        const firstOfMonth = new Date(view.getFullYear(), view.getMonth(), 1);
+        const lastOfMonth = new Date(view.getFullYear(), view.getMonth() + 1, 0);
+        // JS getDay: dom=0..sab=6. Convertimos a lun=0.
+        const startDow = (firstOfMonth.getDay() + 6) % 7;
+        const today = todayISO();
+        // Padding antes del 1° del mes.
+        for (let i = 0; i < startDow; i++) {
+            const empty = document.createElement('span');
+            empty.className = 'date-picker__day is-empty';
+            DOM.datePickerGrid.appendChild(empty);
+        }
+        for (let d = 1; d <= lastOfMonth.getDate(); d++) {
+            const iso = `${view.getFullYear()}-${String(view.getMonth() + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+            const cell = document.createElement('button');
+            cell.type = 'button';
+            cell.className = 'date-picker__day';
+            cell.dataset.date = iso;
+            cell.textContent = String(d);
+            if (iso === today) cell.classList.add('is-today');
+            if (iso === this._dpSelected) cell.classList.add('is-selected');
+            DOM.datePickerGrid.appendChild(cell);
+        }
+    }
+
+    /**
      * FAB mobile (Fase 9F): boton flotante "+ tarea" abajo-derecha
      * que abre un modal con input para crear tarea. Reemplaza al form
      * principal arriba (oculto en mobile via CSS). En desktop el FAB
@@ -307,11 +418,23 @@ class TaskManager {
         if (!DOM.appFab || !DOM.newTaskModal || !DOM.newTaskForm || !DOM.newTaskInput) return;
         DOM.appFab.appendChild(createIcon('plus', { size: 24 }));
 
+        // Helper: actualizar el botón de fecha con el value actual del input
+        // hidden. "Hoy" si coincide con today, "Sin fecha" si vacío.
+        const refreshDateBtn = () => {
+            if (!DOM.newTaskDateBtn) return;
+            const v = DOM.newTaskDate?.value;
+            DOM.newTaskDateBtn.textContent = !v ? 'Sin fecha'
+                : v === todayISO() ? 'Hoy'
+                : v;
+        };
+
         const open = () => {
             DOM.newTaskModal.hidden = false;
             DOM.newTaskInput.value = '';
-            if (DOM.newTaskDate) DOM.newTaskDate.value = '';
+            // Por default, fecha = hoy (decisión UX: tarea sin fecha = today).
+            if (DOM.newTaskDate) DOM.newTaskDate.value = todayISO();
             if (DOM.newTaskPriority) DOM.newTaskPriority.checked = false;
+            refreshDateBtn();
             requestAnimationFrame(() => DOM.newTaskInput.focus());
         };
         const close = () => {
@@ -319,6 +442,17 @@ class TaskManager {
         };
 
         DOM.appFab.addEventListener('click', open);
+
+        // Botón de fecha en el modal: abre el date picker custom.
+        if (DOM.newTaskDateBtn) {
+            DOM.newTaskDateBtn.addEventListener('click', () => {
+                this._openDatePicker(DOM.newTaskDate.value || todayISO(), (newValue) => {
+                    DOM.newTaskDate.value = newValue || '';
+                    refreshDateBtn();
+                });
+            });
+        }
+
         DOM.newTaskForm.addEventListener('submit', (e) => {
             e.preventDefault();
             const value = DOM.newTaskInput.value;
@@ -326,8 +460,10 @@ class TaskManager {
                 this.displayAlert('Por favor ingrese un valor', 'danger');
                 return;
             }
+            // Tarea sin fecha explícita → today por default (decisión UX).
+            const dueDate = DOM.newTaskDate?.value || todayISO();
             this.store.add(value, {
-                dueDate: DOM.newTaskDate?.value || undefined,
+                dueDate,
                 priority: !!DOM.newTaskPriority?.checked,
             });
             this.displayAlert('Item agregado a la lista', 'success');
@@ -492,7 +628,8 @@ class TaskManager {
             this.displayAlert("Por favor ingrese un valor", "danger");
             return;
         }
-        this.store.add(value);
+        // Tarea creada sin fecha asume today (decisión UX).
+        this.store.add(value, { dueDate: todayISO() });
         this.displayAlert("Item agregado a la lista", "success");
         this.currentPage = 1;
         this.renderTasks();
@@ -620,37 +757,20 @@ class TaskManager {
     }
 
     /**
-     * Edita la dueDate de una tarea top-level vía un <input type='date'>
-     * dinámico que dispara el picker nativo del browser. Al change,
-     * setDueDate; vacío = limpiar.
+     * Edita la dueDate vía el date picker custom (modal con calendario
+     * propio que respeta dark/light mode). Reemplaza al picker nativo
+     * que era inestilable.
      */
     _editDueDate(taskId) {
         const task = this.store.tasks.find(t => t.id === taskId);
         if (!task || task.parentId !== null) return;
-        const input = document.createElement('input');
-        input.type = 'date';
-        input.value = task.dueDate || '';
-        input.style.position = 'fixed';
-        input.style.left = '-9999px';
-        document.body.appendChild(input);
-        const cleanup = () => input.remove();
-        input.addEventListener('change', () => {
-            this.store.setDueDate(taskId, input.value || null);
+        this._openDatePicker(task.dueDate || '', (newValue) => {
+            this.store.setDueDate(taskId, newValue || null);
             this.renderTasks();
-            this.displayAlert(input.value
-                ? `Fecha asignada: ${input.value}`
+            this.displayAlert(newValue
+                ? `Fecha asignada: ${newValue}`
                 : 'Fecha removida', 'success');
-            cleanup();
         });
-        input.addEventListener('blur', cleanup);
-        // showPicker es la API moderna; fallback a focus + click para
-        // browsers viejos (la mayoria abren picker con click).
-        if (typeof input.showPicker === 'function') {
-            try { input.showPicker(); } catch { input.focus(); input.click(); }
-        } else {
-            input.focus();
-            input.click();
-        }
     }
 
     /**
@@ -1455,11 +1575,19 @@ class TaskManager {
             let currentParentId = null;
             const showGroups = ['all', 'pending'].includes(this.filterMode);
 
+            // Renderiza el wrapper .m-subs SOLO si tiene contenido (subs
+            // existentes o form expanded por el usuario). Sin contenido,
+            // el wrapper (y su guía árbol) no se inserta — items sin
+            // subtareas quedan limpios.
             const closeSubsWrap = () => {
                 if (currentSubsWrap && currentParentId) {
-                    // Append el form "+ subtarea" como último elemento del wrapper.
-                    currentSubsWrap.appendChild(this._buildSubtaskAddForm(currentParentId));
-                    DOM.list.appendChild(currentSubsWrap);
+                    const expanded = this._showAddSubFor.has(currentParentId);
+                    if (expanded) {
+                        currentSubsWrap.appendChild(this._buildSubtaskAddForm(currentParentId));
+                    }
+                    if (currentSubsWrap.children.length > 0) {
+                        DOM.list.appendChild(currentSubsWrap);
+                    }
                 }
                 currentSubsWrap = null;
                 currentParentId = null;
@@ -1745,6 +1873,26 @@ class TaskManager {
             dueBtn.addEventListener('click', () => this._editDueDate(id));
         }
 
+        // Botón addsub (plus/minus): solo padres. Toggle el form
+        // "+ subtarea" en el wrapper .m-subs. El plus se vuelve minus
+        // cuando el form está visible.
+        let addSubBtn = null;
+        if (!isSubtask) {
+            const expanded = this._showAddSubFor.has(id);
+            addSubBtn = document.createElement('button');
+            addSubBtn.type = 'button';
+            addSubBtn.className = 'addsub-btn btn-icon btn-icon--sm';
+            if (expanded) addSubBtn.classList.add('is-expanded');
+            addSubBtn.setAttribute('aria-label', expanded ? 'Cerrar agregar subtarea' : 'Agregar subtarea');
+            addSubBtn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+            addSubBtn.appendChild(createIcon(expanded ? 'minus' : 'plus'));
+            addSubBtn.addEventListener('click', () => {
+                if (this._showAddSubFor.has(id)) this._showAddSubFor.delete(id);
+                else this._showAddSubFor.add(id);
+                this.renderTasks();
+            });
+        }
+
         const editBtn = document.createElement('button');
         editBtn.type = 'button';
         editBtn.className = 'edit-btn btn-icon btn-icon--sm';
@@ -1763,6 +1911,7 @@ class TaskManager {
         const extras = [];
         if (dueBtn) extras.push(dueBtn);
         if (priorityBtn) extras.push(priorityBtn);
+        if (addSubBtn) extras.push(addSubBtn);
         actionGroup.append(...touchControls, ...extras, editBtn, deleteBtn);
 
         const meta = document.createElement('div');

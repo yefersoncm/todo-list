@@ -191,6 +191,28 @@
         </button>
     </nav>
 
+    <!-- Date picker custom: respeta dark/light, replica look de la app
+         (en lugar del picker nativo del browser). -->
+    <div class="date-picker-modal modal-backdrop" id="datePickerModal" hidden>
+        <div class="date-picker modal" role="dialog" aria-modal="true" aria-labelledby="datePickerTitle">
+            <h3 class="modal__title" id="datePickerTitle">Fecha</h3>
+            <div class="date-picker__nav">
+                <button type="button" class="btn-icon" id="datePickerPrev" aria-label="Mes anterior"></button>
+                <span class="date-picker__month" id="datePickerMonth"></span>
+                <button type="button" class="btn-icon" id="datePickerNext" aria-label="Mes siguiente"></button>
+            </div>
+            <div class="date-picker__weekdays">
+                <span>L</span><span>M</span><span>X</span><span>J</span><span>V</span><span>S</span><span>D</span>
+            </div>
+            <div class="date-picker__grid" id="datePickerGrid" role="grid"></div>
+            <div class="modal__actions">
+                <button type="button" class="btn btn--ghost" id="datePickerClear">Quitar</button>
+                <button type="button" class="btn btn--secondary" data-action="cancel">Cancelar</button>
+                <button type="button" class="btn btn--primary" id="datePickerOk">Aceptar</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal "Nueva tarea" — abierto por el FAB en mobile. -->
     <div class="newtask-modal modal-backdrop" id="newTaskModal" hidden>
         <div class="newtask-modal__dialog modal" role="dialog" aria-modal="true" aria-labelledby="newTaskModalTitle">
@@ -198,8 +220,9 @@
             <form id="newTaskForm" class="newtask-modal__form">
                 <input type="text" id="newTaskInput" class="field" placeholder="¿Qué hay que hacer?" aria-label="Texto de la nueva tarea" autocomplete="off">
                 <div class="newtask-modal__row">
-                    <label class="newtask-modal__label" for="newTaskDate">Fecha</label>
-                    <input type="date" id="newTaskDate" class="field" aria-label="Fecha (opcional)">
+                    <label class="newtask-modal__label">Fecha</label>
+                    <button type="button" class="btn btn--secondary" id="newTaskDateBtn" aria-label="Seleccionar fecha">Sin fecha</button>
+                    <input type="hidden" id="newTaskDate" value="">
                 </div>
                 <label class="newtask-modal__check">
                     <input type="checkbox" id="newTaskPriority">

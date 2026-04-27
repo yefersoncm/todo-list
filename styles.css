@@ -309,6 +309,70 @@ con mayor especificidad y haría invisibles nuestras notificaciones.
 }
 /* FAB (Fase 9F) — solo visible en mobile, oculto en desktop. */
 .app-fab { display: none; }
+/* Date picker custom: respeta dark/light via tokens semánticos. */
+.date-picker-modal[hidden] { display: none; }
+.date-picker { width: 100%; max-width: 340px; }
+.date-picker__nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--sp-3);
+}
+.date-picker__month {
+  font-size: var(--fs-md);
+  font-weight: var(--fw-semibold);
+  color: var(--fg-default);
+  letter-spacing: -0.01em;
+}
+.date-picker__weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  font-family: var(--ff-mono);
+  font-size: 11px;
+  color: var(--fg-subtle);
+  text-align: center;
+  padding-bottom: 4px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.date-picker__grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  margin-bottom: var(--sp-4);
+}
+.date-picker__day {
+  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--fg-default);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-out),
+              border-color var(--dur-fast) var(--ease-out),
+              color var(--dur-fast) var(--ease-out);
+}
+.date-picker__day.is-empty {
+  cursor: default;
+  pointer-events: none;
+}
+.date-picker__day:hover:not(.is-empty):not(.is-selected) {
+  background: var(--bg-surface-2);
+}
+.date-picker__day.is-today {
+  border-color: var(--accent);
+  font-weight: var(--fw-semibold);
+}
+.date-picker__day.is-selected {
+  background: var(--accent);
+  color: var(--accent-fg);
+  border-color: var(--accent);
+}
 /* Bottom nav (Fase F10) — solo en mobile. */
 .m-bottom { display: none; }
 .newtask-modal[hidden] { display: none; }
@@ -342,6 +406,9 @@ con mayor especificidad y haría invisibles nuestras notificaciones.
 .priority-btn.is-priority svg { fill: currentColor; }
 /* Botón calendar (due-btn) — accent cuando ya tiene fecha asignada. */
 .due-btn.is-due { color: var(--accent); }
+/* Botón addsub (plus/minus): toggle del input "+ subtarea". */
+.addsub-btn { color: var(--accent); }
+.addsub-btn.is-expanded { color: var(--danger); }
 /* Star inline al lado del título cuando priority. */
 .task__priority-mark {
   color: var(--warning);
