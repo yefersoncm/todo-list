@@ -263,6 +263,37 @@ con mayor especificidad y haría invisibles nuestras notificaciones.
 }
 .app-chrome .seg__btn .icon { display: block; }
 .app-title { display: none; }
+.app-hamburger {
+  display: none;
+  width: var(--btn-h);
+  height: var(--btn-h);
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-sm);
+  background: var(--bg-surface);
+  color: var(--fg-default);
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex: none;
+  transition: background-color var(--dur-fast) var(--ease-out);
+}
+.app-hamburger:hover { background: var(--bg-surface-2); }
+.app-hamburger:active { transform: scale(0.96); }
+.app-hamburger .icon { display: block; }
+/* Drawer backdrop (oculto en desktop por hidden attribute). */
+.app-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: color-mix(in oklch, var(--slate-950) 55%, transparent);
+  z-index: 999;
+  opacity: 0;
+  transition: opacity 220ms var(--ease-out);
+  pointer-events: none;
+}
+.app-drawer-backdrop.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
 
 .grocery-form h3 {
   color: var(--clr-primary-1);
@@ -860,6 +891,51 @@ solo se ajustan paddings y gaps que en mobile sienten apretados.
   }
   .app-chrome #densitySeg { display: none; }
   .grocery-form h3 { display: none; }
+  /* Hamburger visible en mobile. */
+  .app-hamburger {
+    display: inline-flex;
+    order: -1;
+  }
+  /* Drawer mobile: el .task-count-row se reposiciona como panel
+     fixed slide-from-left. La clase .is-open lo desliza adentro. */
+  .task-count-row {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: min(280px, 80vw);
+    z-index: 1000;
+    background: var(--bg-surface);
+    border-right: 1px solid var(--border-subtle);
+    box-shadow: 4px 0 12px rgba(0, 0, 0, 0.08);
+    padding: var(--sp-5) var(--sp-4);
+    margin: 0;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: var(--sp-3);
+    transform: translateX(-100%);
+    transition: transform 220ms var(--ease-out);
+    overflow-y: auto;
+  }
+  .task-count-row.is-open {
+    transform: translateX(0);
+  }
+  .task-count-row .task-count {
+    text-align: left;
+    font-size: var(--fs-md);
+    font-weight: var(--fw-semibold);
+    color: var(--fg-default);
+    margin: 0 0 var(--sp-2) 0;
+    padding-bottom: var(--sp-2);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .task-count-controls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--sp-3);
+    width: 100%;
+  }
   /* Cada item es su propia card en mobile (Fase 7G). */
   .grocery-item {
     background: var(--bg-surface);
