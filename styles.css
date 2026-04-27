@@ -987,9 +987,12 @@ crece es el padding / min-height para alcanzar el estándar 44x44.
     width: 2.75rem;
     height: 2.75rem;
   }
+  /* Toggle más compacto que el resto de los hit targets:
+     usa var(--btn-h) (36px comfy / 30px compact) en lugar de 44px.
+     El círculo a 44px se veía desproporcionado vs el SVG check de 14px. */
   .grocery-item .toggle-check {
-    width: 2.75rem;
-    height: 2.75rem;
+    width: var(--btn-h);
+    height: var(--btn-h);
   }
   /* Paginación. */
   .page-num,
