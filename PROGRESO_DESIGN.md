@@ -55,6 +55,27 @@ Archivos del diseño Claude generados externamente, copia local en
 .touch-move-btn          → .btn-icon
 ```
 
+## Bugs conocidos
+
+### Samsung Internet — buscador no aparece (low priority)
+En el navegador nativo de Samsung (S24 Ultra), `_updateSearchVisibility()`
+no muestra `.search-row` aunque haya >10 padres. En Chrome del mismo
+dispositivo y en cualquier desktop browser funciona perfecto.
+
+- **Probable causa**: Samsung Internet es Chromium pero con su propio fork
+  y suele tratar el atributo HTML `hidden` y/o ciertos cachés agresivos
+  de forma diferente que Chrome. La feature usa `DOM.searchRow.hidden = !shouldShow`,
+  que probablemente queda "stuck" en true en este browser.
+- **Diagnóstico no realizado**: el usuario decidió no priorizar este caso
+  aislado.
+- **Posibles fixes futuros si se quiere consistencia**:
+  1. Reemplazar el atributo `hidden` por `style.display = '' / 'none'`
+     o por una clase CSS toggle (`.is-hidden { display: none }`).
+  2. Agregar `display: none` explícito en CSS para `.search-row[hidden]`
+     (algunos browsers lo respetan menos sin override CSS).
+  3. Cache-busting: agregar query string al `styles.css` y `app.js` en
+     `index.html`.
+
 ## Cómo hacer rollback
 
 ```
