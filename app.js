@@ -1709,9 +1709,15 @@ class TaskManager {
                         connector = child.offsetTop;
                     }
                 } else {
+                    // El prev tiene border-bottom-left-radius (var(--sp-3)
+                    // = 12px), por lo que su línea vertical TERMINA 12px
+                    // arriba de su centro (la curva ocupa los últimos 12px).
+                    // Compensamos sumando 12 al connector — la línea del
+                    // current arranca donde la del prev realmente terminó.
                     const prev = children[i - 1];
                     const prevCenter = prev.offsetTop + prev.offsetHeight / 2;
-                    connector = Math.max(0, child.offsetTop - prevCenter);
+                    const radius = 12;
+                    connector = Math.max(0, child.offsetTop - prevCenter + radius);
                 }
                 child.style.setProperty('--connector-up', `${connector}px`);
             });
