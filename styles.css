@@ -68,11 +68,18 @@ Global Styles
 }
 body {
   /* App shell: body ocupa el viewport entero, NO scrollea.
-     <main.app-scroll> es el único scroller, footer queda fuera. */
+     <main.app-scroll> es el único scroller, footer queda fuera.
+
+     100dvh (dynamic viewport height) en lugar de 100vh: en Chrome mobile
+     y otros, la barra de URL aparece/desaparece. 100vh se mide con el
+     viewport extendido, dejando el footer fuera de la vista visible.
+     100dvh se ajusta dinámicamente. Fallback a 100vh para browsers
+     anteriores a finales 2022 (Chrome <108, Safari <15.4). */
   background: var(--bg-app);
   color: var(--fg-default);
   line-height: 1.5;
   height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
