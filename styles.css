@@ -1314,19 +1314,12 @@ solo se ajustan paddings y gaps que en mobile sienten apretados.
      colapsadas. */
   .m-subs.is-collapsed > .subtask-add-form { display: none; }
   .m-subs.is-collapsed.is-add-expanded > .subtask-add-form { display: flex; }
-  .m-subs::before {
-    content: "";
-    position: absolute;
-    left: calc(var(--sp-3) * -1);
-    top: 0;
-    /* --guide-bottom lo setea JS al renderizar (offset desde el bottom
-       del wrapper hasta el centro del último child). Default 50% de
-       fallback si JS no corre. */
-    bottom: var(--guide-bottom, 50%);
-    width: 2px;
-    background: var(--border-subtle);
-    border-radius: 1px;
-  }
+  /* Plan B: árbol con esquinas curvadas. NO usamos guía vertical global
+     del wrapper — cada child dibuja su propio "L curvado" con border-left
+     + border-bottom + border-bottom-left-radius. Los segmentos verticales
+     se conectan extendiendo el ::before del child no-primero hacia arriba
+     hasta el sub anterior. Cuando todas las subs están colapsadas
+     (max-height: 0), el ::before también colapsa — sin residuo del árbol. */
   /* Sub-card: indentada respecto al wrapper, con conector horizontal
      pequeño que sale de la guía vertical hasta el card. */
   .grocery-item.is-subtask {
@@ -1338,26 +1331,24 @@ solo se ajustan paddings y gaps que en mobile sienten apretados.
   .grocery-item.is-subtask.is-collapsed {
     max-height: 0;
   }
-  /* Conector horizontal que une la guía vertical del wrapper con el
-     borde izquierdo del card sub. Cálculo:
-     - El wrapper .m-subs tiene la guía en left: calc(--sp-3 * -1) = -12px.
-     - El sub tiene margin-left: var(--sp-3) = 12px del wrapper.
-     - Distancia guía → edge sub = 24px (var(--sp-5)).
-     Por eso el ::before va de -24px a 0 (width = 24px).
-     Termina justo en el borde izquierdo del card. */
+  /* L curvada por cada sub: caja con border-left + border-bottom +
+     border-bottom-left-radius. Va desde top hasta su centro vertical,
+     ancho --sp-5 (24px) para llegar al borde izquierdo del card.
+     El segmento vertical se extiende hacia arriba para conectar con el
+     anterior (override en :first-child más abajo). */
   .grocery-item.is-subtask::before {
     content: "";
     position: absolute;
     left: calc(var(--sp-5) * -1);
-    top: 50%;
+    top: calc(var(--sp-1) * -1 - 1px);
     width: var(--sp-5);
-    height: 2px;
-    background: var(--border-subtle);
-    border-radius: 1px;
+    height: calc(50% + var(--sp-1) + 1px);
+    border-left: 2px solid var(--border-subtle);
+    border-bottom: 2px solid var(--border-subtle);
+    border-bottom-left-radius: var(--sp-3);
+    background: transparent;
   }
-  /* Form "+ subtarea" como último item del wrapper, mismo estilo árbol.
-     El connector usa la misma fórmula que el sub: left: -sp-5, width: sp-5
-     para llegar exactamente desde la guía vertical hasta el edge izq. */
+  /* Form "+ subtarea": misma L curvada que los subs. */
   .m-subs > .subtask-add-form {
     margin-left: var(--sp-3);
     margin-top: var(--sp-1);
@@ -1367,11 +1358,19 @@ solo se ajustan paddings y gaps que en mobile sienten apretados.
     content: "";
     position: absolute;
     left: calc(var(--sp-5) * -1);
-    top: 50%;
+    top: calc(var(--sp-1) * -1 - 1px);
     width: var(--sp-5);
-    height: 2px;
-    background: var(--border-subtle);
-    border-radius: 1px;
+    height: calc(50% + var(--sp-1) + 1px);
+    border-left: 2px solid var(--border-subtle);
+    border-bottom: 2px solid var(--border-subtle);
+    border-bottom-left-radius: var(--sp-3);
+    background: transparent;
+  }
+  /* Override del primer child del wrapper: arranca de top:0 (no extiende
+     hacia arriba porque no hay sub anterior). */
+  .m-subs > *:first-child::before {
+    top: 0;
+    height: 50%;
   }
   .m-subs > .subtask-add-form .subtask-add-input {
     width: 100%;
