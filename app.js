@@ -161,6 +161,7 @@ class TaskManager {
         this.pageSizeCombo.setValue(String(this.pageSize));
         this._mountStaticIcons();
         this._setupChromeToggles();
+        this._setupFooterHeightTracker();
         this.setupEventListeners();
         this.renderTasks();
         this._startElapsedTicker();
@@ -203,6 +204,30 @@ class TaskManager {
         const clearIconSlot = DOM.clearBtn?.querySelector('.bulk-btn-icon');
         if (clearIconSlot && !clearIconSlot.firstChild) {
             clearIconSlot.appendChild(createIcon('trash', { size: 14 }));
+        }
+    }
+
+    /**
+     * Mide la altura real del footer fijo y la setea como --footer-h
+     * sobre <html>. Antes era hardcoded (64/76px) y en algunos casos
+     * el footer real era mayor (filter-tabs height en touch + padding +
+     * border + safe-area), dejando la paginación tapada.
+     * Recalcula en load, resize y cuando cambia density (los botones
+     * cambian de tamaño con --btn-h).
+     */
+    _setupFooterHeightTracker() {
+        const footer = document.querySelector('.app-footer');
+        if (!footer) return;
+        const update = () => {
+            const h = footer.offsetHeight;
+            if (h > 0) document.documentElement.style.setProperty('--footer-h', `${h}px`);
+        };
+        update();
+        window.addEventListener('resize', update);
+        // ResizeObserver dispara cuando el contenido del footer cambia
+        // (cambio de density modifica btn-h, etc.).
+        if (typeof ResizeObserver !== 'undefined') {
+            new ResizeObserver(update).observe(footer);
         }
     }
 
