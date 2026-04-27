@@ -136,7 +136,6 @@ function confirmDialog(message) {
 class TaskManager {
     constructor(store) {
         this.store = store;
-        this._elapsedProbe = null;     // span oculto para medir el texto más largo
         this._elapsedTicker = null;    // id del setInterval
         this.filterMode = 'all';       // 'all' | 'done' | 'pending'
         this.searchQuery = '';         // texto de búsqueda (no persistido)
@@ -174,36 +173,21 @@ class TaskManager {
         this._elapsedTicker = setInterval(() => this._updateElapsed(), 1000);
     }
 
-    _ensureElapsedProbe() {
-        if (this._elapsedProbe) return this._elapsedProbe;
-        const probe = document.createElement('span');
-        probe.className = 'task-days-old';
-        probe.style.cssText = 'position:absolute;visibility:hidden;left:-9999px;top:0;min-width:0;white-space:nowrap;pointer-events:none;';
-        document.body.appendChild(probe);
-        this._elapsedProbe = probe;
-        return probe;
-    }
-
     _updateElapsed() {
+        // Con el formato compacto (single-unit), todos los strings son
+        // cortos y de ancho similar. Ya no necesitamos un probe oculto
+        // para medir el max-width y alinear columnas — un min-width CSS
+        // pequeño basta. Solo actualizamos el textContent.
         const items = DOM.list.querySelectorAll('.grocery-item');
-        if (items.length === 0) {
-            DOM.list.style.removeProperty('--elapsed-min-width');
-            return;
-        }
-        const probe = this._ensureElapsedProbe();
+        if (items.length === 0) return;
         const now = new Date();
-        let maxWidth = 0;
         for (const el of items) {
             const id = el.dataset.id;
             const span = el.querySelector('.task-days-old');
             if (!span) continue;
             const text = formatElapsed(elapsedComponents(parseInt(id), now));
             if (span.textContent !== text) span.textContent = text;
-            probe.textContent = text;
-            const w = probe.offsetWidth;
-            if (w > maxWidth) maxWidth = w;
         }
-        DOM.list.style.setProperty('--elapsed-min-width', `${maxWidth}px`);
     }
 
     _mountStaticIcons() {
