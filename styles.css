@@ -67,11 +67,11 @@ Global Styles
   box-sizing: border-box;
 }
 body {
-  font-family: var(--ff-secondary);
-  background: var(--clr-grey-10);
-  color: var(--clr-grey-1);
+  /* Background y color toman tokens semánticos del rediseño para que
+     respondan al dark mode (data-theme="dark" sobre <html>). */
+  background: var(--bg-app);
+  color: var(--fg-default);
   line-height: 1.5;
-  font-size: 0.875rem;
 }
 ul {
   list-style-type: none;
@@ -108,11 +108,7 @@ h3 {
 h4 {
   font-size: 0.875rem;
 }
-p {
-  margin-bottom: 1.25rem;
-  color: var(--clr-grey-5);
-}
-@media screen and (min-width: 800px) {
+@media screen and (min-width: 768px) {
   h1 {
     font-size: 4rem;
   }
@@ -160,20 +156,14 @@ border-radius: var(--radius);
   padding: 5rem 0;
 }
 
+/* Mobile-first: márgenes fluidos. En mobile el wrapper consume casi todo
+   el ancho, en desktop se queda centrado con max-width. */
 .section-center {
-  margin: 2rem;
-  max-width: 100%;
-}
-@media screen and (min-width: 992px) {
-  .section-center {
-    margin: 2rem;
-    max-width: 100%;
-  }
-}
-@media screen and (max-width: 992px) {
-  .section-center {
-    width: 90vw;
-  }
+  /* margin auto en horizontal centra el wrapper cuando el viewport es
+     más ancho que --container-max. */
+  margin: clamp(0.5rem, 3vw, 2rem) auto;
+  width: 100%;
+  max-width: var(--container-max);
 }
 main {
   min-height: 100vh;
@@ -186,14 +176,12 @@ Grocery List
 ===============
 */
 .section-center {
-  background: var(--clr-white);
-  border-radius: var(--radius);
-  box-shadow: var(--light-shadow);
-  transition: var(--transition);
-  padding: 2rem;
-}
-.section-center:hover {
-  box-shadow: var(--dark-shadow);
+  /* Surface y sombras vienen de tokens (responden al dark mode). */
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-raised);
+  padding: clamp(1rem, 4vw, var(--sp-5));
 }
 /*
 ===============
@@ -205,35 +193,36 @@ Las clases usan el prefijo 'app-toast' para no colisionar con la
 clase .toast de Bootstrap (cargado por CDN), que aplicaría opacity:0
 con mayor especificidad y haría invisibles nuestras notificaciones.
 */
+/* Toast: el contenedor y la paleta vienen de components.css (.toast-stack y
+   .toast--*). Aquí solo conservamos el contenedor wrapper original
+   (`#toastContainer` con `.app-toast-container`) y la animación slide-in
+   que el design no provee. */
 .app-toast-container {
     position: fixed;
-    top: 1rem;
-    right: 1rem;
+    top: var(--sp-4);
+    right: var(--sp-4);
     display: flex;
     flex-direction: column;
-    gap: 0.6rem;
+    gap: var(--sp-2);
     z-index: 1100;
-    pointer-events: none; /* deja pasar clics fuera de las cards */
-    max-width: calc(100vw - 2rem);
+    pointer-events: none;
+    max-width: calc(100vw - var(--sp-7));
 }
+@media (max-width: 640px) {
+    .app-toast-container {
+        top: auto;
+        bottom: var(--sp-4);
+        left: var(--sp-3);
+        right: var(--sp-3);
+        max-width: none;
+    }
+}
+/* Anim slide-from-right (design es estático, mantenemos esta del legacy). */
 .app-toast {
-    pointer-events: auto;
-    position: relative;
-    min-width: 16rem;
-    max-width: 22rem;
-    padding: 0.75rem 1rem;
-    border-radius: var(--radius);
-    border-left: 4px solid currentColor;
-    box-shadow: var(--light-shadow);
-    background: var(--clr-white);
-    font-size: 0.85rem;
-    line-height: 1.4;
+    pointer-events: none;
     transform: translateX(120%);
     opacity: 0;
-    transition: transform 250ms ease-out, opacity 200ms ease-out;
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
+    transition: transform 250ms var(--ease-out), opacity 200ms var(--ease-out);
 }
 .app-toast.is-visible {
     transform: translateX(0);
@@ -243,136 +232,34 @@ con mayor especificidad y haría invisibles nuestras notificaciones.
     transform: translateX(120%);
     opacity: 0;
 }
-.app-toast-message {
-    margin: 0;
-    color: inherit;
-    word-break: break-word;
-    flex: 1;
-    min-width: 0;
+.app-toast-action,
+.app-toast-close { pointer-events: auto; }
+
+/* App chrome con toggles theme + density (Fase 7H). */
+.app-chrome {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-3);
 }
-.app-toast-action {
-    margin-left: 0.5rem;
-    padding: 0.25rem 0.6rem;
-    background: transparent;
-    border: 1px solid currentColor;
-    border-radius: 0.3rem;
-    color: inherit;
-    font: inherit;
-    font-weight: 600;
-    font-size: 0.8rem;
-    cursor: pointer;
-    transition: background-color 0.15s linear, color 0.15s linear;
-    flex: none;
-}
-.app-toast-action:hover {
-    background: currentColor;
-    color: var(--clr-white);
-}
-.app-toast-action:focus-visible {
-    outline: none;
-    box-shadow: 0 0 0 2px currentColor;
-}
-.app-toast-close {
-    width: 1.5rem;
-    height: 1.5rem;
-    padding: 0;
-    flex: none;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: transparent;
-    border: none;
-    border-radius: 0.3rem;
-    cursor: pointer;
-    color: inherit;
-    opacity: 0.6;
-    transition: opacity 0.15s linear, background-color 0.15s linear;
-}
-.app-toast-close:hover {
-    opacity: 1;
-    background: rgba(0, 0, 0, 0.06);
-}
-.app-toast-close:focus-visible {
-    outline: none;
-    opacity: 1;
-    box-shadow: 0 0 0 2px currentColor;
-}
-.app-toast-close .icon {
-    display: block;
-}
-/* Paleta por tipo. El border-left toma el color del texto via currentColor. */
-.app-toast-success {
-    background: #d4edda;
-    color: #155724;
-}
-.app-toast-danger {
-    background: #f8d7da;
-    color: #721c24;
-}
-.app-toast-warning {
-    background: #fff3cd;
-    color: #856404;
-}
+.app-chrome .seg__btn .icon { display: block; }
 
 .grocery-form h3 {
   color: var(--clr-primary-1);
   margin-bottom: 1.5rem;
   text-align: center;
 }
+/* Form principal: input + botón con gap (Fase 7B).
+   Los estilos del input vienen de .field y los del botón de .btn--primary
+   en components.css. Esta regla solo controla el layout del form. */
 .form-control1 {
   display: flex;
   justify-content: center;
+  gap: var(--sp-2);
 }
-#grocery {
-  padding: 0.25rem;
-  padding-left: 1rem;
-  background: var(--clr-grey-10);
-  border-top-left-radius: var(--radius);
-  border-bottom-left-radius: var(--radius);
-  border-color: transparent;
-  font-size: 1rem;
-  flex: 1 0 auto;
-  color: var(--clr-grey-5);
-}
-
-
-#grocery::placeholder {
-  font-family: var(--ff-secondary);
-  color: var(--clr-grey-5);
-}
-.submit-btn {
-  background: var(--clr-primary-8);
-  border: none;
-  /* Ancho fijo: el botón no debe crecer ni encogerse al alternar entre
-     'Agregar' y 'Editar'. 7.5rem cabe holgado el más ancho de los dos. */
-  flex: none;
-  width: 7.5rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.4rem;
-  padding: 0.25rem 0.5rem;
-  text-transform: capitalize;
-  letter-spacing: 2px;
-  border-top-right-radius: var(--radius);
-  border-bottom-right-radius: var(--radius);
-  color: var(--clr-grey-1);
-  cursor: pointer;
-  transition: var(--transition);
-  font-size: 0.85rem;
-}
-.submit-btn:hover {
-  background: var(--clr-primary-5);
-  color: var(--clr-white);
-}
-.submit-btn:active {
-  transform: scale(0.96);
-  background: var(--clr-primary-3);
-}
-.submit-btn:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 3px var(--clr-primary-10);
-}
+.form-control1 #grocery { flex: 1 1 auto; min-width: 0; }
+/* .submit-btn queda como hook JS sin estilos propios — los estilos vienen
+   de .btn .btn--primary en components.css. */
 .submit-icon {
   display: inline-flex;
   align-items: center;
@@ -395,31 +282,7 @@ con mayor especificidad y haría invisibles nuestras notificaciones.
 .search-row {
     margin-bottom: 0.75rem;
 }
-.search-input {
-    width: 100%;
-    padding: 0.45rem 0.75rem;
-    border: 1px solid var(--clr-grey-9);
-    border-radius: var(--radius);
-    background: var(--clr-grey-10);
-    color: var(--clr-grey-1);
-    font: inherit;
-    font-size: 0.85rem;
-    transition: var(--transition);
-}
-.search-input::placeholder {
-    color: var(--clr-grey-6);
-    font-style: italic;
-}
-.search-input:hover {
-    background: var(--clr-white);
-    border-color: var(--clr-primary-7);
-}
-.search-input:focus {
-    outline: none;
-    background: var(--clr-white);
-    border-color: var(--clr-primary-5);
-    box-shadow: 0 0 0 3px var(--clr-primary-10);
-}
+/* .search-input ahora hereda todos los estilos de .field (components.css). */
 /* Cabecera del listado: contador a la izquierda, controles a la derecha. */
 .task-count-row {
     display: flex;
@@ -451,7 +314,7 @@ con mayor especificidad y haría invisibles nuestras notificaciones.
     font-size: 0.8rem;
 }
 .combo-sort .combo-toggle {
-    min-width: 13rem;
+    min-width: clamp(8rem, 40vw, 13rem);
 }
 .page-size-control .combo-toggle {
     min-width: 4.5rem;
@@ -537,11 +400,23 @@ Paginación
 .grocery-item {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  margin-bottom: 0.5rem;
-  transition: var(--transition);
-  padding: 0.25rem 1rem;
-  border-radius: var(--radius);
+  /* Tokens de densidad: --row-h, --row-py, --row-px, --row-gap se
+     contraen cuando data-density="compact" en <html>. Esto hace que el
+     toggle de densidad realmente reduzca la altura del item completo. */
+  gap: var(--row-gap);
+  min-height: var(--row-h);
+  padding: var(--row-py) var(--row-px);
+  margin-bottom: var(--sp-1);
+  border-radius: var(--r-md);
+  transition: background-color var(--dur-fast) var(--ease-out),
+              min-height var(--dur-base) var(--ease-out),
+              padding var(--dur-base) var(--ease-out);
+  /* min-width: 0 evita que un hijo con nowrap (.task-days-old con
+     min-width calculado por JS) fuerce overflow horizontal del viewport. */
+  min-width: 0;
+}
+.grocery-item .meta {
+  min-width: 0;
 }
 /* Capitaliza SOLO la primera letra del título (no cada palabra). */
 .grocery-item .title::first-letter {
@@ -550,13 +425,23 @@ Paginación
 .grocery-item .title {
   flex: 1;
   min-width: 0;
+  /* line-height igualada a la altura del toggle-check (22px) para que
+     ambos bbox sean idénticos y align-items:center los centre exacto.
+     line-height 1 daba bbox de 14px (solo glyph) que se centraba en el
+     row pero el cap-height del glyph queda arriba del centro óptico. */
+  line-height: 22px;
+  align-self: center;
 }
+/* SVG del check en display:block para evitar offset por baseline inline. */
+.toggle-check svg { display: block; }
 /* Subtareas: indentación pura, sin línea conectora.
    max-height + transition para animar collapse/expand. */
 .grocery-item.is-subtask {
-  margin-left: 3.5rem;
+  /* Indentación proporcional: en mobile no come tanto ancho, en desktop
+     mantiene la jerarquía visual fuerte. */
+  margin-left: clamp(1.25rem, 6vw, 3.5rem);
   position: relative;
-  padding-left: 1.25rem;
+  padding-left: clamp(0.5rem, 2vw, 1.25rem);
   overflow: hidden;
   max-height: 8rem;
   transition: max-height 220ms ease, opacity 200ms ease,
@@ -613,26 +498,7 @@ Paginación
 .bulk-collapse[hidden] {
   display: none;
 }
-.bulk-btn {
-  background: transparent;
-  border: 1px solid var(--clr-grey-9);
-  border-radius: var(--radius);
-  padding: 0.25rem 0.6rem;
-  color: var(--clr-grey-3);
-  font-family: var(--ff-secondary);
-  font-size: 0.75rem;
-  cursor: pointer;
-  transition: var(--transition);
-}
-.bulk-btn:hover {
-  background: var(--clr-primary-10);
-  border-color: var(--clr-primary-7);
-  color: var(--clr-primary-2);
-}
-.bulk-btn:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 3px var(--clr-primary-10);
-}
+/* .bulk-btn usa .btn .btn--ghost / .btn--danger / .btn--sm desde HTML. */
 /* Contador "(X/Y)" en el título del padre. */
 .subtask-counter {
   margin-left: 0.4rem;
@@ -645,30 +511,10 @@ Paginación
 .subtask-add-form {
   flex: 0 0 auto;
 }
+/* .subtask-add-input usa .field; aquí solo el width fluido especifico. */
 .subtask-add-input {
-  width: 9rem;
-  padding: 0.3rem 0.6rem;
-  border: 1px solid var(--clr-grey-9);
-  border-radius: var(--radius);
-  background: var(--clr-grey-10);
-  color: var(--clr-grey-1);
-  font-family: var(--ff-secondary);
+  width: clamp(7rem, 28vw, 9rem);
   font-size: 0.8rem;
-  transition: var(--transition);
-}
-.subtask-add-input::placeholder {
-  color: var(--clr-grey-6);
-  font-style: italic;
-}
-.subtask-add-input:hover {
-  background: var(--clr-white);
-  border-color: var(--clr-primary-7);
-}
-.subtask-add-input:focus {
-  outline: none;
-  background: var(--clr-white);
-  border-color: var(--clr-primary-5);
-  box-shadow: 0 0 0 3px var(--clr-primary-10);
 }
 
 /* Modo manual: cursor de agarre y feedback visual al arrastrar. */
@@ -747,20 +593,9 @@ Paginación
 .promote-zone-label {
   font-style: italic;
 }
-.grocery-item:hover {
-  color: var(--clr-grey-5);
-  background: var(--clr-grey-10);
-}
-.grocery-item:hover .title {
-  color: var(--clr-grey-5);
-}
-.title {
-  margin-bottom: 0;
-  color: var(--clr-grey-1);
-  letter-spacing: 2px;
-  transition: var(--transition);
-  cursor: text;
-}
+/* .task ya define hover en components.css. .task__title cubre el title.
+   Solo conservamos cursor: text que el design no setea. */
+.title { cursor: text; }
 /* Input que reemplaza al .title cuando la fila entra en modo edición
    inline (doble-click o lápiz). Hereda el flex: 1 del .title para
    ocupar el mismo espacio horizontal. */
@@ -780,57 +615,8 @@ Paginación
 .title-edit-input:focus {
   outline: none;
 }
-.edit-btn,
-.delete-btn {
-    width: 2rem;
-    height: 2rem;
-    padding: 0;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: transparent;
-    border: none;
-    border-radius: 0.4rem;
-    cursor: pointer;
-    color: var(--clr-grey-5);
-    transition: var(--transition);
-}
-.edit-btn:hover {
-    color: var(--clr-primary-3);
-    background: var(--clr-primary-10);
-}
-.delete-btn:hover {
-    color: var(--clr-red-dark);
-    background: hsla(360, 67%, 44%, 0.08);
-}
-.edit-btn:focus-visible,
-.delete-btn:focus-visible {
-    outline: none;
-    box-shadow: 0 0 0 3px var(--clr-primary-10);
-}
-.edit-btn .icon,
-.delete-btn .icon {
-    display: block;
-}
-/* Variante 'danger' del .bulk-btn — para acciones destructivas globales
-   como 'Limpiar lista'. Outline rojo en reposo, fill al hover, icono
-   inline a la izquierda del texto. */
-.bulk-btn-danger {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  border-color: var(--clr-red-light);
-  color: var(--clr-red-dark);
-}
-.bulk-btn-danger:hover {
-  background: var(--clr-red-dark);
-  border-color: var(--clr-red-dark);
-  color: var(--clr-white);
-}
-.bulk-btn-danger:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 3px hsla(360, 71%, 66%, 0.35);
-}
+/* .edit-btn / .delete-btn ahora usan .btn-icon (+ --danger) desde HTML. */
+/* .bulk-btn-danger ahora usa .btn .btn--danger desde HTML. */
 .bulk-btn-icon {
   display: inline-flex;
   align-items: center;
@@ -867,8 +653,45 @@ Paginación
 }
 
 .filter-label {
-    color: var(--clr-grey-3);
-    font-size: 0.85rem;
+    color: var(--fg-muted);
+    font-size: var(--fs-sm);
+}
+
+/* Filter tabs (Fase 7F): segmented control que reemplaza al combo
+   "Mostrar". Estructura: contenedor + 3 tabs (Todas / Pendientes / Hechas). */
+.filter-tabs {
+    display: inline-flex;
+    gap: 2px;
+    padding: 2px;
+    background: var(--bg-surface-2);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-md);
+}
+.filter-tab {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 28px;
+    padding: 0 var(--sp-3);
+    border: none;
+    background: transparent;
+    color: var(--fg-muted);
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-medium);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color var(--dur-fast) var(--ease-out),
+                color var(--dur-fast) var(--ease-out);
+}
+.filter-tab:hover { color: var(--fg-default); }
+.filter-tab.is-active {
+    background: var(--bg-surface);
+    color: var(--fg-default);
+    box-shadow: var(--shadow-flat);
+    font-weight: var(--fw-semibold);
+}
+@media (pointer: coarse) {
+    .filter-tab { height: 36px; padding: 0 var(--sp-4); }
 }
 
 /*
@@ -876,88 +699,20 @@ Paginación
 Combobox custom (reemplaza al <select> nativo)
 ===============
 */
+/* Combobox migrado a tokens semánticos para responder al dark mode.
+   Estructura HTML: <div.combo> > <button.combo-toggle> + <ul.combo-listbox>.
+   La mayoría de los estilos vienen de components.css; aquí solo overrides
+   específicos del proyecto (font-size del listbox, posición). */
 .combo {
     position: relative;
     display: inline-block;
-    font-family: var(--ff-secondary);
-    font-size: 0.85rem;
-}
-.combo-toggle {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.6rem;
-    padding: 0.35rem 0.7rem;
-    min-width: 8rem;
-    border: 1px solid var(--clr-grey-9);
-    border-radius: var(--radius);
-    background: var(--clr-grey-10);
-    color: var(--clr-grey-1);
-    cursor: pointer;
-    transition: var(--transition);
-    font: inherit;
-    text-align: left;
-    justify-content: space-between;
-}
-.combo-toggle:hover {
-    background: var(--clr-white);
-    border-color: var(--clr-primary-7);
-}
-.combo-toggle:focus-visible {
-    outline: none;
-    border-color: var(--clr-primary-5);
-    box-shadow: 0 0 0 3px var(--clr-primary-10);
-}
-.combo-arrow {
-    color: var(--clr-grey-5);
-    font-size: 0.7rem;
-    transition: transform 0.2s ease;
-}
-.combo-toggle[aria-expanded="true"] .combo-arrow {
-    transform: rotate(180deg);
 }
 .combo-listbox {
-    position: absolute;
-    top: calc(100% + 0.35rem);
-    left: 0;
-    right: 0;
-    margin: 0;
-    padding: 0.25rem;
     list-style: none;
-    background: var(--clr-white);
-    border: 1px solid var(--clr-grey-9);
-    border-radius: var(--radius);
-    box-shadow: var(--light-shadow);
-    z-index: 50;
+    top: calc(100% + 0.35rem);
+    right: 0;
 }
-.combo-listbox:focus {
-    outline: none;
-}
-.combo-listbox[hidden] {
-    display: none;
-}
-.combo-listbox [role="option"] {
-    padding: 0.4rem 0.65rem;
-    border-radius: calc(var(--radius) - 0.15rem);
-    color: var(--clr-grey-1);
-    cursor: pointer;
-    transition: background 0.12s linear, color 0.12s linear;
-}
-.combo-listbox [role="option"].is-active {
-    background: var(--clr-primary-10);
-    color: var(--clr-primary-1);
-}
-.combo-listbox [role="option"][aria-selected="true"] {
-    color: var(--clr-primary-2);
-    font-weight: 600;
-}
-.combo-listbox [role="option"][aria-selected="true"].is-active {
-    background: var(--clr-primary-9);
-}
-
-.form-check-label {
-    margin-left: 0.5rem; /* Space between checkbox and label text */
-    cursor: pointer;
-}
+.combo-listbox[hidden] { display: none; }
 
 /* Ensure the done class makes the text visible on colored background */
 .done .title {
@@ -965,54 +720,20 @@ Combobox custom (reemplaza al <select> nativo)
     text-decoration: line-through;
 }
 
-/* Botón circular de toggle, a la izquierda de cada tarea. */
-.grocery-item .toggle-btn {
-    width: 2.25rem;
-    height: 2.25rem;
-    padding: 0;
-    border: none;
-    background: transparent;
-    border-radius: 50%;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--clr-grey-5);
-    transition: color 0.15s linear, background-color 0.15s linear, transform 0.08s ease-out;
-    flex-shrink: 0;
-}
-.grocery-item .toggle-btn:hover {
-    color: var(--clr-primary-5);
-    background: var(--clr-primary-10);
-}
-.grocery-item .toggle-btn:active {
-    transform: scale(0.92);
-}
-.grocery-item .toggle-btn:focus-visible {
-    outline: none;
-    box-shadow: 0 0 0 3px var(--clr-primary-10);
-}
-.grocery-item .toggle-btn[aria-pressed="true"] {
-    color: var(--clr-primary-5);
-}
-/* Cuando está marcada, el círculo se rellena en azul y el check va en blanco. */
-.grocery-item .toggle-btn[aria-pressed="true"] svg circle {
-    fill: var(--clr-primary-5);
-    stroke: var(--clr-primary-5);
-}
-.grocery-item .toggle-btn[aria-pressed="true"] svg path {
-    stroke: var(--clr-white);
-}
-.grocery-item .toggle-icon {
-    display: block;
-}
+/* Toggle migrado a .toggle-check (Fase 7C). Estilos en components.css con
+   animación check-pop al marcar. Aquí solo overrides específicos del item. */
 
 /* Cluster derecho: acciones + metadata. */
 .grocery-item .meta {
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    flex-shrink: 0;
+    /* flex-shrink: 1 (default) y min-width: 0 (en regla de arriba) permiten
+       que el meta se encoja cuando .task-days-old quiere imponer un
+       min-width grande calculado por JS. Sin esto, el viewport scrollea
+       horizontal en mobile/tablet con tareas viejas (texto largo de tiempo). */
+    flex-shrink: 1;
+    min-width: 0;
 }
 .grocery-item .action-group {
     display: flex;
@@ -1031,65 +752,372 @@ Combobox custom (reemplaza al <select> nativo)
     white-space: nowrap;
     min-width: var(--elapsed-min-width, 0);
 }
+/* En tablets/mobiles, el min-width calculado por JS puede ser más ancho
+   que el espacio disponible y forzar scroll horizontal. Apagamos el
+   alineado en columna por debajo de 768px — la metadata sigue visible
+   pero sin imponer ancho. */
+@media (max-width: 768px) {
+    .task-days-old {
+        min-width: 0;
+    }
+}
 
 /*
 ===============
 Confirm modal
 ===============
 */
-.confirm-modal {
-    position: fixed;
-    inset: 0;
+/* Modal: estilos vienen de .modal-backdrop y .modal en components.css.
+   Solo conservamos el toggle hidden (HTML attribute). */
+.confirm-modal[hidden] { display: none; }
+.confirm-modal-text { text-align: center; }
+
+/*
+===============
+Mobile-first overrides (≤480px)
+===============
+Ajustes finos para pantallas estrechas. Lo importante (widths fluidos,
+indentación proporcional) ya está resuelto vía clamp() arriba; aquí
+solo se ajustan paddings y gaps que en mobile sienten apretados.
+*/
+@media screen and (max-width: 480px) {
+  .section {
+    padding: 1.5rem 0;
+  }
+  /* Cada item es su propia card en mobile (Fase 7G). */
+  .grocery-item {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-md);
+    padding: var(--sp-3);
+    margin-bottom: var(--sp-2);
+    gap: var(--sp-2);
+  }
+  /* Sub-card: misma estética + indentación + guía vertical.
+     Subimos el max-height del .is-subtask (default 8rem para la
+     animación de collapse) porque en mobile la sub se vuelve card
+     con 3 filas (título / toggle / acciones con border-top) y 8rem
+     no alcanza — los botones edit/delete quedaban recortados por el
+     overflow:hidden del collapse. */
+  .grocery-item.is-subtask {
+    margin-left: var(--sp-5);
+    position: relative;
+    max-height: 16rem;
+  }
+  .grocery-item.is-subtask.is-collapsed {
+    max-height: 0;
+  }
+  .grocery-item.is-subtask::before {
+    content: "";
+    position: absolute;
+    left: calc(var(--sp-3) * -1);
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--border-subtle);
+    border-radius: 1px;
+  }
+  /* La row de acciones (.meta) se separa con un divisor superior. */
+  .grocery-item .meta {
+    border-top: 1px solid var(--border-subtle);
+    padding-top: var(--sp-2);
+    margin-top: var(--sp-1);
+  }
+  /* Forzar visibilidad: en components.css .task__actions arranca con
+     opacity:0 y se muestra en hover (desktop) o pointer:coarse. En mobile
+     real (S24) a veces el media query no matchea — forzamos aquí. */
+  .grocery-item .action-group,
+  .task__actions {
+    opacity: 1 !important;
+  }
+  .task-count-row,
+  .task-count-controls {
+    gap: 0.5rem;
+  }
+  .pagination {
+    justify-content: center;
+    gap: 0.35rem;
+  }
+  /* En filas estrechas, gap reducido entre meta y acciones. */
+  .grocery-item .meta {
+    gap: 0.4rem;
+  }
+  /* Header del listado en columna: contador centrado, luego bulk-collapse,
+     limpiar, sort y page-size como rows full-width independientes. */
+  .task-count-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+  .task-count-row .task-count {
+    text-align: center;
+    margin: 0;
+  }
+  .task-count-controls {
+    justify-content: center;
+    gap: 0.5rem;
+  }
+  /* Colapsar + Expandir lado a lado en su propia row, cada uno la mitad. */
+  .bulk-collapse:not([hidden]) {
     display: flex;
+    flex: 1 1 100%;
+    gap: 0.4rem;
+    justify-content: center;
+  }
+  .bulk-collapse > .bulk-btn {
+    flex: 1 1 0;
+    justify-content: center;
+  }
+  /* Limpiar lista en su propia row, full-width centrado. */
+  .task-count-controls > .clear-btn {
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+  /* Sort y Page-size cada uno en row full-width con label a la izquierda
+     y combo a la derecha. */
+  .sort-control,
+  .page-size-control {
+    flex: 1 1 100%;
+    justify-content: space-between;
+  }
+  /* Toast a la parte inferior en mobile: arriba choca con el form de
+     'Agregar' y aunque ya no bloquea taps (pointer-events:none), tapaba
+     visualmente el botón. */
+  .app-toast-container {
+    top: auto;
+    bottom: 1rem;
+    right: 1rem;
+    left: 1rem;
+    align-items: flex-end;
+  }
+  /* El item se vuelve flex-wrap para que el title tenga línea propia
+     cuando los botones touch (toggle + ↑ ↓ ⬅ edit delete) no le dejan
+     espacio. La metadata de tiempo se oculta — secundaria. */
+  .grocery-item {
+    flex-wrap: wrap;
+    row-gap: 0.35rem;
+  }
+  .grocery-item .title {
+    flex: 1 1 100%;
+    order: -1;
+    padding: 0 0.25rem;
+    word-break: break-word;
+    letter-spacing: 1px;
+    /* line-height más holgado para títulos que wrappean en 2 líneas. */
+    line-height: var(--lh-snug);
+  }
+  /* La sub mantiene su indentación pero el title también va arriba. */
+  .grocery-item.is-subtask .title {
+    flex-basis: 100%;
+  }
+  /* La metadata (tiempo) ocupa demasiado en mobile y no es crítica. */
+  .task-days-old {
+    display: none;
+  }
+  /* Layout en 3 líneas para tareas padre:
+       L1: título full-width
+       L2: chevron + toggle + input "+ subtarea" (al lado del toggle)
+       L3: action-group centrado
+     Subtareas: L1 título, L2 toggle (sin chevron ni form), L3 acciones
+     centradas. */
+  .grocery-item .meta {
+    flex: 1 1 100%;
+    margin-left: 0;
+    justify-content: center;
+  }
+  .grocery-item .action-group {
+    justify-content: center;
+  }
+  /* El input para agregar subtarea queda al lado del toggle, ocupando
+     el espacio restante de la línea. */
+  .subtask-add-form {
+    flex: 1 1 0;
+    min-width: 6rem;
+    margin-top: 0;
+  }
+  .subtask-add-input {
+    width: 100%;
+  }
+}
+
+/*
+===============
+Touch move buttons (Fase 3 — DnD opción B)
+===============
+Botones ↑/↓/promote que reemplazan el drag-and-drop en touch. Se
+renderizan SIEMPRE pero el media query de pointer:fine los oculta.
+*/
+.touch-move-btn {
+    display: none;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
     align-items: center;
     justify-content: center;
-    background: rgba(34, 34, 34, 0.45);
-    z-index: 1000;
-    padding: 1rem;
-}
-.confirm-modal[hidden] {
-    display: none;
-}
-.confirm-modal-dialog {
-    background: var(--clr-white);
-    border-radius: var(--radius);
-    box-shadow: var(--dark-shadow);
-    padding: 1.5rem;
-    max-width: 22rem;
-    width: 100%;
-    text-align: center;
-}
-.confirm-modal-text {
-    color: var(--clr-grey-1);
-    margin-bottom: 1.25rem;
-    font-size: 0.95rem;
-}
-.confirm-modal-actions {
-    display: flex;
-    justify-content: center;
-    gap: 0.75rem;
-}
-.confirm-btn {
-    border: none;
-    border-radius: var(--radius);
-    padding: 0.4rem 1rem;
-    font-size: 0.85rem;
-    letter-spacing: var(--spacing);
-    text-transform: capitalize;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 0.4rem;
     cursor: pointer;
-    transition: var(--transition);
+    color: var(--clr-grey-5);
+    transition: background-color 0.15s linear, color 0.15s linear,
+                border-color 0.15s linear;
 }
-.confirm-btn-cancel {
-    background: var(--clr-grey-9);
-    color: var(--clr-grey-1);
+.touch-move-btn:hover:not(:disabled) {
+    color: var(--clr-primary-3);
+    background: var(--clr-primary-10);
+    border-color: var(--clr-primary-9);
 }
-.confirm-btn-cancel:hover {
-    background: var(--clr-grey-8);
+.touch-move-btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--clr-primary-10);
 }
-.confirm-btn-ok {
-    background: var(--clr-red-light);
-    color: var(--clr-white);
+.touch-move-btn:active:not(:disabled) {
+    transform: scale(0.94);
 }
-.confirm-btn-ok:hover {
-    background: var(--clr-red-dark);
+.touch-move-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
 }
+.touch-move-btn .icon {
+    display: block;
+}
+.touch-promote-btn {
+    color: var(--clr-primary-3);
+}
+
+/*
+===============
+Touch targets ≥44px (Fase 2)
+===============
+Activamos áreas tappables grandes solo en dispositivos primary touch
+(`pointer: coarse`). Los iconos visuales no cambian de tamaño, lo que
+crece es el padding / min-height para alcanzar el estándar 44x44.
+*/
+@media (pointer: coarse) {
+  /* Botones cuadrados de acción de fila. */
+  .subtask-collapse-btn,
+  .subtask-collapse-placeholder,
+  .edit-btn,
+  .delete-btn {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+  /* Toggle más compacto que el resto de los hit targets:
+     usa var(--btn-h) (36px comfy / 30px compact) en lugar de 44px.
+     El círculo a 44px se veía desproporcionado vs el SVG check de 14px. */
+  .grocery-item .toggle-check {
+    width: var(--btn-h);
+    height: var(--btn-h);
+  }
+  /* Paginación. */
+  .page-num,
+  .page-prev,
+  .page-next {
+    min-width: 2.75rem;
+    height: 2.75rem;
+    padding: 0 0.75rem;
+    font-size: 0.9rem;
+  }
+  /* Combobox triggers (sort, page-size, filter). */
+  .combo-toggle {
+    padding: 0.65rem 0.75rem;
+    font-size: 0.95rem;
+  }
+  /* Bulk buttons (Limpiar lista, Colapsar/Expandir todo). */
+  .bulk-btn {
+    padding: 0.55rem 0.85rem;
+    font-size: 0.85rem;
+  }
+  /* Confirm modal buttons. */
+  .confirm-btn {
+    padding: 0.65rem 1.15rem;
+    font-size: 0.95rem;
+  }
+  /* Submit principal. */
+  .submit-btn {
+    min-height: 2.75rem;
+  }
+  /* Inputs alcanzan 44px también para no parecer aplastados frente a botones. */
+  .search-input,
+  .subtask-add-input,
+  #grocery {
+    min-height: 2.75rem;
+  }
+  /* Espaciado entre acciones para evitar mis-taps. */
+  .grocery-item .action-group {
+    gap: 0.5rem;
+  }
+  /* Activación de los botones touch ↑/↓/promote (Fase 3). */
+  .touch-move-btn {
+    display: inline-flex;
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+  /* En touch, el cursor grab es engañoso (HTML5 drag no dispara). */
+  .grocery-item.is-draggable {
+    cursor: default;
+  }
+  /* La promote-zone es desktop-only — en touch usamos el botón ⬅. */
+  .promote-zone {
+    display: none !important;
+  }
+}
+
+/*
+===============
+Sticky-hover fix en touch (Fase 5)
+===============
+En dispositivos sin hover real (`hover: none`) el `:hover` queda activo
+hasta el próximo tap en otro lado — los items y botones se ven
+"resaltados" sin razón. Aquí neutralizamos los cambios de fondo/borde/
+color/shadow del :hover para esos selectores, y reforzamos `:active`.
+*/
+@media (hover: none) {
+  .btn:hover,
+  .grocery-item:hover,
+  .grocery-item:hover .title,
+  .section-center:hover,
+  .search-input:hover,
+  .subtask-add-input:hover,
+  .combo-toggle:hover,
+  .subtask-collapse-btn:hover,
+  .bulk-btn:hover,
+  .bulk-btn-danger:hover,
+  .submit-btn:hover,
+  .page-num:hover,
+  .page-prev:hover,
+  .page-next:hover,
+  .grocery-item .toggle-check:hover,
+  .edit-btn:hover,
+  .delete-btn:hover,
+  .touch-move-btn:hover,
+  .confirm-btn-cancel:hover,
+  .confirm-btn-ok:hover,
+  .app-toast-close:hover,
+  .done:hover {
+    background: revert;
+    border-color: revert;
+    color: revert;
+    box-shadow: revert;
+  }
+  /* :active da feedback inmediato al tap. */
+  .grocery-item:active {
+    background: var(--clr-grey-10);
+  }
+  .bulk-btn:active,
+  .submit-btn:active,
+  .page-num:active,
+  .page-prev:active,
+  .page-next:active,
+  .combo-toggle:active,
+  .edit-btn:active,
+  .delete-btn:active,
+  .subtask-collapse-btn:active,
+  .grocery-item .toggle-check:active,
+  .touch-move-btn:active {
+    transform: scale(0.96);
+  }
+}
+
+
+

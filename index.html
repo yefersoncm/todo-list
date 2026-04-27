@@ -4,23 +4,34 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Todo List</title>
-    <!-- Fallback que se carga antes de los CDN. Si Bootstrap responde, lo sobreescribe. -->
-    <link rel="stylesheet" href="vendor/fallback.css" />
-    <link
-        href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
-        rel="stylesheet"
-        integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
-        crossorigin="anonymous"
-    />
+    <!-- Fuentes del nuevo sistema de diseño (Fase 7A). -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- Orden: tokens → components → styles (legacy + overrides). -->
+    <link rel="stylesheet" href="tokens.css" />
+    <link rel="stylesheet" href="components.css" />
     <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
     <section class="section-center">
+        <!-- App chrome: toggles de tema y densidad (Fase 7H). Iconos
+             se montan en JS via createIcon. -->
+        <div class="app-chrome">
+            <div class="seg" id="themeSeg" role="group" aria-label="Tema">
+                <button type="button" class="seg__btn" data-theme="light" aria-label="Tema claro" title="Claro"></button>
+                <button type="button" class="seg__btn" data-theme="dark" aria-label="Tema oscuro" title="Oscuro"></button>
+            </div>
+            <div class="seg" id="densitySeg" role="group" aria-label="Densidad">
+                <button type="button" class="seg__btn" data-density="comfy" aria-label="Densidad cómoda" title="Cómoda"></button>
+                <button type="button" class="seg__btn" data-density="compact" aria-label="Densidad compacta" title="Compacta"></button>
+            </div>
+        </div>
         <form class="grocery-form">
             <h3>Todo List</h3>
             <div class="form-control1">
-                <input type="text" id="grocery" placeholder="ejemplo: Ir al Gym">
-                <button type="submit" class="submit-btn">
+                <input type="text" id="grocery" class="field" placeholder="ejemplo: Ir al Gym">
+                <button type="submit" class="submit-btn btn btn--primary">
                     <span class="submit-icon" aria-hidden="true"></span>
                     <span class="submit-label">Agregar</span>
                 </button>
@@ -28,17 +39,17 @@
         </form>
 
         <div class="grocery-container">
-            <div class="search-row">
-                <input type="search" id="searchInput" class="search-input" placeholder="Buscar tareas…" aria-label="Buscar tareas por texto" autocomplete="off">
+            <div class="search-row" id="searchRow" hidden>
+                <input type="search" id="searchInput" class="search-input field" placeholder="Buscar tareas…" aria-label="Buscar tareas por texto" autocomplete="off">
             </div>
             <div class="task-count-row">
                 <p class="task-count"></p>
                 <div class="task-count-controls">
                     <div class="bulk-collapse" id="bulkCollapse" hidden>
-                        <button type="button" class="bulk-btn bulk-collapse-all" aria-label="Colapsar todas las tareas con subtareas">Colapsar todo</button>
-                        <button type="button" class="bulk-btn bulk-expand-all" aria-label="Expandir todas las tareas con subtareas">Expandir todo</button>
+                        <button type="button" class="bulk-btn bulk-collapse-all btn btn--ghost btn--sm" aria-label="Colapsar todas las tareas con subtareas">Colapsar todo</button>
+                        <button type="button" class="bulk-btn bulk-expand-all btn btn--ghost btn--sm" aria-label="Expandir todas las tareas con subtareas">Expandir todo</button>
                     </div>
-                    <button type="button" class="bulk-btn bulk-btn-danger clear-btn" aria-label="Limpiar toda la lista de tareas">
+                    <button type="button" class="bulk-btn bulk-btn-danger clear-btn btn btn--danger btn--sm" aria-label="Limpiar toda la lista de tareas">
                         <span class="bulk-btn-icon" aria-hidden="true"></span>
                         <span class="bulk-btn-label">Limpiar lista</span>
                     </button>
@@ -114,46 +125,26 @@
 
         <div class="filters-container">
             <span id="filterLabel" class="filter-label">Mostrar</span>
-            <div class="combo" id="taskFilter">
-                <button
-                    type="button"
-                    class="combo-toggle"
-                    aria-haspopup="listbox"
-                    aria-expanded="false"
-                    aria-labelledby="filterLabel"
-                >
-                    <span class="combo-toggle-label">Todas</span>
-                    <span class="combo-arrow" aria-hidden="true">▾</span>
-                </button>
-                <ul
-                    class="combo-listbox"
-                    role="listbox"
-                    tabindex="-1"
-                    aria-labelledby="filterLabel"
-                    hidden
-                >
-                    <li role="option" data-value="all" aria-selected="true" id="opt-all">Todas</li>
-                    <li role="option" data-value="done" aria-selected="false" id="opt-done">Hechas</li>
-                    <li role="option" data-value="pending" aria-selected="false" id="opt-pending">Pendientes</li>
-                </ul>
+            <div class="filter-tabs" id="taskFilter" role="tablist" aria-labelledby="filterLabel">
+                <button type="button" class="filter-tab is-active" role="tab" aria-selected="true" data-value="all">Todas</button>
+                <button type="button" class="filter-tab" role="tab" aria-selected="false" data-value="pending">Pendientes</button>
+                <button type="button" class="filter-tab" role="tab" aria-selected="false" data-value="done">Hechas</button>
             </div>
         </div>
     </section>
 
     <div class="app-toast-container" id="toastContainer" aria-live="polite" aria-atomic="false"></div>
 
-    <div class="confirm-modal" id="confirmModal" hidden>
-        <div class="confirm-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="confirmModalText">
-            <p class="confirm-modal-text" id="confirmModalText"></p>
-            <div class="confirm-modal-actions">
-                <button type="button" class="confirm-btn confirm-btn-cancel" data-action="cancel">Cancelar</button>
-                <button type="button" class="confirm-btn confirm-btn-ok" data-action="ok">Aceptar</button>
+    <div class="confirm-modal modal-backdrop" id="confirmModal" hidden>
+        <div class="confirm-modal-dialog modal" role="dialog" aria-modal="true" aria-labelledby="confirmModalText">
+            <p class="confirm-modal-text modal__body" id="confirmModalText"></p>
+            <div class="confirm-modal-actions modal__actions">
+                <button type="button" class="confirm-btn confirm-btn-cancel btn btn--secondary" data-action="cancel">Cancelar</button>
+                <button type="button" class="confirm-btn confirm-btn-ok btn btn--danger-filled" data-action="ok">Aceptar</button>
             </div>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.1/dist/umd/popper.min.js" integrity="sha384-SR1sx49pcuLnqZUnnPwx6FCym0wLsk5JZuNx2bPPENzswTNFaQU1RDvt3wT4gWFG" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js" integrity="sha384-w76AqPfDkMBDXo30jS1Sgez6pr3x5MlQ1ZAGC+nuZB+EYdgRZgiwxhTBTkF7CXvN" crossorigin="anonymous"></script>
     <script type="module" src="app.js"></script>
 </body>
 </html>
