@@ -53,6 +53,7 @@ const DOM = {
     bulkExpandAllBtn: document.querySelector('.bulk-expand-all'),
     promoteZone: document.getElementById('promoteZone'),
     searchInput: document.getElementById('searchInput'),
+    searchRow: document.getElementById('searchRow'),
     paginationNav: document.querySelector('.pagination'),
     taskCountDisplay: document.querySelector('.task-count'),
     toastContainer: document.getElementById('toastContainer'),
@@ -1164,7 +1165,23 @@ class TaskManager {
         this._renderPagination(totalPages);
         this.updateTaskCount(filteredParents.length);
         this._updateBulkCollapseVisibility();
+        this._updateSearchVisibility();
         this._updateElapsed();
+    }
+
+    /**
+     * Muestra el buscador solo si hay más padres que el page-size mínimo (10).
+     * Si oculta, limpia el query activo para no dejar filtro fantasma.
+     */
+    _updateSearchVisibility() {
+        if (!DOM.searchRow) return;
+        const totalParents = this.store.tasks.filter(t => t.parentId === null).length;
+        const shouldShow = totalParents > 10;
+        DOM.searchRow.hidden = !shouldShow;
+        if (!shouldShow && this.searchQuery) {
+            this.searchQuery = '';
+            if (DOM.searchInput) DOM.searchInput.value = '';
+        }
     }
 
     _updateBulkCollapseVisibility() {
