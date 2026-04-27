@@ -1915,8 +1915,12 @@ class TaskManager {
             addSubBtn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
             addSubBtn.appendChild(createIcon(expanded ? 'minus-circle' : 'plus-circle'));
             addSubBtn.addEventListener('click', () => {
-                if (this._showAddSubFor.has(id)) this._showAddSubFor.delete(id);
-                else this._showAddSubFor.add(id);
+                // Comportamiento exclusivo: solo UN form '+ subtarea' abierto
+                // a la vez. Click en otro padre cierra el actual y abre el
+                // nuevo. Click en el mismo padre toggla off.
+                const wasExpanded = this._showAddSubFor.has(id);
+                this._showAddSubFor.clear();
+                if (!wasExpanded) this._showAddSubFor.add(id);
                 this.renderTasks();
             });
         }
