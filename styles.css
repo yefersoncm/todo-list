@@ -283,6 +283,9 @@ con mayor especificidad y haría invisibles nuestras notificaciones.
 /* Pills mobile ocultas en desktop por default. Se muestran en mobile
    via override en @media (max-width: 480px). */
 .filter-tabs.m-pills { display: none; }
+/* Group titles (Fase 9E): solo visibles en mobile como labels de
+   sección "Pendientes" / "Hechas" entre bloques de tareas. */
+.group-title { display: none; }
 /* Drawer backdrop (oculto en desktop por hidden attribute). */
 .app-drawer-backdrop {
   position: fixed;
@@ -927,6 +930,19 @@ solo se ajustan paddings y gaps que en mobile sienten apretados.
   }
   /* Footer (filter desktop) oculto en mobile — las pills lo reemplazan. */
   .app-footer { display: none; }
+  /* Group title visible: divisor decorativo entre Pendientes y Hechas. */
+  .group-title {
+    display: block;
+    font-family: var(--ff-mono);
+    font-size: 10px;
+    color: var(--fg-subtle);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-caps);
+    padding: var(--sp-3) var(--sp-3) var(--sp-2);
+  }
+  .group-title:first-child {
+    padding-top: var(--sp-1);
+  }
   /* Hamburger visible en mobile. */
   .app-hamburger {
     display: inline-flex;

@@ -1260,7 +1260,22 @@ class TaskManager {
     _renderList(items) {
         DOM.list.innerHTML = '';
         if (items.length > 0) {
-            items.forEach(item => this.createListItem(item));
+            // Group titles por estado (Fase 9E): solo cuando filter='all'.
+            // Insertamos un .group-title antes de cada cambio de done state
+            // entre PADRES (subs no disparan cambio de grupo). En desktop
+            // están ocultos por CSS.
+            let lastParentDone = null;
+            const showGroups = this.filterMode === 'all';
+            items.forEach(item => {
+                if (showGroups && item.parentId === null && item.done !== lastParentDone) {
+                    const title = document.createElement('div');
+                    title.className = 'group-title';
+                    title.textContent = item.done ? 'Hechas' : 'Pendientes';
+                    DOM.list.appendChild(title);
+                    lastParentDone = item.done;
+                }
+                this.createListItem(item);
+            });
             DOM.container.classList.add('show-container');
         } else {
             DOM.container.classList.remove("show-container");
