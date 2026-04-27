@@ -211,7 +211,8 @@ con mayor especificidad y haría invisibles nuestras notificaciones.
 @media (max-width: 640px) {
     .app-toast-container {
         top: auto;
-        bottom: var(--sp-4);
+        /* Sumamos --footer-h para que el toast no tape el footer fijo. */
+        bottom: calc(var(--footer-h) + var(--sp-2) + env(safe-area-inset-bottom, 0px));
         left: var(--sp-3);
         right: var(--sp-3);
         max-width: none;
@@ -643,6 +644,15 @@ Paginación
 
 /* ... (Tu código CSS existente) ... */
 
+/* Altura del footer fijo. Reusada por body padding-bottom y por el toast
+   container para que los toasts no aparezcan tapando el footer. */
+:root {
+    --footer-h: 64px;
+}
+@media (pointer: coarse) {
+    :root { --footer-h: 76px; }
+}
+
 /* Footer fijo con el filtro Mostrar/Todas/Pendientes/Hechas siempre
    visible al pie de la pantalla. */
 .app-footer {
@@ -672,10 +682,9 @@ Paginación
 [data-theme="dark"] .app-footer {
     box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.4);
 }
-/* Espacio al final del body para que el footer no tape el último item.
-   Aproximación generosa: alto del footer + safe-area. */
+/* Espacio al final del body para que el footer no tape el último item. */
 body {
-    padding-bottom: calc(var(--sp-7) + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(var(--footer-h) + env(safe-area-inset-bottom, 0px));
 }
 
 .filter-label {
@@ -906,12 +915,10 @@ solo se ajustan paddings y gaps que en mobile sienten apretados.
     flex: 1 1 100%;
     justify-content: space-between;
   }
-  /* Toast a la parte inferior en mobile: arriba choca con el form de
-     'Agregar' y aunque ya no bloquea taps (pointer-events:none), tapaba
-     visualmente el botón. */
+  /* Toast en mobile: bottom + arriba del footer fijo (no lo tapa). */
   .app-toast-container {
     top: auto;
-    bottom: 1rem;
+    bottom: calc(var(--footer-h) + var(--sp-2) + env(safe-area-inset-bottom, 0px));
     right: 1rem;
     left: 1rem;
     align-items: flex-end;
