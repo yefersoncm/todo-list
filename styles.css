@@ -162,6 +162,11 @@ border-radius: var(--radius);
   /* margin auto en horizontal centra el wrapper cuando el viewport es
      más ancho que --container-max. */
   margin: clamp(0.5rem, 3vw, 2rem) auto;
+  /* margin-bottom específico que garantiza espacio para el footer fijo
+     y la paginación al final de la lista. El body padding-bottom solo
+     no era suficiente en ciertos casos (browsers mobile, contenido
+     que llena el viewport). */
+  margin-bottom: calc(var(--footer-h) + var(--sp-4) + env(safe-area-inset-bottom, 0px));
   width: 100%;
   max-width: var(--container-max);
 }
