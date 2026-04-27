@@ -409,11 +409,9 @@ con mayor especificidad y haría invisibles nuestras notificaciones.
 /* Botón star (priority) — diferente a edit/delete: amarillo cuando activo. */
 .priority-btn.is-priority { color: var(--warning); }
 .priority-btn.is-priority svg { fill: currentColor; }
-/* Botón calendar (due-btn) — accent cuando ya tiene fecha asignada. */
-.due-btn.is-due { color: var(--accent); }
-/* Botón addsub (plus/minus): toggle del input "+ subtarea". */
-.addsub-btn { color: var(--accent); }
-.addsub-btn.is-expanded { color: var(--danger); }
+/* Botón calendar (due-btn) y botón addsub (plus/minus) — color neutro
+   igual al resto de iconos del action-group. Solo el priority-btn
+   cambia de color cuando se activa (warning/amarillo). */
 /* Star inline al lado del título cuando priority. */
 .task__priority-mark {
   color: var(--warning);
