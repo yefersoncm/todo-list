@@ -283,6 +283,18 @@ con mayor especificidad y haría invisibles nuestras notificaciones.
 /* Pills mobile ocultas en desktop por default. Se muestran en mobile
    via override en @media (max-width: 480px). */
 .filter-tabs.m-pills { display: none; }
+/* Bloque title + elapsed: wrapper que en mobile muestra el title
+   arriba y el elapsed pequeño debajo. En desktop comporta como flex
+   item normal con el title — el elapsed dentro queda en su mismo flow. */
+.task__title-block {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.task__title-block .title { flex: 1; min-width: 0; }
+.task__title-block .task__elapsed { flex: none; }
 /* Group titles (Fase 9E): solo visibles en mobile como labels de
    sección "Pendientes" / "Hechas" entre bloques de tareas. */
 .group-title { display: none; }
@@ -293,6 +305,46 @@ con mayor especificidad y haría invisibles nuestras notificaciones.
   display: flex;
   flex-direction: column;
   gap: var(--sp-4);
+}
+.newtask-modal__row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+.newtask-modal__label {
+  font-size: var(--fs-sm);
+  color: var(--fg-muted);
+  min-width: 4rem;
+}
+.newtask-modal__check {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-sm);
+  color: var(--fg-default);
+  cursor: pointer;
+}
+/* Mini-toolbar mobile (Fase F3) — solo visible en mobile. */
+.m-toolbar { display: none; }
+/* Botón star (priority) — diferente a edit/delete: amarillo cuando activo. */
+.priority-btn.is-priority { color: var(--warning); }
+.priority-btn.is-priority svg { fill: currentColor; }
+/* Due-date badge en items con dueDate (mobile + desktop). */
+.task__due-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 6px;
+  border-radius: var(--r-sm);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-family: var(--ff-mono);
+  font-size: 10px;
+  letter-spacing: 0;
+}
+.task.is-due-today .task__due-badge {
+  background: var(--warning-soft);
+  color: var(--warning);
 }
 /* Drawer backdrop (oculto en desktop por hidden attribute). */
 .app-drawer-backdrop {
@@ -940,6 +992,27 @@ solo se ajustan paddings y gaps que en mobile sienten apretados.
   .app-footer { display: none; }
   /* Form principal arriba: en mobile lo reemplaza el FAB + modal. */
   .grocery-form { display: none; }
+  /* Mini-toolbar visible en mobile (Fase F3). */
+  .m-toolbar {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    padding: var(--sp-2) 0;
+    border-top: 1px solid var(--border-subtle);
+    margin-top: var(--sp-2);
+  }
+  .m-toolbar__count {
+    font-size: var(--fs-xs);
+    color: var(--fg-muted);
+  }
+  .m-toolbar__count strong {
+    color: var(--fg-default);
+    font-weight: var(--fw-semibold);
+  }
+  .m-toolbar__spacer {
+    flex: 1;
+  }
+  .m-toolbar .btn { flex: none; height: 32px; padding: 0 var(--sp-3); }
   /* FAB visible en mobile. */
   .app-fab {
     display: inline-flex;
@@ -1021,15 +1094,47 @@ solo se ajustan paddings y gaps que en mobile sienten apretados.
     gap: var(--sp-3);
     width: 100%;
   }
-  /* Cada item es su propia card en mobile (Fase 7G). */
-  .grocery-item {
+  /* Cada item es su propia card en mobile (Fase 7G + F4 grid puro).
+     Padres: grid 3-col toggle | title | chevron + filas para form y actions.
+     Subs: grid 2-col toggle | title + fila para actions. */
+  .grocery-item:not(.is-subtask) {
     background: var(--bg-surface);
     border: 1px solid var(--border-subtle);
     border-radius: var(--r-md);
     padding: var(--sp-3);
     margin-bottom: var(--sp-2);
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    grid-template-areas:
+      "toggle title chevron"
+      "subform subform subform"
+      "actions actions actions";
     gap: var(--sp-2);
+    align-items: center;
   }
+  .grocery-item:not(.is-subtask) > .toggle-check { grid-area: toggle; }
+  .grocery-item:not(.is-subtask) > .task__title-block { grid-area: title; }
+  .grocery-item:not(.is-subtask) > .subtask-collapse-btn,
+  .grocery-item:not(.is-subtask) > .subtask-collapse-placeholder { grid-area: chevron; justify-self: end; }
+  .grocery-item:not(.is-subtask) > .subtask-add-form { grid-area: subform; margin: 0; }
+  .grocery-item:not(.is-subtask) > .meta { grid-area: actions; }
+  .grocery-item.is-subtask {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-md);
+    padding: var(--sp-3);
+    margin-bottom: var(--sp-2);
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-areas:
+      "toggle title"
+      "actions actions";
+    gap: var(--sp-2);
+    align-items: center;
+  }
+  .grocery-item.is-subtask > .toggle-check { grid-area: toggle; }
+  .grocery-item.is-subtask > .task__title-block { grid-area: title; }
+  .grocery-item.is-subtask > .meta { grid-area: actions; }
   /* Sub-card: misma estética + indentación + guía vertical.
      Subimos el max-height del .is-subtask (default 8rem para la
      animación de collapse) porque en mobile la sub se vuelve card
@@ -1132,9 +1237,19 @@ solo se ajustan paddings y gaps que en mobile sienten apretados.
     flex-wrap: wrap;
     row-gap: 0.35rem;
   }
-  /* Título inline con toggle/chevron en mobile (estilo m-task__head del
-     mockup): el title ocupa el espacio restante de la primera fila con
-     elipsis si overflow. NO va más full-width como antes. */
+  /* En mobile el title-block es columna: title arriba, elapsed debajo
+     (estilo m-task__head del mockup). */
+  .task__title-block {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+  .task__title-block .title { width: 100%; }
+  .task__title-block .task__elapsed {
+    font-size: 11px;
+    line-height: 1;
+  }
+  /* Título inline con toggle/chevron — flex-basis auto + ellipsis. */
   .grocery-item .title {
     flex: 1 1 auto;
     min-width: 0;

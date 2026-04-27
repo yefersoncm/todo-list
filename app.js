@@ -68,6 +68,11 @@ const DOM = {
     newTaskModal: document.getElementById('newTaskModal'),
     newTaskForm: document.getElementById('newTaskForm'),
     newTaskInput: document.getElementById('newTaskInput'),
+    newTaskDate: document.getElementById('newTaskDate'),
+    newTaskPriority: document.getElementById('newTaskPriority'),
+    mToolbarCount: document.getElementById('mToolbarCount'),
+    mCollapseAll: document.getElementById('mCollapseAll'),
+    mExpandAll: document.getElementById('mExpandAll'),
 };
 
 function loadPageSize() {
@@ -101,6 +106,15 @@ function loadCollapsed() {
 
 function saveCollapsed(set) {
     localStorage.setItem(COLLAPSED_KEY, JSON.stringify([...set]));
+}
+
+/** Hoy en formato YYYY-MM-DD (timezone local del browser). */
+function todayISO() {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
 }
 
 // Modal de confirmación que reemplaza al confirm() nativo.
@@ -217,6 +231,13 @@ class TaskManager {
         if (DOM.appHamburger && !DOM.appHamburger.firstChild) {
             DOM.appHamburger.appendChild(createIcon('menu', { size: 22 }));
         }
+        // Mini-toolbar mobile (Fase F3): iconos collapse-all/expand-all.
+        if (DOM.mCollapseAll && !DOM.mCollapseAll.firstChild) {
+            DOM.mCollapseAll.appendChild(createIcon('chevron-up', { size: 16 }));
+        }
+        if (DOM.mExpandAll && !DOM.mExpandAll.firstChild) {
+            DOM.mExpandAll.appendChild(createIcon('chevron-down', { size: 16 }));
+        }
     }
 
     /**
@@ -232,6 +253,8 @@ class TaskManager {
         const open = () => {
             DOM.newTaskModal.hidden = false;
             DOM.newTaskInput.value = '';
+            if (DOM.newTaskDate) DOM.newTaskDate.value = '';
+            if (DOM.newTaskPriority) DOM.newTaskPriority.checked = false;
             requestAnimationFrame(() => DOM.newTaskInput.focus());
         };
         const close = () => {
@@ -246,7 +269,10 @@ class TaskManager {
                 this.displayAlert('Por favor ingrese un valor', 'danger');
                 return;
             }
-            this.store.add(value);
+            this.store.add(value, {
+                dueDate: DOM.newTaskDate?.value || undefined,
+                priority: !!DOM.newTaskPriority?.checked,
+            });
             this.displayAlert('Item agregado a la lista', 'success');
             this.currentPage = 1;
             this.renderTasks();
@@ -377,6 +403,13 @@ class TaskManager {
         if (DOM.bulkExpandAllBtn) {
             DOM.bulkExpandAllBtn.addEventListener('click', this.handleExpandAll.bind(this));
         }
+        // Mini-toolbar mobile (Fase F3): mismos handlers que los del drawer.
+        if (DOM.mCollapseAll) {
+            DOM.mCollapseAll.addEventListener('click', this.handleCollapseAll.bind(this));
+        }
+        if (DOM.mExpandAll) {
+            DOM.mExpandAll.addEventListener('click', this.handleExpandAll.bind(this));
+        }
         if (DOM.promoteZone) {
             DOM.promoteZone.addEventListener('dragover', this.handlePromoteDragOver.bind(this));
             DOM.promoteZone.addEventListener('dragleave', this.handlePromoteDragLeave.bind(this));
@@ -439,7 +472,7 @@ class TaskManager {
     }
 
     _setFilterTab(value) {
-        if (!['all', 'done', 'pending'].includes(value)) return;
+        if (!['all', 'done', 'pending', 'today', 'priority'].includes(value)) return;
         if (this.filterMode === value) return;
         this.filterMode = value;
         this.currentPage = 1;
@@ -1292,6 +1325,11 @@ class TaskManager {
         let parents = ordered.filter(t => t.parentId === null);
         if (this.filterMode === 'done') parents = parents.filter(t => t.done);
         else if (this.filterMode === 'pending') parents = parents.filter(t => !t.done);
+        else if (this.filterMode === 'today') {
+            const today = todayISO();
+            parents = parents.filter(t => t.dueDate === today);
+        }
+        else if (this.filterMode === 'priority') parents = parents.filter(t => !!t.priority);
         // Búsqueda: substring case-insensitive en el value del padre o
         // de cualquiera de sus subs. Match en sub también muestra al
         // padre completo para preservar el contexto.
@@ -1473,6 +1511,35 @@ class TaskManager {
             }
         }
 
+        // Bloque title + elapsed (estilo m-task__head del mockup):
+        // wrapper que agrupa visualmente el título arriba y el elapsed
+        // pequeño debajo. Permite que el grid 3-col del item ponga este
+        // bloque en la columna central.
+        const titleBlock = document.createElement('div');
+        titleBlock.className = 'task__title-block';
+
+        const daysSpan = document.createElement('span');
+        daysSpan.className = 'task-days-old task__elapsed';
+        daysSpan.textContent = elapsedText;
+
+        titleBlock.append(title, daysSpan);
+
+        // Botón star (priority): solo padres. Toggle el flag.
+        let priorityBtn = null;
+        if (!isSubtask) {
+            priorityBtn = document.createElement('button');
+            priorityBtn.type = 'button';
+            priorityBtn.className = 'priority-btn btn-icon btn-icon--sm';
+            if (task.priority) priorityBtn.classList.add('is-priority');
+            priorityBtn.setAttribute('aria-label', task.priority ? 'Quitar prioridad' : 'Marcar prioridad');
+            priorityBtn.setAttribute('aria-pressed', task.priority ? 'true' : 'false');
+            priorityBtn.appendChild(createIcon('star'));
+            priorityBtn.addEventListener('click', () => {
+                this.store.togglePriority(id);
+                this.renderTasks();
+            });
+        }
+
         const editBtn = document.createElement('button');
         editBtn.type = 'button';
         editBtn.className = 'edit-btn btn-icon btn-icon--sm';
@@ -1488,15 +1555,12 @@ class TaskManager {
         const actionGroup = document.createElement('div');
         actionGroup.className = 'action-group task__actions';
         const touchControls = this._buildTouchMoveControls(task, isSubtask);
-        actionGroup.append(...touchControls, editBtn, deleteBtn);
-
-        const daysSpan = document.createElement('span');
-        daysSpan.className = 'task-days-old task__elapsed';
-        daysSpan.textContent = elapsedText;
+        const extras = priorityBtn ? [priorityBtn] : [];
+        actionGroup.append(...touchControls, ...extras, editBtn, deleteBtn);
 
         const meta = document.createElement('div');
         meta.className = 'meta';
-        meta.append(actionGroup, daysSpan);
+        meta.append(actionGroup);
 
         // Padres llevan input inline para agregar subtareas, y un
         // chevron al inicio si tienen al menos una sub. Cuando NO tienen
@@ -1506,9 +1570,9 @@ class TaskManager {
             const hasSubs = this.store.subsOf(id).length > 0;
             const subSlot = hasSubs ? this._buildSubtaskCollapseBtn(id) : this._buildSubtaskCollapsePlaceholder();
             const subForm = this._buildSubtaskAddForm(id);
-            element.append(subSlot, toggleBtn, title, subForm, meta);
+            element.append(subSlot, toggleBtn, titleBlock, subForm, meta);
         } else {
-            element.append(toggleBtn, title, meta);
+            element.append(toggleBtn, titleBlock, meta);
         }
 
         toggleBtn.addEventListener('click', this.handleMarkTaskAsDone.bind(this));
@@ -1579,14 +1643,21 @@ class TaskManager {
             let label = 'Total';
             if (this.filterMode === 'done') label = 'Completadas';
             else if (this.filterMode === 'pending') label = 'Pendientes';
+            else if (this.filterMode === 'today') label = 'Hoy';
+            else if (this.filterMode === 'priority') label = 'Prioridad';
             DOM.taskCountDisplay.textContent = `Tareas: ${label}: ${filteredCount}`;
         }
-        // Subtítulo del header mobile: "X de Y" donde X = padres hechos
-        // (sobre el TOTAL real, no sobre el filtrado).
+        if (DOM.mToolbarCount) {
+            DOM.mToolbarCount.innerHTML = `<strong>${filteredCount}</strong> tareas`;
+        }
+        // Subtítulo del header mobile: "X de Y · DD mes" (Fase F1).
         if (DOM.appTitleSub) {
             const allParents = this.store.tasks.filter(t => t.parentId === null);
             const doneCount = allParents.filter(p => p.done).length;
-            DOM.appTitleSub.textContent = `${doneCount} de ${allParents.length}`;
+            const today = new Date();
+            const months = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+            const dateStr = `${today.getDate()} ${months[today.getMonth()]}`;
+            DOM.appTitleSub.textContent = `${doneCount} de ${allParents.length} · ${dateStr}`;
         }
     }
 }
