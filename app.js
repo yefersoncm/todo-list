@@ -447,8 +447,9 @@ class TaskManager {
         const open = () => {
             DOM.newTaskModal.hidden = false;
             DOM.newTaskInput.value = '';
-            // Por default, fecha = hoy (decisión UX: tarea sin fecha = today).
-            if (DOM.newTaskDate) DOM.newTaskDate.value = todayISO();
+            // Por default sin fecha. El usuario la asigna explícitamente
+            // si quiere via el botón del picker.
+            if (DOM.newTaskDate) DOM.newTaskDate.value = '';
             if (DOM.newTaskPriority) DOM.newTaskPriority.checked = false;
             refreshDateBtn();
             requestAnimationFrame(() => DOM.newTaskInput.focus());
@@ -476,10 +477,9 @@ class TaskManager {
                 this.displayAlert('Por favor ingrese un valor', 'danger');
                 return;
             }
-            // Tarea sin fecha explícita → today por default (decisión UX).
-            const dueDate = DOM.newTaskDate?.value || todayISO();
+            // Sin fecha explícita = sin fecha (no asume today).
             this.store.add(value, {
-                dueDate,
+                dueDate: DOM.newTaskDate?.value || undefined,
                 priority: !!DOM.newTaskPriority?.checked,
             });
             this.displayAlert('Item agregado a la lista', 'success');
@@ -644,8 +644,7 @@ class TaskManager {
             this.displayAlert("Por favor ingrese un valor", "danger");
             return;
         }
-        // Tarea creada sin fecha asume today (decisión UX).
-        this.store.add(value, { dueDate: todayISO() });
+        this.store.add(value);
         this.displayAlert("Item agregado a la lista", "success");
         this.currentPage = 1;
         this.renderTasks();
