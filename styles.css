@@ -998,6 +998,27 @@ solo se ajustan paddings y gaps que en mobile sienten apretados.
   }
   .grocery-item .action-group {
     justify-content: center;
+    gap: 0;
+  }
+  /* Separadores visuales entre botones de acción (estilo m-task__actions
+     del mockup mobile). Cada botón menos el último lleva un border-right
+     fino que actúa como divisor. */
+  .grocery-item .action-group > .btn-icon:not(:last-child) {
+    border-right: 1px solid var(--border-subtle);
+    border-radius: 0;
+  }
+  .grocery-item .action-group > .btn-icon {
+    flex: 1 1 auto;
+    max-width: 5rem;
+    border-radius: 0;
+  }
+  .grocery-item .action-group > .btn-icon:first-child {
+    border-top-left-radius: var(--r-sm);
+    border-bottom-left-radius: var(--r-sm);
+  }
+  .grocery-item .action-group > .btn-icon:last-child {
+    border-top-right-radius: var(--r-sm);
+    border-bottom-right-radius: var(--r-sm);
   }
   /* El input para agregar subtarea queda al lado del toggle, ocupando
      el espacio restante de la línea. */
