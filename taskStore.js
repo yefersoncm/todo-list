@@ -1,13 +1,15 @@
 /*
  * TaskStore — lógica pura de gestión de tareas y subtareas, sin DOM.
  *
- * Modelo de tarea: { id, value, done, updatedAt, parentId }
+ * Modelo de tarea: { id, value, done, updatedAt, parentId, dueDate?, priority? }
  *   - id: timestamp epoch (string) en el momento de creación.
  *   - value: texto.
  *   - done: booleano.
  *   - updatedAt: timestamp epoch (number) de la última modificación.
  *   - parentId: null para tareas top-level, id (string) del padre
  *     para subtareas. Profundidad máxima: 1 nivel.
+ *   - dueDate (opcional): fecha límite YYYY-MM-DD. Solo aplica a top-level.
+ *   - priority (opcional): boolean (estrella destacada).
  *
  * Reglas de propagación (sólo entre padre y sus subs):
  *   - Toggle padre → propaga el done a TODAS sus subs.
@@ -67,13 +69,42 @@ export class TaskStore {
     /**
      * Crea una tarea top-level. Se inserta al inicio del orden manual.
      */
-    add(value, idFactory = () => Date.now().toString()) {
+    add(value, optionsOrIdFactory = {}) {
+        // Compat: si recibe función, es el idFactory legacy. Si recibe
+        // objeto, son options { dueDate?, priority?, idFactory? }.
+        const opts = typeof optionsOrIdFactory === 'function'
+            ? { idFactory: optionsOrIdFactory }
+            : optionsOrIdFactory;
+        const idFactory = opts.idFactory || (() => Date.now().toString());
         const id = idFactory();
         const createdAt = parseInt(id) || Date.now();
         const task = { id, value, done: false, updatedAt: createdAt, parentId: null };
+        if (opts.dueDate) task.dueDate = opts.dueDate;
+        if (opts.priority) task.priority = true;
         this.tasks.unshift(task);
         this.save();
         return task;
+    }
+
+    /** Setea o limpia (null/undefined) la dueDate de una tarea top-level. */
+    setDueDate(taskId, dueDate, now = Date.now()) {
+        const t = this.tasks.find(x => x.id === taskId);
+        if (!t || t.parentId !== null) return false;
+        if (dueDate) t.dueDate = dueDate;
+        else delete t.dueDate;
+        t.updatedAt = now;
+        this.save();
+        return true;
+    }
+
+    /** Togglea el flag priority de una tarea top-level. */
+    togglePriority(taskId, now = Date.now()) {
+        const t = this.tasks.find(x => x.id === taskId);
+        if (!t || t.parentId !== null) return false;
+        t.priority = !t.priority;
+        t.updatedAt = now;
+        this.save();
+        return true;
     }
 
     /**

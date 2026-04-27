@@ -251,14 +251,208 @@ con mayor especificidad y haría invisibles nuestras notificaciones.
 .app-toast-action,
 .app-toast-close { pointer-events: auto; }
 
-/* App chrome con toggles theme + density (Fase 7H). */
+/* App chrome con toggles theme + density (Fase 7H) y, en mobile (Fase 8A),
+   el título con stats. En desktop el título permanece oculto y solo se
+   muestran los toggles alineados a la derecha. */
 .app-chrome {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
   gap: var(--sp-2);
   margin-bottom: var(--sp-3);
 }
 .app-chrome .seg__btn .icon { display: block; }
+.app-title { display: none; }
+.app-hamburger {
+  display: none;
+  width: var(--btn-h);
+  height: var(--btn-h);
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-sm);
+  background: var(--bg-surface);
+  color: var(--fg-default);
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex: none;
+  transition: background-color var(--dur-fast) var(--ease-out);
+}
+.app-hamburger:hover { background: var(--bg-surface-2); }
+.app-hamburger:active { transform: scale(0.96); }
+.app-hamburger .icon { display: block; }
+/* Pills mobile ocultas en desktop por default. Se muestran en mobile
+   via override en @media (max-width: 480px). */
+.filter-tabs.m-pills { display: none; }
+/* Bloque title + elapsed: wrapper que en mobile muestra el title
+   arriba y el elapsed pequeño debajo. En desktop comporta como flex
+   item normal con el title — el elapsed dentro queda en su mismo flow. */
+.task__title-block {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.task__title-block .title { flex: 1; min-width: 0; }
+.task__title-block .task__elapsed { flex: none; }
+/* Group titles (Fase 9E): solo visibles en mobile como labels de
+   sección "Pendientes" / "Hechas" entre bloques de tareas. */
+.group-title { display: none; }
+/* Empty state (cuando un filter no devuelve resultados pero la app
+   tiene tareas). Visible en cualquier viewport. */
+.empty-state {
+  padding: var(--sp-7) var(--sp-4);
+  text-align: center;
+  color: var(--fg-muted);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-normal);
+}
+/* FAB (Fase 9F) — solo visible en mobile, oculto en desktop. */
+.app-fab { display: none; }
+/* Date picker custom: respeta dark/light via tokens semánticos.
+   z-index 1200 (mayor que el modal-backdrop 1000) para quedar encima
+   del modal "Nueva tarea" cuando se abre desde ahí. */
+.date-picker-modal {
+  z-index: 1200;
+}
+.date-picker-modal[hidden] { display: none; }
+.date-picker { width: 100%; max-width: 340px; }
+.date-picker__nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--sp-3);
+}
+.date-picker__month {
+  font-size: var(--fs-md);
+  font-weight: var(--fw-semibold);
+  color: var(--fg-default);
+  letter-spacing: -0.01em;
+}
+.date-picker__weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  font-family: var(--ff-mono);
+  font-size: 11px;
+  color: var(--fg-subtle);
+  text-align: center;
+  padding-bottom: 4px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.date-picker__grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  margin-bottom: var(--sp-4);
+}
+.date-picker__day {
+  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--fg-default);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-out),
+              border-color var(--dur-fast) var(--ease-out),
+              color var(--dur-fast) var(--ease-out);
+}
+.date-picker__day.is-empty {
+  cursor: default;
+  pointer-events: none;
+}
+.date-picker__day:hover:not(.is-empty):not(.is-selected) {
+  background: var(--bg-surface-2);
+}
+.date-picker__day.is-today {
+  border-color: var(--accent);
+  font-weight: var(--fw-semibold);
+}
+.date-picker__day.is-selected {
+  background: var(--accent);
+  color: var(--accent-fg);
+  border-color: var(--accent);
+}
+/* Bottom nav (Fase F10) — solo en mobile. */
+.m-bottom { display: none; }
+.newtask-modal[hidden] { display: none; }
+.newtask-modal__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+.newtask-modal__row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+.newtask-modal__label {
+  font-size: var(--fs-sm);
+  color: var(--fg-muted);
+  min-width: 4rem;
+}
+.newtask-modal__check {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-sm);
+  color: var(--fg-default);
+  cursor: pointer;
+}
+/* Mini-toolbar mobile (Fase F3) — solo visible en mobile. */
+.m-toolbar { display: none; }
+/* Botón star (priority) — diferente a edit/delete: amarillo cuando activo. */
+.priority-btn.is-priority { color: var(--warning); }
+.priority-btn.is-priority svg { fill: currentColor; }
+/* Botón calendar (due-btn) y botón addsub (plus/minus) — color neutro
+   igual al resto de iconos del action-group. Solo el priority-btn
+   cambia de color cuando se activa (warning/amarillo). */
+/* Star inline al lado del título cuando priority. */
+.task__priority-mark {
+  color: var(--warning);
+  fill: var(--warning);
+  margin-left: 0.25rem;
+  vertical-align: middle;
+}
+/* Item con due-date hoy: borde left amarillo. Item overdue: rojo. */
+.task.is-due-today { border-left: 3px solid var(--warning); }
+.task.is-overdue { border-left: 3px solid var(--danger); }
+/* Due-date badge en items con dueDate (mobile + desktop). */
+.task__due-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 6px;
+  border-radius: var(--r-sm);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-family: var(--ff-mono);
+  font-size: 10px;
+  letter-spacing: 0;
+}
+.task.is-due-today .task__due-badge {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+/* Drawer backdrop (oculto en desktop por hidden attribute). */
+.app-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: color-mix(in oklch, var(--slate-950) 55%, transparent);
+  z-index: 999;
+  opacity: 0;
+  transition: opacity 220ms var(--ease-out);
+  pointer-events: none;
+}
+.app-drawer-backdrop.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
 
 .grocery-form h3 {
   color: var(--clr-primary-1);
@@ -827,38 +1021,355 @@ solo se ajustan paddings y gaps que en mobile sienten apretados.
   .section {
     padding: 1.5rem 0;
   }
-  /* Cada item es su propia card en mobile (Fase 7G). */
-  .grocery-item {
+  /* Header mobile estilo m-top: título grande + stats + theme toggle a
+     la derecha. Density toggle se oculta (es de power-user, en mobile
+     reduce ruido visual). Hide del h3 'Todo List' del form. */
+  .app-chrome {
+    justify-content: space-between;
+    margin-bottom: var(--sp-4);
+  }
+  .app-title {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+    min-width: 0;
+  }
+  .app-title__main {
+    font-size: var(--fs-2xl);
+    font-weight: var(--fw-semibold);
+    letter-spacing: -0.015em;
+    line-height: 1.2;
+    color: var(--fg-default);
+  }
+  .app-title__sub {
+    font-size: var(--fs-xs);
+    color: var(--fg-muted);
+    font-family: var(--ff-mono);
+    letter-spacing: 0;
+  }
+  .app-chrome #densitySeg { display: none; }
+  .grocery-form h3 { display: none; }
+  /* Theme toggle en mobile: tamaño touch (44px) y flex none para no
+     encogerse por el title con flex: 1 al lado. */
+  .app-chrome #themeSeg {
+    flex: none;
+    z-index: 1;
+  }
+  .app-chrome #themeSeg .seg__btn {
+    min-width: 36px;
+    height: 32px;
+    padding: 0 var(--sp-2);
+  }
+  /* Pills filter en header (estilo m-pills del mockup): scroll horizontal,
+     pill rounded por tab, gap entre tabs. Reemplaza al filter-tabs del
+     footer (oculto en mobile via Fase 9C). */
+  .filter-tabs.m-pills {
+    display: flex;
+    gap: var(--sp-2);
+    margin: var(--sp-3) 0 var(--sp-2);
+    padding: 2px 0;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .filter-tabs.m-pills::-webkit-scrollbar { display: none; }
+  .filter-tabs.m-pills .filter-tab {
+    flex: none;
+    height: 32px;
+    padding: 0 var(--sp-3);
+    border-radius: 999px;
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-surface);
+    color: var(--fg-muted);
+    font-weight: var(--fw-medium);
+    box-shadow: none;
+  }
+  .filter-tabs.m-pills .filter-tab.is-active {
+    background: var(--accent);
+    color: var(--accent-fg);
+    border-color: var(--accent);
+  }
+  /* Footer (filter desktop) oculto en mobile — las pills lo reemplazan. */
+  .app-footer { display: none; }
+  /* Form principal arriba: en mobile lo reemplaza el FAB + modal. */
+  .grocery-form { display: none; }
+  /* Mini-toolbar visible en mobile (Fase F3). */
+  .m-toolbar {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    padding: var(--sp-2) 0;
+    border-top: 1px solid var(--border-subtle);
+    margin-top: var(--sp-2);
+  }
+  .m-toolbar__count {
+    font-size: var(--fs-xs);
+    color: var(--fg-muted);
+  }
+  .m-toolbar__count strong {
+    color: var(--fg-default);
+    font-weight: var(--fw-semibold);
+  }
+  .m-toolbar__spacer {
+    flex: 1;
+  }
+  .m-toolbar .btn { flex: none; height: 32px; padding: 0 var(--sp-3); }
+  /* Bottom nav visible en mobile (Fase F10). Flex item del body al final.
+     Como body es flex column con overflow hidden (app shell), queda fijo
+     en el bottom del viewport. */
+  .m-bottom {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    background: var(--bg-surface);
+    border-top: 1px solid var(--border-subtle);
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.04);
+    flex: 0 0 auto;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    z-index: 80;
+  }
+  .m-bottom-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    height: 56px;
+    background: transparent;
+    border: none;
+    color: var(--fg-muted);
+    font-size: 10px;
+    font-family: var(--ff-mono);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-caps);
+    cursor: pointer;
+    transition: color var(--dur-fast) var(--ease-out);
+  }
+  .m-bottom-btn:active { transform: scale(0.97); }
+  .m-bottom-btn.is-active { color: var(--accent); }
+  .m-bottom-btn__icon { display: inline-flex; }
+  .m-bottom-btn__icon .icon { width: 20px; height: 20px; display: block; }
+  /* FAB sube para no chocar con el bottom nav. */
+  .app-fab {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+    right: var(--sp-4);
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: var(--accent-fg);
+    border: none;
+    cursor: pointer;
+    box-shadow: var(--shadow-overlay);
+    z-index: 95;
+    transition: transform var(--dur-fast) var(--ease-out),
+                background-color var(--dur-fast) var(--ease-out);
+  }
+  .app-fab:hover { background: var(--accent-hover); }
+  .app-fab:active { transform: scale(0.94); }
+  /* Icono del FAB: forzar tamaño 24 y color del fg-onAccent (blanco)
+     porque la regla global .icon usa 18px que opacaba el contenido
+     dentro del círculo de 56px. */
+  .app-fab .icon {
+    display: block;
+    width: 24px;
+    height: 24px;
+    color: var(--accent-fg);
+    stroke-width: 2.5;
+  }
+  /* Group title visible: divisor decorativo entre Pendientes y Hechas. */
+  .group-title {
+    display: block;
+    font-family: var(--ff-mono);
+    font-size: 10px;
+    color: var(--fg-subtle);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-caps);
+    padding: var(--sp-3) var(--sp-3) var(--sp-2);
+  }
+  .group-title:first-child {
+    padding-top: var(--sp-1);
+  }
+  /* Hamburger visible en mobile. */
+  .app-hamburger {
+    display: inline-flex;
+    order: -1;
+  }
+  /* Drawer mobile: el .task-count-row se reposiciona como panel
+     fixed slide-from-left. La clase .is-open lo desliza adentro. */
+  .task-count-row {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: min(280px, 80vw);
+    z-index: 1000;
+    background: var(--bg-surface);
+    border-right: 1px solid var(--border-subtle);
+    box-shadow: 4px 0 12px rgba(0, 0, 0, 0.08);
+    padding: var(--sp-5) var(--sp-4);
+    margin: 0;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: var(--sp-3);
+    transform: translateX(-100%);
+    transition: transform 220ms var(--ease-out);
+    overflow-y: auto;
+  }
+  .task-count-row.is-open {
+    transform: translateX(0);
+  }
+  .task-count-row .task-count {
+    text-align: left;
+    font-size: var(--fs-md);
+    font-weight: var(--fw-semibold);
+    color: var(--fg-default);
+    margin: 0 0 var(--sp-2) 0;
+    padding-bottom: var(--sp-2);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .task-count-controls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--sp-3);
+    width: 100%;
+  }
+  /* Cada item es su propia card en mobile (Fase 7G + F4 grid puro).
+     Padres: grid 3-col toggle | title | chevron + filas para form y actions.
+     Subs: grid 2-col toggle | title + fila para actions. */
+  .grocery-item:not(.is-subtask) {
     background: var(--bg-surface);
     border: 1px solid var(--border-subtle);
     border-radius: var(--r-md);
     padding: var(--sp-3);
     margin-bottom: var(--sp-2);
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    grid-template-areas:
+      "toggle title chevron"
+      "actions actions actions";
     gap: var(--sp-2);
+    align-items: center;
   }
-  /* Sub-card: misma estética + indentación + guía vertical.
-     Subimos el max-height del .is-subtask (default 8rem para la
-     animación de collapse) porque en mobile la sub se vuelve card
-     con 3 filas (título / toggle / acciones con border-top) y 8rem
-     no alcanza — los botones edit/delete quedaban recortados por el
-     overflow:hidden del collapse. */
+  .grocery-item:not(.is-subtask) > .toggle-check { grid-area: toggle; }
+  .grocery-item:not(.is-subtask) > .task__title-block { grid-area: title; }
+  .grocery-item:not(.is-subtask) > .subtask-collapse-btn,
+  .grocery-item:not(.is-subtask) > .subtask-collapse-placeholder { grid-area: chevron; justify-self: end; }
+  .grocery-item:not(.is-subtask) > .meta { grid-area: actions; }
+  /* Sub-card: grid 3-col en UNA SOLA ROW (estilo .m-sub del mockup):
+     toggle | title-block | meta. Sin row separada con border-top.
+     overflow: visible es necesario para que el conector ::before del
+     árbol se vea fuera del card (la regla legacy lo tenía hidden para
+     animar collapse — eso lo manejamos con max-height transition sin
+     necesidad de cortar contenido). */
   .grocery-item.is-subtask {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-md);
+    padding: var(--sp-2) var(--sp-3);
+    margin-bottom: var(--sp-1);
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: var(--sp-2);
+    align-items: center;
+    overflow: visible;
+  }
+  /* Sin border-top en .meta de sub — todo es una row. */
+  .grocery-item.is-subtask > .meta {
+    border-top: none;
+    padding-top: 0;
+    margin-top: 0;
+    width: auto;
+  }
+  /* Action-group del sub: inline, gap chico, sin width 100% (no ocupa
+     toda la fila — solo el espacio necesario para los íconos). */
+  .grocery-item.is-subtask .action-group {
+    width: auto;
+    gap: 2px;
+  }
+  .grocery-item.is-subtask .action-group > .btn-icon {
+    flex: none;
+    width: 32px;
+    height: 32px;
+  }
+  /* Wrapper de subs (.m-subs) con guía vertical árbol que conecta el
+     padre con cada sub-card. El input "+ subtarea" se renderiza como
+     último hijo del wrapper. */
+  .m-subs {
     margin-left: var(--sp-5);
     position: relative;
+    padding-top: var(--sp-2);
+    margin-bottom: var(--sp-3);
+  }
+  /* Cuando el padre está colapsado, el form '+ subtarea' se oculta junto
+     con las subs — A MENOS que el user lo haya expandido explícitamente
+     (botón +). En ese caso, el form se muestra aunque las subs estén
+     colapsadas. */
+  .m-subs.is-collapsed > .subtask-add-form { display: none; }
+  .m-subs.is-collapsed.is-add-expanded > .subtask-add-form { display: flex; }
+  /* Plan B: árbol con esquinas curvadas. NO usamos guía vertical global
+     del wrapper — cada child dibuja su propio "L curvado" con border-left
+     + border-bottom + border-bottom-left-radius. Los segmentos verticales
+     se conectan extendiendo el ::before del child no-primero hacia arriba
+     hasta el sub anterior. Cuando todas las subs están colapsadas
+     (max-height: 0), el ::before también colapsa — sin residuo del árbol. */
+  /* Sub-card: indentada respecto al wrapper, con conector horizontal
+     pequeño que sale de la guía vertical hasta el card. */
+  .grocery-item.is-subtask {
+    position: relative;
     max-height: 16rem;
+    margin-left: var(--sp-3);
+    margin-bottom: var(--sp-1);
   }
   .grocery-item.is-subtask.is-collapsed {
     max-height: 0;
   }
+  /* L curvada con border-left + border-bottom + border-bottom-left-radius.
+     --connector-up lo setea JS al ancho del segmento vertical hacia arriba
+     necesario para llegar al centro del child anterior (o al top del
+     wrapper si es :first-child). Default 0 = solo curva, sin línea
+     vertical (caso degradado).  */
   .grocery-item.is-subtask::before {
     content: "";
     position: absolute;
-    left: calc(var(--sp-3) * -1);
-    top: 0;
-    bottom: 0;
-    width: 2px;
-    background: var(--border-subtle);
-    border-radius: 1px;
+    left: calc(var(--sp-5) * -1);
+    top: calc(var(--connector-up, 0px) * -1);
+    width: var(--sp-5);
+    height: calc(50% + var(--connector-up, 0px));
+    border-left: 2px solid var(--border-subtle);
+    border-bottom: 2px solid var(--border-subtle);
+    border-bottom-left-radius: var(--sp-3);
+    background: transparent;
+  }
+  /* Form "+ subtarea": misma L curvada que los subs. */
+  .m-subs > .subtask-add-form {
+    margin-left: var(--sp-3);
+    margin-top: var(--sp-1);
+    position: relative;
+  }
+  .m-subs > .subtask-add-form::before {
+    content: "";
+    position: absolute;
+    left: calc(var(--sp-5) * -1);
+    top: calc(var(--connector-up, 0px) * -1);
+    width: var(--sp-5);
+    height: calc(50% + var(--connector-up, 0px));
+    border-left: 2px solid var(--border-subtle);
+    border-bottom: 2px solid var(--border-subtle);
+    border-bottom-left-radius: var(--sp-3);
+    background: transparent;
+  }
+  .m-subs > .subtask-add-form .subtask-add-input {
+    width: 100%;
+    background: transparent;
+    border-style: dashed;
   }
   /* La row de acciones (.meta) se separa con un divisor superior. */
   .grocery-item .meta {
@@ -873,10 +1384,6 @@ solo se ajustan paddings y gaps que en mobile sienten apretados.
   .task__actions {
     opacity: 1 !important;
   }
-  .task-count-row,
-  .task-count-controls {
-    gap: 0.5rem;
-  }
   .pagination {
     justify-content: center;
     gap: 0.35rem;
@@ -885,43 +1392,41 @@ solo se ajustan paddings y gaps que en mobile sienten apretados.
   .grocery-item .meta {
     gap: 0.4rem;
   }
-  /* Header del listado en columna: contador centrado, luego bulk-collapse,
-     limpiar, sort y page-size como rows full-width independientes. */
-  .task-count-row {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.5rem;
+  /* Drawer: organización de cada control en columna limpia.
+     El .task-count-controls hereda flex column de la regla del drawer
+     (linea 1159). Aquí solo aseguramos que cada child ocupe ancho
+     completo y que sub-grupos (bulk-collapse, sort, page-size) no
+     entren en conflicto con flex 1 1 100% de cuando estaba inline. */
+  .task-count-row.is-open .task-count-controls > * {
+    width: 100%;
   }
-  .task-count-row .task-count {
-    text-align: center;
-    margin: 0;
-  }
-  .task-count-controls {
-    justify-content: center;
-    gap: 0.5rem;
-  }
-  /* Colapsar + Expandir lado a lado en su propia row, cada uno la mitad. */
-  .bulk-collapse:not([hidden]) {
+  .task-count-row.is-open .bulk-collapse:not([hidden]) {
     display: flex;
-    flex: 1 1 100%;
-    gap: 0.4rem;
-    justify-content: center;
+    gap: var(--sp-2);
+    width: 100%;
   }
-  .bulk-collapse > .bulk-btn {
+  .task-count-row.is-open .bulk-collapse > .bulk-btn {
     flex: 1 1 0;
     justify-content: center;
   }
-  /* Limpiar lista en su propia row, full-width centrado. */
-  .task-count-controls > .clear-btn {
-    flex: 1 1 100%;
+  .task-count-row.is-open .clear-btn {
+    width: 100%;
     justify-content: center;
   }
-  /* Sort y Page-size cada uno en row full-width con label a la izquierda
-     y combo a la derecha. */
-  .sort-control,
-  .page-size-control {
-    flex: 1 1 100%;
+  .task-count-row.is-open .sort-control,
+  .task-count-row.is-open .page-size-control {
+    display: flex;
+    align-items: center;
     justify-content: space-between;
+    gap: var(--sp-2);
+    width: 100%;
+  }
+  .task-count-row.is-open .sort-control .combo,
+  .task-count-row.is-open .page-size-control .combo {
+    flex: 1;
+  }
+  .task-count-row.is-open .combo-toggle {
+    width: 100%;
   }
   /* Toast en mobile: bottom + arriba del footer fijo (no lo tapa). */
   .app-toast-container {
@@ -931,47 +1436,76 @@ solo se ajustan paddings y gaps que en mobile sienten apretados.
     left: 1rem;
     align-items: flex-end;
   }
-  /* El item se vuelve flex-wrap para que el title tenga línea propia
-     cuando los botones touch (toggle + ↑ ↓ ⬅ edit delete) no le dejan
-     espacio. La metadata de tiempo se oculta — secundaria. */
-  .grocery-item {
-    flex-wrap: wrap;
-    row-gap: 0.35rem;
+  /* (Las reglas .grocery-item flex-wrap/row-gap se eliminaron — el item
+     en mobile es grid puro vía .grocery-item:not(.is-subtask) y .is-subtask
+     definidas más abajo en este mismo bloque.) */
+  /* En mobile el title-block es columna: title arriba, elapsed debajo
+     (estilo m-task__head del mockup). */
+  .task__title-block {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
   }
+  .task__title-block .title { width: 100%; }
+  .task__title-block .task__elapsed {
+    font-size: 11px;
+    line-height: 1;
+  }
+  /* Título inline con toggle/chevron — flex-basis auto + ellipsis. */
   .grocery-item .title {
-    flex: 1 1 100%;
-    order: -1;
-    padding: 0 0.25rem;
-    word-break: break-word;
-    letter-spacing: 1px;
-    /* line-height más holgado para títulos que wrappean en 2 líneas. */
-    line-height: var(--lh-snug);
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 0 var(--sp-1);
+    letter-spacing: 0;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
-  /* La sub mantiene su indentación pero el title también va arriba. */
   .grocery-item.is-subtask .title {
-    flex-basis: 100%;
+    flex-basis: auto;
   }
   /* En mobile el elapsed compacto cabe (3-5 chars), no se oculta. */
-  /* Layout en 3 líneas para tareas padre:
-       L1: título full-width
-       L2: chevron + toggle + input "+ subtarea" (al lado del toggle)
-       L3: action-group centrado
-     Subtareas: L1 título, L2 toggle (sin chevron ni form), L3 acciones
-     centradas. */
+  /* meta es grid-area 'actions' — ocupa todo el ancho del item para
+     que el action-group adentro distribuya sus botones sin apilarlos
+     en el centro (estilo .m-task__actions del mockup). */
   .grocery-item .meta {
-    flex: 1 1 100%;
     margin-left: 0;
-    justify-content: center;
+    display: flex;
+    width: 100%;
   }
   .grocery-item .action-group {
-    justify-content: center;
+    display: flex;
+    width: 100%;
+    gap: var(--sp-2);
   }
-  /* El input para agregar subtarea queda al lado del toggle, ocupando
-     el espacio restante de la línea. */
-  .subtask-add-form {
+  /* Cada botón del action-group toma 1/N del ancho total, manteniendo
+     su border-radius individual (sin pill compuesta). Resultado: cada
+     acción queda separada visualmente por un gap, fácil de tappear. */
+  .grocery-item:not(.is-subtask) .action-group > .btn-icon {
     flex: 1 1 0;
-    min-width: 6rem;
-    margin-top: 0;
+    border-radius: var(--r-sm);
+    position: relative;
+  }
+  /* Barras .sep entre los actions de tareas padre (estilo m-task__actions
+     del mockup). Línea fina vertical en el gap derecho de cada btn
+     menos el último. Altura FIJA (no porcentual) para que todas las
+     barras sean idénticas independiente del alto del btn. */
+  .grocery-item:not(.is-subtask) .action-group > .btn-icon:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    right: calc(var(--sp-2) * -0.5);
+    top: 50%;
+    transform: translateY(-50%);
+    height: 24px;
+    width: 1px;
+    background: var(--border-subtle);
+  }
+  /* Input para agregar subtarea: línea propia debajo del head, ahora
+     que el title comparte fila con toggle/chevron (Fase 9D). */
+  .subtask-add-form {
+    flex: 1 1 100%;
+    margin-top: var(--sp-1);
   }
   .subtask-add-input {
     width: 100%;
@@ -1020,7 +1554,10 @@ renderizan SIEMPRE pero el media query de pointer:fine los oculta.
     display: block;
 }
 .touch-promote-btn {
-    color: var(--clr-primary-3);
+    /* Mismo color que .btn-icon (edit/delete): var(--fg-muted). El
+     'inherit' anterior heredaba del item que era más oscuro. */
+    color: var(--fg-muted);
+    display: inline-flex;
 }
 
 /*

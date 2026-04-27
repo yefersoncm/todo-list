@@ -19,6 +19,14 @@
         <!-- App chrome: toggles de tema y densidad (Fase 7H). Iconos
              se montan en JS via createIcon. -->
         <div class="app-chrome">
+            <!-- Hamburger (solo mobile): abre drawer con sort/pageSize/bulk/clear. -->
+            <button type="button" class="app-hamburger" id="appHamburger" aria-label="Menú" aria-expanded="false"></button>
+            <!-- Título mobile (oculto en desktop). El main y el sub se hidratan
+                 dinámicamente con el filter activo + stats. -->
+            <div class="app-title">
+                <div class="app-title__main" id="appTitleMain">Tareas</div>
+                <div class="app-title__sub" id="appTitleSub"></div>
+            </div>
             <div class="seg" id="themeSeg" role="group" aria-label="Tema">
                 <button type="button" class="seg__btn" data-theme="light" aria-label="Tema claro" title="Claro"></button>
                 <button type="button" class="seg__btn" data-theme="dark" aria-label="Tema oscuro" title="Oscuro"></button>
@@ -42,6 +50,23 @@
         <div class="grocery-container">
             <div class="search-row" id="searchRow" hidden>
                 <input type="search" id="searchInput" class="search-input field" placeholder="Buscar tareas…" aria-label="Buscar tareas por texto" autocomplete="off">
+            </div>
+            <!-- Pills mobile: copia del filter-tabs del footer, visible solo
+                 en mobile via CSS. El JS sincroniza ambos sets via data-filter-tabs. -->
+            <div class="filter-tabs m-pills" data-filter-tabs role="tablist" aria-label="Filtro mobile">
+                <button type="button" class="filter-tab is-active" role="tab" aria-selected="true" data-value="all">Todas</button>
+                <button type="button" class="filter-tab" role="tab" aria-selected="false" data-value="pending">Pendientes</button>
+                <button type="button" class="filter-tab" role="tab" aria-selected="false" data-value="done">Hechas</button>
+                <button type="button" class="filter-tab" role="tab" aria-selected="false" data-value="today">Hoy</button>
+                <button type="button" class="filter-tab" role="tab" aria-selected="false" data-value="priority">Prioridad</button>
+            </div>
+            <!-- Mini-toolbar mobile (Fase F3): count + collapse-all visible.
+                 El sort y los detalles siguen en el drawer del hamburger. -->
+            <div class="m-toolbar" id="mToolbar">
+                <span class="m-toolbar__count" id="mToolbarCount"></span>
+                <span class="m-toolbar__spacer"></span>
+                <button type="button" class="btn btn--sm btn--ghost m-toolbar__collapse-all" id="mCollapseAll" aria-label="Colapsar todo"></button>
+                <button type="button" class="btn btn--sm btn--ghost m-toolbar__expand-all" id="mExpandAll" aria-label="Expandir todo"></button>
             </div>
             <div class="task-count-row">
                 <p class="task-count"></p>
@@ -131,13 +156,85 @@
     <footer class="app-footer" role="contentinfo">
         <div class="app-footer__inner">
             <span id="filterLabel" class="filter-label">Mostrar</span>
-            <div class="filter-tabs" id="taskFilter" role="tablist" aria-labelledby="filterLabel">
+            <div class="filter-tabs" id="taskFilter" data-filter-tabs role="tablist" aria-labelledby="filterLabel">
                 <button type="button" class="filter-tab is-active" role="tab" aria-selected="true" data-value="all">Todas</button>
                 <button type="button" class="filter-tab" role="tab" aria-selected="false" data-value="pending">Pendientes</button>
                 <button type="button" class="filter-tab" role="tab" aria-selected="false" data-value="done">Hechas</button>
             </div>
         </div>
     </footer>
+
+    <!-- Backdrop del drawer mobile. -->
+    <div class="app-drawer-backdrop" id="appDrawerBackdrop" hidden></div>
+
+    <!-- FAB (Floating Action Button): solo en mobile. Abre el modal de
+         nueva tarea para reemplazar al form principal. -->
+    <button type="button" class="app-fab" id="appFab" aria-label="Nueva tarea"></button>
+
+    <!-- Bottom nav mobile (Fase F10): 4 tabs. Solo visible en mobile. -->
+    <nav class="m-bottom" id="mBottomNav" aria-label="Navegación">
+        <button type="button" class="m-bottom-btn" data-bottom-action="today">
+            <span class="m-bottom-btn__icon" data-icon-slot="today"></span>
+            <span class="m-bottom-btn__label">Hoy</span>
+        </button>
+        <button type="button" class="m-bottom-btn" data-bottom-action="week">
+            <span class="m-bottom-btn__icon" data-icon-slot="week"></span>
+            <span class="m-bottom-btn__label">Semana</span>
+        </button>
+        <button type="button" class="m-bottom-btn" data-bottom-action="done">
+            <span class="m-bottom-btn__icon" data-icon-slot="done"></span>
+            <span class="m-bottom-btn__label">Hechas</span>
+        </button>
+        <button type="button" class="m-bottom-btn" data-bottom-action="settings">
+            <span class="m-bottom-btn__icon" data-icon-slot="settings"></span>
+            <span class="m-bottom-btn__label">Ajustes</span>
+        </button>
+    </nav>
+
+    <!-- Date picker custom: respeta dark/light, replica look de la app
+         (en lugar del picker nativo del browser). -->
+    <div class="date-picker-modal modal-backdrop" id="datePickerModal" hidden>
+        <div class="date-picker modal" role="dialog" aria-modal="true" aria-labelledby="datePickerTitle">
+            <h3 class="modal__title" id="datePickerTitle">Fecha</h3>
+            <div class="date-picker__nav">
+                <button type="button" class="btn-icon" id="datePickerPrev" aria-label="Mes anterior"></button>
+                <span class="date-picker__month" id="datePickerMonth"></span>
+                <button type="button" class="btn-icon" id="datePickerNext" aria-label="Mes siguiente"></button>
+            </div>
+            <div class="date-picker__weekdays">
+                <span>L</span><span>M</span><span>X</span><span>J</span><span>V</span><span>S</span><span>D</span>
+            </div>
+            <div class="date-picker__grid" id="datePickerGrid" role="grid"></div>
+            <div class="modal__actions">
+                <button type="button" class="btn btn--ghost" id="datePickerClear">Quitar</button>
+                <button type="button" class="btn btn--secondary" data-action="cancel">Cancelar</button>
+                <button type="button" class="btn btn--primary" id="datePickerOk">Aceptar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal "Nueva tarea" — abierto por el FAB en mobile. -->
+    <div class="newtask-modal modal-backdrop" id="newTaskModal" hidden>
+        <div class="newtask-modal__dialog modal" role="dialog" aria-modal="true" aria-labelledby="newTaskModalTitle">
+            <h3 class="modal__title" id="newTaskModalTitle">Nueva tarea</h3>
+            <form id="newTaskForm" class="newtask-modal__form">
+                <input type="text" id="newTaskInput" class="field" placeholder="¿Qué hay que hacer?" aria-label="Texto de la nueva tarea" autocomplete="off">
+                <div class="newtask-modal__row">
+                    <label class="newtask-modal__label">Fecha</label>
+                    <button type="button" class="btn btn--secondary" id="newTaskDateBtn" aria-label="Seleccionar fecha">Sin fecha</button>
+                    <input type="hidden" id="newTaskDate" value="">
+                </div>
+                <label class="newtask-modal__check">
+                    <input type="checkbox" id="newTaskPriority">
+                    <span>Prioridad alta</span>
+                </label>
+                <div class="modal__actions">
+                    <button type="button" class="btn btn--secondary" data-action="cancel">Cancelar</button>
+                    <button type="submit" class="btn btn--primary">Agregar</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <div class="app-toast-container" id="toastContainer" aria-live="polite" aria-atomic="false"></div>
 
