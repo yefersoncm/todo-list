@@ -1310,10 +1310,28 @@ solo se ajustan paddings y gaps que en mobile sienten apretados.
     padding-top: var(--sp-2);
     margin-bottom: var(--sp-3);
   }
-  /* Cuando el padre está colapsado, el form '+ subtarea' también se oculta
-     (junto con las subs). Así no queda un input solitario flotando. */
-  .m-subs.is-collapsed > .subtask-add-form {
-    display: none;
+  /* Cuando el padre está colapsado, el form '+ subtarea' se oculta junto
+     con las subs — A MENOS que el user lo haya expandido explícitamente
+     (botón +). En ese caso, el form se muestra aunque las subs estén
+     colapsadas. */
+  .m-subs.is-collapsed > .subtask-add-form { display: none; }
+  .m-subs.is-collapsed.is-add-expanded > .subtask-add-form { display: flex; }
+  /* Trick: tapar la guía vertical después del último child del wrapper
+     para que el árbol no quede como una "T rotada". El ::after del
+     último child cubre la guía desde su centro hacia abajo. Usa
+     bg-surface (color del wrapper-padre) para esconder los pixels. */
+  .m-subs > *:last-child {
+    position: relative;
+  }
+  .m-subs > *:last-child::after {
+    content: "";
+    position: absolute;
+    left: calc(var(--sp-5) * -1 - 1px);
+    top: calc(50% + 1px);
+    bottom: -100px;
+    width: 4px;
+    background: var(--bg-surface);
+    z-index: 1;
   }
   .m-subs::before {
     content: "";
@@ -1557,7 +1575,9 @@ renderizan SIEMPRE pero el media query de pointer:fine los oculta.
     display: block;
 }
 .touch-promote-btn {
-    color: var(--accent);
+    /* Color igual al resto de iconos del action-group (heredado del
+     contexto), no accent — para que no destaque diferente. */
+    color: inherit;
     display: inline-flex;
 }
 

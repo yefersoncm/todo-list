@@ -8,6 +8,8 @@ import { ToastManager } from './toast.js';
 const PAGE_SIZE_KEY = 'todo-list:pageSize';
 const VALID_PAGE_SIZES = [10, 20, 50, 100];
 const DEFAULT_PAGE_SIZE = 10;
+// Umbral fijo para mostrar el buscador (coincide con pageSize mínimo).
+const SEARCH_VISIBILITY_THRESHOLD = VALID_PAGE_SIZES[0];
 
 const SORT_BY_KEY = 'todo-list:sortBy';
 const DEFAULT_SORT = 'created-desc';
@@ -53,6 +55,7 @@ const DOM = {
     bulkExpandAllBtn: document.querySelector('.bulk-expand-all'),
     promoteZone: document.getElementById('promoteZone'),
     searchInput: document.getElementById('searchInput'),
+    searchRow: document.getElementById('searchRow'),
     paginationNav: document.querySelector('.pagination'),
     taskCountDisplay: document.querySelector('.task-count'),
     toastContainer: document.getElementById('toastContainer'),
@@ -1282,15 +1285,10 @@ class TaskManager {
         const parentId = btn.dataset.parentId;
         this._toggleCollapsed(parentId);
         const isNowCollapsed = this.collapsedParents.has(parentId);
-        // Al colapsar, también reinicia el form "+ subtarea" expandido
-        // para ese padre — vuelve al estado por default (icono plus).
-        // Render completo para refrescar el icono del addSubBtn.
-        if (isNowCollapsed && this._showAddSubFor.has(parentId)) {
-            this._showAddSubFor.delete(parentId);
-            this.renderTasks();
-            return;
-        }
-        // Path expandir o colapsar sin form: animación DOM-only.
+        // El chevron individual SOLO afecta la visibilidad de las subs.
+        // El form '+ subtarea' (si está expandido) sigue visible — el user
+        // puede agregar una sub aunque las existentes estén colapsadas.
+        // Animación DOM-only (sin renderTasks) para preservar transiciones.
         btn.setAttribute('aria-expanded', String(!isNowCollapsed));
         btn.setAttribute('aria-label', isNowCollapsed ? 'Expandir subtareas' : 'Contraer subtareas');
         btn.replaceChildren(createIcon(isNowCollapsed ? 'chevron-right' : 'chevron-down', { size: 14 }));
@@ -1532,7 +1530,19 @@ class TaskManager {
         this._renderPagination(totalPages);
         this.updateTaskCount(filteredParents.length);
         this._updateBulkCollapseVisibility();
+        this._updateSearchVisibility();
         this._updateElapsed();
+    }
+
+    _updateSearchVisibility() {
+        if (!DOM.searchRow) return;
+        const totalParents = this.store.tasks.filter(t => t.parentId === null).length;
+        const shouldShow = totalParents > SEARCH_VISIBILITY_THRESHOLD;
+        DOM.searchRow.hidden = !shouldShow;
+        if (!shouldShow && this.searchQuery) {
+            this.searchQuery = '';
+            if (DOM.searchInput) DOM.searchInput.value = '';
+        }
     }
 
     _updateBulkCollapseVisibility() {
@@ -1637,6 +1647,9 @@ class TaskManager {
                     currentSubsWrap.className = 'm-subs';
                     if (this.collapsedParents.has(item.id)) {
                         currentSubsWrap.classList.add('is-collapsed');
+                    }
+                    if (this._showAddSubFor.has(item.id)) {
+                        currentSubsWrap.classList.add('is-add-expanded');
                     }
                     currentSubsWrap.dataset.parentId = item.id;
                 } else {
