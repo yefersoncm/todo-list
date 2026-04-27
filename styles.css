@@ -776,25 +776,17 @@ Combobox custom (reemplaza al <select> nativo)
     gap: 0.25rem;
 }
 /* Indicador de tiempo transcurrido — metadata, no acción.
-   --elapsed-min-width lo setea JS al ancho del texto más largo de la
-   lista, así todas las filas alinean a la misma columna. */
+   Formato compacto single-unit: 'ahora' / '5m' / '3h' / '2d' / '2sem' /
+   '5mes' / '2a'. Mono-typed para que dígitos alineen entre filas sin
+   necesidad de min-width calculado en JS. */
 .task-days-old {
-    color: var(--clr-grey-6);
-    font-size: 0.75rem;
-    font-style: italic;
-    letter-spacing: 0.5px;
+    font-family: var(--ff-mono);
+    color: var(--fg-subtle);
+    font-size: var(--fs-xs);
+    letter-spacing: 0;
     text-align: right;
     white-space: nowrap;
-    min-width: var(--elapsed-min-width, 0);
-}
-/* En tablets/mobiles, el min-width calculado por JS puede ser más ancho
-   que el espacio disponible y forzar scroll horizontal. Apagamos el
-   alineado en columna por debajo de 768px — la metadata sigue visible
-   pero sin imponer ancho. */
-@media (max-width: 768px) {
-    .task-days-old {
-        min-width: 0;
-    }
+    min-width: 4ch;
 }
 
 /*
@@ -943,10 +935,7 @@ solo se ajustan paddings y gaps que en mobile sienten apretados.
   .grocery-item.is-subtask .title {
     flex-basis: 100%;
   }
-  /* La metadata (tiempo) ocupa demasiado en mobile y no es crítica. */
-  .task-days-old {
-    display: none;
-  }
+  /* En mobile el elapsed compacto cabe (3-5 chars), no se oculta. */
   /* Layout en 3 líneas para tareas padre:
        L1: título full-width
        L2: chevron + toggle + input "+ subtarea" (al lado del toggle)

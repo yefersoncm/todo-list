@@ -5,22 +5,12 @@
  * { years, months, days, hours, minutes, seconds } usando
  * aritmética de calendario real (no aproximaciones de 30 días).
  *
- * formatElapsed(parts): formatea como
- *   "1 Año, 3 Meses, 4 Días, 5 Horas, 30 Minutos y 55 Segundos"
- * - Omite componentes en cero.
- * - Plurales correctos en español.
- * - "y" antes del último; coma entre los demás.
- * - Cadena vacía si todos los componentes son cero.
+ * formatElapsed(parts): devuelve un string COMPACTO con solo la unidad
+ * mayor significativa, en español abreviado:
+ *   "ahora" / "5m" / "3h" / "2d" / "2sem" / "5mes" / "2a"
+ * Diseño compacto para que quepa en metadata de tareas en cualquier
+ * viewport sin truncar.
  */
-
-const UNITS = [
-    ['years', 'Año', 'Años'],
-    ['months', 'Mes', 'Meses'],
-    ['days', 'Día', 'Días'],
-    ['hours', 'Hora', 'Horas'],
-    ['minutes', 'Minuto', 'Minutos'],
-    ['seconds', 'Segundo', 'Segundos'],
-];
 
 export function elapsedComponents(startTs, now = new Date()) {
     const start = new Date(startTs);
@@ -51,15 +41,14 @@ export function elapsedComponents(startTs, now = new Date()) {
 }
 
 export function formatElapsed(parts) {
-    const tokens = [];
-    for (const [key, sg, pl] of UNITS) {
-        const n = parts[key];
-        if (!n) continue;
-        tokens.push(`${n} ${n === 1 ? sg : pl}`);
-    }
-
-    if (tokens.length === 0) return '';
-    if (tokens.length === 1) return tokens[0];
-    if (tokens.length === 2) return `${tokens[0]} y ${tokens[1]}`;
-    return `${tokens.slice(0, -1).join(', ')} y ${tokens[tokens.length - 1]}`;
+    if (!parts) return '';
+    const { years, months, days, hours, minutes } = parts;
+    if (years > 0) return `${years}a`;
+    if (months > 0) return `${months}mes`;
+    // 7+ días = semanas; redondeo hacia abajo (8 días → 1sem, 14 → 2sem).
+    if (days >= 7) return `${Math.floor(days / 7)}sem`;
+    if (days > 0) return `${days}d`;
+    if (hours > 0) return `${hours}h`;
+    if (minutes > 0) return `${minutes}m`;
+    return 'ahora';
 }
