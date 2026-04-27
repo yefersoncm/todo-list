@@ -67,11 +67,15 @@ Global Styles
   box-sizing: border-box;
 }
 body {
-  /* Background y color toman tokens semánticos del rediseño para que
-     respondan al dark mode (data-theme="dark" sobre <html>). */
+  /* App shell: body ocupa el viewport entero y NO scrollea. El scroll
+     vive dentro de .section-center. Footer es flex item static al final. */
   background: var(--bg-app);
   color: var(--fg-default);
   line-height: 1.5;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 ul {
   list-style-type: none;
@@ -159,15 +163,16 @@ border-radius: var(--radius);
 /* Mobile-first: márgenes fluidos. En mobile el wrapper consume casi todo
    el ancho, en desktop se queda centrado con max-width. */
 .section-center {
-  /* margin auto en horizontal centra el wrapper cuando el viewport es
-     más ancho que --container-max. */
+  /* App shell: el section es el único elemento scrolleable. Toma todo el
+     alto restante del flex column body (después del footer estático).
+     min-height: 0 es CRÍTICO para que overflow-y: auto funcione en un
+     flex item (el default min-height: auto de flex impide encogerse). */
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
   margin: clamp(0.5rem, 3vw, 2rem) auto;
-  /* margin-bottom específico que garantiza espacio para el footer fijo
-     y la paginación al final de la lista. El body padding-bottom solo
-     no era suficiente en ciertos casos (browsers mobile, contenido
-     que llena el viewport). */
-  margin-bottom: calc(var(--footer-h) + var(--sp-4) + env(safe-area-inset-bottom, 0px));
-  width: 100%;
+  width: calc(100% - 2 * clamp(0.5rem, 3vw, 2rem));
   max-width: var(--container-max);
 }
 main {
@@ -665,13 +670,11 @@ Paginación
     :root { --footer-h: 76px; }
 }
 
-/* Footer fijo con el filtro Mostrar/Todas/Pendientes/Hechas siempre
-   visible al pie de la pantalla. */
+/* Footer estático al final del body (flex item). Como el body es
+   display:flex column con height:100vh y overflow:hidden, el footer
+   queda anclado abajo del viewport sin necesidad de position:fixed. */
 .app-footer {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
+    flex: 0 0 auto;
     z-index: 90;
     background: var(--bg-surface);
     border-top: 1px solid var(--border-subtle);
@@ -679,8 +682,6 @@ Paginación
     padding: var(--sp-3) var(--sp-4);
     /* Respeto de safe-area en iPhone con notch (no rompe en otros). */
     padding-bottom: calc(var(--sp-3) + env(safe-area-inset-bottom, 0px));
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
 }
 .app-footer__inner {
     max-width: var(--container-max);
@@ -694,19 +695,9 @@ Paginación
 [data-theme="dark"] .app-footer {
     box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.4);
 }
-/* Espacio al final del body para que el footer no tape el último contenido
-   (paginación, último item, etc.). Buffer generoso = footer-h + sp-5 (24px)
-   + safe-area. Antes era solo footer-h + safe-area, lo que dejaba la
-   paginación al ras del footer y en algunos browsers (mobile, scroll fino)
-   se veia tapada parcialmente. */
-body {
-    padding-bottom: calc(var(--footer-h) + var(--sp-5) + env(safe-area-inset-bottom, 0px));
-}
-/* scroll-padding-bottom: si el browser auto-scrollea (focus en input,
-   anchor, etc.) que lo haga dejando aire para no quedar bajo el footer. */
-html {
-    scroll-padding-bottom: calc(var(--footer-h) + var(--sp-3) + env(safe-area-inset-bottom, 0px));
-}
+/* Con app shell (body flex column + .section-center scrolleable + footer
+   static), ya no hace falta padding-bottom en body ni scroll-padding-bottom
+   en html — el footer no se solapa con el contenido. */
 
 .filter-label {
     color: var(--fg-muted);
