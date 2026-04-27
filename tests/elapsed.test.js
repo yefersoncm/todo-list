@@ -84,45 +84,54 @@ describe('elapsedComponents — préstamos entre componentes', () => {
     });
 });
 
-describe('formatElapsed — formato y plurales', () => {
+describe('formatElapsed — formato compacto (single-unit, español abreviado)', () => {
     const z = { years: 0, months: 0, days: 0, hours: 0, minutes: 0, seconds: 0 };
 
-    test('todo en cero → cadena vacía', () => {
-        assert.equal(formatElapsed(z), '');
+    test('todo en cero → "ahora"', () => {
+        assert.equal(formatElapsed(z), 'ahora');
     });
 
-    test('un solo componente, plural', () => {
-        assert.equal(formatElapsed({ ...z, seconds: 5 }), '5 Segundos');
+    test('solo segundos → "ahora" (sub-minuto se considera ahora)', () => {
+        assert.equal(formatElapsed({ ...z, seconds: 5 }), 'ahora');
+        assert.equal(formatElapsed({ ...z, seconds: 59 }), 'ahora');
     });
 
-    test('un solo componente, singular', () => {
-        assert.equal(formatElapsed({ ...z, seconds: 1 }), '1 Segundo');
+    test('minutos → "Nm"', () => {
+        assert.equal(formatElapsed({ ...z, minutes: 1 }), '1m');
+        assert.equal(formatElapsed({ ...z, minutes: 30 }), '30m');
+        assert.equal(formatElapsed({ ...z, minutes: 59, seconds: 30 }), '59m');
     });
 
-    test('dos componentes — usa "y" sin coma', () => {
-        assert.equal(formatElapsed({ ...z, hours: 5, minutes: 30 }), '5 Horas y 30 Minutos');
+    test('horas → "Nh"', () => {
+        assert.equal(formatElapsed({ ...z, hours: 1 }), '1h');
+        assert.equal(formatElapsed({ ...z, hours: 23, minutes: 59 }), '23h');
     });
 
-    test('tres componentes — coma + "y"', () => {
-        assert.equal(formatElapsed({ ...z, days: 4, hours: 5, minutes: 30 }), '4 Días, 5 Horas y 30 Minutos');
+    test('días < 7 → "Nd"', () => {
+        assert.equal(formatElapsed({ ...z, days: 1 }), '1d');
+        assert.equal(formatElapsed({ ...z, days: 6, hours: 23 }), '6d');
     });
 
-    test('seis componentes (caso máximo)', () => {
-        assert.equal(
-            formatElapsed({ years: 1, months: 3, days: 4, hours: 5, minutes: 30, seconds: 55 }),
-            '1 Año, 3 Meses, 4 Días, 5 Horas, 30 Minutos y 55 Segundos'
-        );
+    test('días 7+ → "Nsem" (semanas, floor)', () => {
+        assert.equal(formatElapsed({ ...z, days: 7 }), '1sem');
+        assert.equal(formatElapsed({ ...z, days: 13 }), '1sem');
+        assert.equal(formatElapsed({ ...z, days: 14 }), '2sem');
+        assert.equal(formatElapsed({ ...z, days: 29 }), '4sem');
     });
 
-    test('omite ceros intermedios', () => {
-        assert.equal(formatElapsed({ ...z, years: 1, days: 5 }), '1 Año y 5 Días');
+    test('meses → "Nmes"', () => {
+        assert.equal(formatElapsed({ ...z, months: 1 }), '1mes');
+        assert.equal(formatElapsed({ ...z, months: 11 }), '11mes');
     });
 
-    test('omite ceros al final (no muestra "0 Segundos")', () => {
-        assert.equal(formatElapsed({ ...z, days: 1, hours: 2, minutes: 3 }), '1 Día, 2 Horas y 3 Minutos');
+    test('años → "Na" (mayor unidad gana, ignora el resto)', () => {
+        assert.equal(formatElapsed({ ...z, years: 1 }), '1a');
+        assert.equal(formatElapsed({ years: 1, months: 3, days: 4, hours: 5, minutes: 30, seconds: 55 }), '1a');
+        assert.equal(formatElapsed({ ...z, years: 5 }), '5a');
     });
 
-    test('singulares en orden distinto: 1 Año, 1 Mes', () => {
-        assert.equal(formatElapsed({ ...z, years: 1, months: 1 }), '1 Año y 1 Mes');
+    test('parts null/undefined → cadena vacía', () => {
+        assert.equal(formatElapsed(null), '');
+        assert.equal(formatElapsed(undefined), '');
     });
 });
