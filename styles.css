@@ -1331,12 +1331,19 @@ solo se ajustan paddings y gaps que en mobile sienten apretados.
   .grocery-item.is-subtask.is-collapsed {
     max-height: 0;
   }
+  /* Conector horizontal que une la guía vertical del wrapper con el
+     borde izquierdo del card sub. Cálculo:
+     - El wrapper .m-subs tiene la guía en left: calc(--sp-3 * -1) = -12px.
+     - El sub tiene margin-left: var(--sp-3) = 12px del wrapper.
+     - Distancia guía → edge sub = 24px (var(--sp-5)).
+     Por eso el ::before va de -24px a 0 (width = 24px).
+     Termina justo en el borde izquierdo del card. */
   .grocery-item.is-subtask::before {
     content: "";
     position: absolute;
-    left: calc(var(--sp-3) * -1 - 2px);
+    left: calc(var(--sp-5) * -1);
     top: 50%;
-    width: var(--sp-3);
+    width: var(--sp-5);
     height: 2px;
     background: var(--border-subtle);
     border-radius: 1px;
