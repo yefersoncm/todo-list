@@ -67,11 +67,22 @@ Global Styles
   box-sizing: border-box;
 }
 body {
-  /* Background y color toman tokens semánticos del rediseño para que
-     respondan al dark mode (data-theme="dark" sobre <html>). */
+  /* App shell: body ocupa el viewport entero, NO scrollea.
+     <main.app-scroll> es el único scroller, footer queda fuera.
+
+     100dvh (dynamic viewport height) en lugar de 100vh: en Chrome mobile
+     y otros, la barra de URL aparece/desaparece. 100vh se mide con el
+     viewport extendido, dejando el footer fuera de la vista visible.
+     100dvh se ajusta dinámicamente. Fallback a 100vh para browsers
+     anteriores a finales 2022 (Chrome <108, Safari <15.4). */
   background: var(--bg-app);
   color: var(--fg-default);
   line-height: 1.5;
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 ul {
   list-style-type: none;
@@ -159,16 +170,20 @@ border-radius: var(--radius);
 /* Mobile-first: márgenes fluidos. En mobile el wrapper consume casi todo
    el ancho, en desktop se queda centrado con max-width. */
 .section-center {
-  /* margin auto en horizontal centra el wrapper cuando el viewport es
-     más ancho que --container-max. */
   margin: clamp(0.5rem, 3vw, 2rem) auto;
-  width: 100%;
+  width: calc(100% - 2 * clamp(0.5rem, 3vw, 2rem));
   max-width: var(--container-max);
 }
-main {
-  min-height: 100vh;
-  display: grid;
-  place-items: center;
+/* Wrapper scrolleable: contiene el .section-center, deja el footer fuera.
+   Es el único elemento del layout con scroll. */
+main.app-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* Reserva espacio para la scrollbar aunque no haya scroll, para que el
+     ancho del card no salte cuando aparece/desaparece. */
+  scrollbar-gutter: stable;
 }
 /*
 ===============
@@ -450,7 +465,14 @@ Paginación
               margin-top 220ms ease, margin-bottom 220ms ease;
 }
 .grocery-item.is-subtask.is-collapsed {
+  /* Tras Fase 1 el .grocery-item gana min-height: var(--row-h) (44px),
+     y tras Fase 7G card-per-item un border 1px en mobile. Sin estos
+     resets el sub colapsado seguia ocupando 44-46px. Ahora se colapsa
+     a 0 real. */
   max-height: 0;
+  min-height: 0;
+  border-top-width: 0;
+  border-bottom-width: 0;
   opacity: 0;
   padding-top: 0;
   padding-bottom: 0;
@@ -653,22 +675,18 @@ Paginación
     :root { --footer-h: 76px; }
 }
 
-/* Footer fijo con el filtro Mostrar/Todas/Pendientes/Hechas siempre
-   visible al pie de la pantalla. */
+/* Footer estático al final del body (flex item). El body es flex column
+   con height 100vh y overflow hidden, asi que el footer queda anclado
+   abajo del viewport sin necesidad de position:fixed — y el scroll del
+   <main.app-scroll> nunca lo solapa. */
 .app-footer {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    z-index: 90;
+    flex: 0 0 auto;
     background: var(--bg-surface);
     border-top: 1px solid var(--border-subtle);
     box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.04);
     padding: var(--sp-3) var(--sp-4);
     /* Respeto de safe-area en iPhone con notch (no rompe en otros). */
     padding-bottom: calc(var(--sp-3) + env(safe-area-inset-bottom, 0px));
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
 }
 .app-footer__inner {
     max-width: var(--container-max);
@@ -682,10 +700,8 @@ Paginación
 [data-theme="dark"] .app-footer {
     box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.4);
 }
-/* Espacio al final del body para que el footer no tape el último item. */
-body {
-    padding-bottom: calc(var(--footer-h) + env(safe-area-inset-bottom, 0px));
-}
+/* Con app shell (main.app-scroll scrolleable + footer static), no hace
+   falta padding-bottom en body ni scroll-padding-bottom en html. */
 
 .filter-label {
     color: var(--fg-muted);
