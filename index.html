@@ -56,6 +56,16 @@
                 <button type="button" class="filter-tab is-active" role="tab" aria-selected="true" data-value="all">Todas</button>
                 <button type="button" class="filter-tab" role="tab" aria-selected="false" data-value="pending">Pendientes</button>
                 <button type="button" class="filter-tab" role="tab" aria-selected="false" data-value="done">Hechas</button>
+                <button type="button" class="filter-tab" role="tab" aria-selected="false" data-value="today">Hoy</button>
+                <button type="button" class="filter-tab" role="tab" aria-selected="false" data-value="priority">Prioridad</button>
+            </div>
+            <!-- Mini-toolbar mobile (Fase F3): count + collapse-all visible.
+                 El sort y los detalles siguen en el drawer del hamburger. -->
+            <div class="m-toolbar" id="mToolbar">
+                <span class="m-toolbar__count" id="mToolbarCount"></span>
+                <span class="m-toolbar__spacer"></span>
+                <button type="button" class="btn btn--sm btn--ghost m-toolbar__collapse-all" id="mCollapseAll" aria-label="Colapsar todo"></button>
+                <button type="button" class="btn btn--sm btn--ghost m-toolbar__expand-all" id="mExpandAll" aria-label="Expandir todo"></button>
             </div>
             <div class="task-count-row">
                 <p class="task-count"></p>
@@ -166,6 +176,14 @@
             <h3 class="modal__title" id="newTaskModalTitle">Nueva tarea</h3>
             <form id="newTaskForm" class="newtask-modal__form">
                 <input type="text" id="newTaskInput" class="field" placeholder="¿Qué hay que hacer?" aria-label="Texto de la nueva tarea" autocomplete="off">
+                <div class="newtask-modal__row">
+                    <label class="newtask-modal__label" for="newTaskDate">Fecha</label>
+                    <input type="date" id="newTaskDate" class="field" aria-label="Fecha (opcional)">
+                </div>
+                <label class="newtask-modal__check">
+                    <input type="checkbox" id="newTaskPriority">
+                    <span>Prioridad alta</span>
+                </label>
                 <div class="modal__actions">
                     <button type="button" class="btn btn--secondary" data-action="cancel">Cancelar</button>
                     <button type="submit" class="btn btn--primary">Agregar</button>
