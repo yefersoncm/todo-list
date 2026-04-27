@@ -391,6 +391,11 @@ class TaskManager {
         const monthNames = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
         DOM.datePickerMonth.textContent = `${monthNames[view.getMonth()]} ${view.getFullYear()}`;
         DOM.datePickerGrid.innerHTML = '';
+        // El botón "Quitar" solo aparece si hay una fecha seleccionada;
+        // en otro caso no tiene sentido mostrarlo.
+        if (DOM.datePickerClear) {
+            DOM.datePickerClear.hidden = !this._dpSelected;
+        }
         // Días en el mes y day-of-week del primero (lun=0..dom=6).
         const firstOfMonth = new Date(view.getFullYear(), view.getMonth(), 1);
         const lastOfMonth = new Date(view.getFullYear(), view.getMonth() + 1, 0);
@@ -1277,16 +1282,20 @@ class TaskManager {
         const parentId = btn.dataset.parentId;
         this._toggleCollapsed(parentId);
         const isNowCollapsed = this.collapsedParents.has(parentId);
-        // Actualiza el icono y aria-expanded sin re-renderizar todo —
-        // así se ve la animación CSS al cambiar de clase.
+        // Al colapsar, también reinicia el form "+ subtarea" expandido
+        // para ese padre — vuelve al estado por default (icono plus).
+        // Render completo para refrescar el icono del addSubBtn.
+        if (isNowCollapsed && this._showAddSubFor.has(parentId)) {
+            this._showAddSubFor.delete(parentId);
+            this.renderTasks();
+            return;
+        }
+        // Path expandir o colapsar sin form: animación DOM-only.
         btn.setAttribute('aria-expanded', String(!isNowCollapsed));
         btn.setAttribute('aria-label', isNowCollapsed ? 'Expandir subtareas' : 'Contraer subtareas');
         btn.replaceChildren(createIcon(isNowCollapsed ? 'chevron-right' : 'chevron-down', { size: 14 }));
-        // Toggle .is-collapsed en las subs del DOM con ese parentId.
         DOM.list.querySelectorAll(`.grocery-item.is-subtask[data-parent-id="${parentId}"]`)
             .forEach(el => el.classList.toggle('is-collapsed', isNowCollapsed));
-        // Toggle también en el wrapper .m-subs para que CSS oculte el form
-        // "+ subtarea" cuando el padre está colapsado y lo restaure al expandir.
         const subsWrap = DOM.list.querySelector(`.m-subs[data-parent-id="${parentId}"]`);
         subsWrap?.classList.toggle('is-collapsed', isNowCollapsed);
     }
@@ -1308,6 +1317,10 @@ class TaskManager {
         const ids = this._parentsWithSubs();
         for (const id of ids) this.collapsedParents.add(id);
         saveCollapsed(this.collapsedParents);
+        // 'Colapsar todo' también cierra TODOS los forms '+ subtarea'
+        // expandidos (incluso en padres sin subs). Reinicia al estado
+        // por default: ícono plus, sin input visible.
+        this._showAddSubFor.clear();
         this.renderTasks();
     }
 
