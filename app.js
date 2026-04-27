@@ -1285,6 +1285,10 @@ class TaskManager {
         // Toggle .is-collapsed en las subs del DOM con ese parentId.
         DOM.list.querySelectorAll(`.grocery-item.is-subtask[data-parent-id="${parentId}"]`)
             .forEach(el => el.classList.toggle('is-collapsed', isNowCollapsed));
+        // Toggle también en el wrapper .m-subs para que CSS oculte el form
+        // "+ subtarea" cuando el padre está colapsado y lo restaure al expandir.
+        const subsWrap = DOM.list.querySelector(`.m-subs[data-parent-id="${parentId}"]`);
+        subsWrap?.classList.toggle('is-collapsed', isNowCollapsed);
     }
 
     handleSubtaskToggleKeyDown(e) {
@@ -1429,7 +1433,7 @@ class TaskManager {
         }
 
         if (isSubtask) {
-            const promoteBtn = this._makeTouchMoveBtn('chevron-left',
+            const promoteBtn = this._makeTouchMoveBtn('corner-up-left',
                 'Convertir en tarea principal', () => this._touchPromote(id));
             promoteBtn.classList.add('touch-promote-btn');
             out.push(promoteBtn);
@@ -1618,6 +1622,9 @@ class TaskManager {
                     currentParentId = item.id;
                     currentSubsWrap = document.createElement('div');
                     currentSubsWrap.className = 'm-subs';
+                    if (this.collapsedParents.has(item.id)) {
+                        currentSubsWrap.classList.add('is-collapsed');
+                    }
                     currentSubsWrap.dataset.parentId = item.id;
                 } else {
                     if (currentSubsWrap) {
@@ -1893,7 +1900,7 @@ class TaskManager {
             if (expanded) addSubBtn.classList.add('is-expanded');
             addSubBtn.setAttribute('aria-label', expanded ? 'Cerrar agregar subtarea' : 'Agregar subtarea');
             addSubBtn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
-            addSubBtn.appendChild(createIcon(expanded ? 'minus' : 'plus'));
+            addSubBtn.appendChild(createIcon(expanded ? 'minus-circle' : 'plus-circle'));
             addSubBtn.addEventListener('click', () => {
                 if (this._showAddSubFor.has(id)) this._showAddSubFor.delete(id);
                 else this._showAddSubFor.add(id);
