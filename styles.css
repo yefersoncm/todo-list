@@ -925,6 +925,8 @@ solo se ajustan paddings y gaps que en mobile sienten apretados.
     color: var(--accent-fg);
     border-color: var(--accent);
   }
+  /* Footer (filter desktop) oculto en mobile — las pills lo reemplazan. */
+  .app-footer { display: none; }
   /* Hamburger visible en mobile. */
   .app-hamburger {
     display: inline-flex;
