@@ -1366,11 +1366,13 @@ solo se ajustan paddings y gaps que en mobile sienten apretados.
     border-bottom-left-radius: var(--sp-3);
     background: transparent;
   }
-  /* Override del primer child del wrapper: arranca de top:0 (no extiende
-     hacia arriba porque no hay sub anterior). */
+  /* Override del primer child del wrapper: la línea arranca arriba del
+     top del wrapper (padding-top sp-2) para conectar visualmente con el
+     bottom del padre. Sin esto, la curva del primer sub quedaba suelta
+     sin línea vertical hacia el padre. */
   .m-subs > *:first-child::before {
-    top: 0;
-    height: 50%;
+    top: calc(var(--sp-2) * -1 - 1px);
+    height: calc(50% + var(--sp-2) + 1px);
   }
   .m-subs > .subtask-add-form .subtask-add-input {
     width: 100%;
@@ -1503,7 +1505,7 @@ solo se ajustan paddings y gaps que en mobile sienten apretados.
     right: calc(var(--sp-2) * -0.5);
     top: 50%;
     transform: translateY(-50%);
-    height: 18px;
+    height: 24px;
     width: 1px;
     background: var(--border-subtle);
   }
