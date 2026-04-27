@@ -264,11 +264,19 @@ class TaskManager {
         }
         // Bottom nav mobile (Fase F10): iconos en cada slot.
         if (DOM.mBottomNav) {
-            const iconMap = { today: 'flag', week: 'calendar', done: 'check-circle', settings: 'settings' };
+            // Nombre correcto en icons.js: 'circle-check' (no 'check-circle').
+            // Cada icono envuelto en try/catch para que un nombre incorrecto
+            // no aborte el resto.
+            const iconMap = { today: 'flag', week: 'calendar', done: 'circle-check', settings: 'settings' };
             DOM.mBottomNav.querySelectorAll('[data-icon-slot]').forEach(slot => {
                 if (slot.firstChild) return;
                 const name = iconMap[slot.dataset.iconSlot];
-                if (name) slot.appendChild(createIcon(name, { size: 20 }));
+                if (!name) return;
+                try {
+                    slot.appendChild(createIcon(name, { size: 20 }));
+                } catch (err) {
+                    console.error(`[bottom-nav icon ${name}]`, err);
+                }
             });
         }
     }

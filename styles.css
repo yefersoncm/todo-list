@@ -1260,23 +1260,37 @@ solo se ajustan paddings y gaps que en mobile sienten apretados.
   .grocery-item:not(.is-subtask) > .subtask-collapse-btn,
   .grocery-item:not(.is-subtask) > .subtask-collapse-placeholder { grid-area: chevron; justify-self: end; }
   .grocery-item:not(.is-subtask) > .meta { grid-area: actions; }
+  /* Sub-card: grid 3-col en UNA SOLA ROW (estilo .m-sub del mockup):
+     toggle | title-block | meta. Sin row separada con border-top. */
   .grocery-item.is-subtask {
     background: var(--bg-surface);
     border: 1px solid var(--border-subtle);
     border-radius: var(--r-md);
-    padding: var(--sp-3);
-    margin-bottom: var(--sp-2);
+    padding: var(--sp-2) var(--sp-3);
+    margin-bottom: var(--sp-1);
     display: grid;
-    grid-template-columns: auto 1fr;
-    grid-template-areas:
-      "toggle title"
-      "actions actions";
+    grid-template-columns: auto 1fr auto;
     gap: var(--sp-2);
     align-items: center;
   }
-  .grocery-item.is-subtask > .toggle-check { grid-area: toggle; }
-  .grocery-item.is-subtask > .task__title-block { grid-area: title; }
-  .grocery-item.is-subtask > .meta { grid-area: actions; }
+  /* Sin border-top en .meta de sub — todo es una row. */
+  .grocery-item.is-subtask > .meta {
+    border-top: none;
+    padding-top: 0;
+    margin-top: 0;
+    width: auto;
+  }
+  /* Action-group del sub: inline, gap chico, sin width 100% (no ocupa
+     toda la fila — solo el espacio necesario para los íconos). */
+  .grocery-item.is-subtask .action-group {
+    width: auto;
+    gap: 2px;
+  }
+  .grocery-item.is-subtask .action-group > .btn-icon {
+    flex: none;
+    width: 32px;
+    height: 32px;
+  }
   /* Wrapper de subs (.m-subs) con guía vertical árbol que conecta el
      padre con cada sub-card. El input "+ subtarea" se renderiza como
      último hijo del wrapper. */
@@ -1284,6 +1298,7 @@ solo se ajustan paddings y gaps que en mobile sienten apretados.
     margin-left: var(--sp-5);
     position: relative;
     padding-top: var(--sp-2);
+    margin-bottom: var(--sp-3);
   }
   .m-subs::before {
     content: "";
@@ -1448,9 +1463,22 @@ solo se ajustan paddings y gaps que en mobile sienten apretados.
   /* Cada botón del action-group toma 1/N del ancho total, manteniendo
      su border-radius individual (sin pill compuesta). Resultado: cada
      acción queda separada visualmente por un gap, fácil de tappear. */
-  .grocery-item .action-group > .btn-icon {
+  .grocery-item:not(.is-subtask) .action-group > .btn-icon {
     flex: 1 1 0;
     border-radius: var(--r-sm);
+    position: relative;
+  }
+  /* Barras .sep entre los actions de tareas padre (estilo m-task__actions
+     del mockup). Línea fina vertical en el gap derecho de cada btn
+     menos el último. */
+  .grocery-item:not(.is-subtask) .action-group > .btn-icon:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    right: calc(var(--sp-2) * -0.5);
+    top: 22%;
+    bottom: 22%;
+    width: 1px;
+    background: var(--border-subtle);
   }
   /* Input para agregar subtarea: línea propia debajo del head, ahora
      que el title comparte fila con toggle/chevron (Fase 9D). */
@@ -1505,7 +1533,8 @@ renderizan SIEMPRE pero el media query de pointer:fine los oculta.
     display: block;
 }
 .touch-promote-btn {
-    color: var(--clr-primary-3);
+    color: var(--accent);
+    display: inline-flex;
 }
 
 /*
