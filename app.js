@@ -1622,6 +1622,7 @@ class TaskManager {
                     }
                     if (currentSubsWrap.children.length > 0) {
                         DOM.list.appendChild(currentSubsWrap);
+                        this._adjustTreeConnectors(currentSubsWrap);
                     }
                 }
                 currentSubsWrap = null;
@@ -1678,6 +1679,32 @@ class TaskManager {
                 DOM.container.classList.add('show-container');
             }
         }
+    }
+
+    /**
+     * Mide cada child del wrapper .m-subs y setea --connector-up con la
+     * distancia vertical desde el top del child al CENTRO del child
+     * anterior (o al top del wrapper si es el primero). El CSS usa esa
+     * variable para extender el border-left del ::before hacia arriba
+     * y conectar con el sub anterior — generando una línea vertical
+     * continua entre subs y desde el primer sub hasta el padre.
+     */
+    _adjustTreeConnectors(wrap) {
+        requestAnimationFrame(() => {
+            const children = [...wrap.children];
+            children.forEach((child, i) => {
+                let connector;
+                if (i === 0) {
+                    // Hasta el top del wrapper (= bottom del padre).
+                    connector = child.offsetTop;
+                } else {
+                    const prev = children[i - 1];
+                    const prevCenter = prev.offsetTop + prev.offsetHeight / 2;
+                    connector = Math.max(0, child.offsetTop - prevCenter);
+                }
+                child.style.setProperty('--connector-up', `${connector}px`);
+            });
+        });
     }
 
     _emptyStateMessage() {

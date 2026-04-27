@@ -1331,18 +1331,18 @@ solo se ajustan paddings y gaps que en mobile sienten apretados.
   .grocery-item.is-subtask.is-collapsed {
     max-height: 0;
   }
-  /* L curvada por cada sub: caja con border-left + border-bottom +
-     border-bottom-left-radius. Va desde top hasta su centro vertical,
-     ancho --sp-5 (24px) para llegar al borde izquierdo del card.
-     El segmento vertical se extiende hacia arriba para conectar con el
-     anterior (override en :first-child más abajo). */
+  /* L curvada con border-left + border-bottom + border-bottom-left-radius.
+     --connector-up lo setea JS al ancho del segmento vertical hacia arriba
+     necesario para llegar al centro del child anterior (o al top del
+     wrapper si es :first-child). Default 0 = solo curva, sin línea
+     vertical (caso degradado).  */
   .grocery-item.is-subtask::before {
     content: "";
     position: absolute;
     left: calc(var(--sp-5) * -1);
-    top: calc(var(--sp-1) * -1 - 1px);
+    top: calc(var(--connector-up, 0px) * -1);
     width: var(--sp-5);
-    height: calc(50% + var(--sp-1) + 1px);
+    height: calc(50% + var(--connector-up, 0px));
     border-left: 2px solid var(--border-subtle);
     border-bottom: 2px solid var(--border-subtle);
     border-bottom-left-radius: var(--sp-3);
@@ -1358,21 +1358,13 @@ solo se ajustan paddings y gaps que en mobile sienten apretados.
     content: "";
     position: absolute;
     left: calc(var(--sp-5) * -1);
-    top: calc(var(--sp-1) * -1 - 1px);
+    top: calc(var(--connector-up, 0px) * -1);
     width: var(--sp-5);
-    height: calc(50% + var(--sp-1) + 1px);
+    height: calc(50% + var(--connector-up, 0px));
     border-left: 2px solid var(--border-subtle);
     border-bottom: 2px solid var(--border-subtle);
     border-bottom-left-radius: var(--sp-3);
     background: transparent;
-  }
-  /* Override del primer child del wrapper: la línea arranca arriba del
-     top del wrapper (padding-top sp-2) para conectar visualmente con el
-     bottom del padre. Sin esto, la curva del primer sub quedaba suelta
-     sin línea vertical hacia el padre. */
-  .m-subs > *:first-child::before {
-    top: calc(var(--sp-2) * -1 - 1px);
-    height: calc(50% + var(--sp-2) + 1px);
   }
   .m-subs > .subtask-add-form .subtask-add-input {
     width: 100%;
