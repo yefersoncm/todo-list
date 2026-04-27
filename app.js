@@ -8,8 +8,7 @@ import { ToastManager } from './toast.js';
 const PAGE_SIZE_KEY = 'todo-list:pageSize';
 const VALID_PAGE_SIZES = [10, 20, 50, 100];
 const DEFAULT_PAGE_SIZE = 10;
-// Umbral fijo para mostrar el buscador. Coincide con el pageSize mínimo
-// (la primera entrada de VALID_PAGE_SIZES) — NO con el pageSize actual.
+// Umbral fijo para mostrar el buscador (coincide con pageSize mínimo).
 const SEARCH_VISIBILITY_THRESHOLD = VALID_PAGE_SIZES[0];
 
 const SORT_BY_KEY = 'todo-list:sortBy';
@@ -64,6 +63,29 @@ const DOM = {
     confirmModalText: document.getElementById('confirmModalText'),
     themeSeg: document.getElementById('themeSeg'),
     densitySeg: document.getElementById('densitySeg'),
+    appTitleSub: document.getElementById('appTitleSub'),
+    appTitleMain: document.getElementById('appTitleMain'),
+    appHamburger: document.getElementById('appHamburger'),
+    appDrawerBackdrop: document.getElementById('appDrawerBackdrop'),
+    taskCountRow: document.querySelector('.task-count-row'),
+    appFab: document.getElementById('appFab'),
+    newTaskModal: document.getElementById('newTaskModal'),
+    newTaskForm: document.getElementById('newTaskForm'),
+    newTaskInput: document.getElementById('newTaskInput'),
+    newTaskDate: document.getElementById('newTaskDate'),
+    newTaskPriority: document.getElementById('newTaskPriority'),
+    mToolbarCount: document.getElementById('mToolbarCount'),
+    mCollapseAll: document.getElementById('mCollapseAll'),
+    mExpandAll: document.getElementById('mExpandAll'),
+    mBottomNav: document.getElementById('mBottomNav'),
+    newTaskDateBtn: document.getElementById('newTaskDateBtn'),
+    datePickerModal: document.getElementById('datePickerModal'),
+    datePickerMonth: document.getElementById('datePickerMonth'),
+    datePickerPrev: document.getElementById('datePickerPrev'),
+    datePickerNext: document.getElementById('datePickerNext'),
+    datePickerGrid: document.getElementById('datePickerGrid'),
+    datePickerOk: document.getElementById('datePickerOk'),
+    datePickerClear: document.getElementById('datePickerClear'),
 };
 
 function loadPageSize() {
@@ -97,6 +119,15 @@ function loadCollapsed() {
 
 function saveCollapsed(set) {
     localStorage.setItem(COLLAPSED_KEY, JSON.stringify([...set]));
+}
+
+/** Hoy en formato YYYY-MM-DD (timezone local del browser). */
+function todayISO() {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
 }
 
 // Modal de confirmación que reemplaza al confirm() nativo.
@@ -143,13 +174,18 @@ class TaskManager {
         this.pageSize = loadPageSize();
         this.currentPage = 1;
         this.collapsedParents = loadCollapsed();
+        // Set transitorio (no persistido) de IDs de padres con el form
+        // "+ subtarea" expandido. Toggle desde el botón addsub-btn.
+        this._showAddSubFor = new Set();
         this.toast = new ToastManager(DOM.toastContainer);
-        // Filter ahora son tabs (Fase 7F): click en cualquier .filter-tab
-        // setea filterMode y actualiza aria-selected.
-        DOM.taskFilterRoot.addEventListener('click', (e) => {
-            const tab = e.target.closest('.filter-tab');
-            if (!tab) return;
-            this._setFilterTab(tab.dataset.value);
+        // Filter tabs: hay 2 sets en el DOM (footer desktop + header mobile,
+        // ambos con [data-filter-tabs]). Listener delegado en cada uno.
+        document.querySelectorAll('[data-filter-tabs]').forEach(root => {
+            root.addEventListener('click', (e) => {
+                const tab = e.target.closest('.filter-tab');
+                if (!tab) return;
+                this._setFilterTab(tab.dataset.value);
+            });
         });
         this.sortByCombo = new Combobox(DOM.sortByRoot, {
             onChange: (value) => this.handleSortChange(value),
@@ -159,9 +195,14 @@ class TaskManager {
             onChange: (value) => this.handlePageSizeChange(parseInt(value)),
         });
         this.pageSizeCombo.setValue(String(this.pageSize));
-        this._mountStaticIcons();
-        this._setupChromeToggles();
-        this._setupFooterHeightTracker();
+        // Setups defensivos: un error en uno NO debe romper los siguientes.
+        this._safeRun('mountStaticIcons', () => this._mountStaticIcons());
+        this._safeRun('setupChromeToggles', () => this._setupChromeToggles());
+        this._safeRun('setupFooterHeightTracker', () => this._setupFooterHeightTracker());
+        this._safeRun('setupMobileDrawer', () => this._setupMobileDrawer());
+        this._safeRun('setupMobileFab', () => this._setupMobileFab());
+        this._safeRun('setupMobileBottomNav', () => this._setupMobileBottomNav());
+        this._safeRun('setupDatePicker', () => this._setupDatePicker());
         this.setupEventListeners();
         this.renderTasks();
         this._startElapsedTicker();
@@ -191,6 +232,14 @@ class TaskManager {
         }
     }
 
+    _safeRun(label, fn) {
+        try {
+            fn();
+        } catch (err) {
+            console.error(`[init:${label}]`, err);
+        }
+    }
+
     _mountStaticIcons() {
         // Icono fijo del botón principal (siempre 'Agregar' — la edición
         // ahora es inline sobre la fila de la tarea).
@@ -205,6 +254,277 @@ class TaskManager {
         if (clearIconSlot && !clearIconSlot.firstChild) {
             clearIconSlot.appendChild(createIcon('trash', { size: 14 }));
         }
+        // Hamburger icon (menu) — solo se ve en mobile vía CSS.
+        if (DOM.appHamburger && !DOM.appHamburger.firstChild) {
+            DOM.appHamburger.appendChild(createIcon('menu', { size: 22 }));
+        }
+        // Mini-toolbar mobile (Fase F3): iconos collapse-all/expand-all.
+        if (DOM.mCollapseAll && !DOM.mCollapseAll.firstChild) {
+            DOM.mCollapseAll.appendChild(createIcon('chevron-up', { size: 16 }));
+        }
+        if (DOM.mExpandAll && !DOM.mExpandAll.firstChild) {
+            DOM.mExpandAll.appendChild(createIcon('chevron-down', { size: 16 }));
+        }
+        // Bottom nav mobile (Fase F10): iconos en cada slot.
+        if (DOM.mBottomNav) {
+            // Nombre correcto en icons.js: 'circle-check' (no 'check-circle').
+            // Cada icono envuelto en try/catch para que un nombre incorrecto
+            // no aborte el resto.
+            const iconMap = { today: 'flag', week: 'calendar', done: 'circle-check', settings: 'settings' };
+            DOM.mBottomNav.querySelectorAll('[data-icon-slot]').forEach(slot => {
+                if (slot.firstChild) return;
+                const name = iconMap[slot.dataset.iconSlot];
+                if (!name) return;
+                try {
+                    slot.appendChild(createIcon(name, { size: 20 }));
+                } catch (err) {
+                    console.error(`[bottom-nav icon ${name}]`, err);
+                }
+            });
+        }
+    }
+
+    /**
+     * Bottom nav mobile (Fase F10): 4 tabs.
+     * - today/week/done: setean filterMode + sincroniza pills.
+     * - settings: abre el drawer existente.
+     * Marca .is-active el tab según filterMode actual.
+     */
+    _setupMobileBottomNav() {
+        if (!DOM.mBottomNav) return;
+        const updateActive = () => {
+            DOM.mBottomNav.querySelectorAll('.m-bottom-btn').forEach(b => {
+                const action = b.dataset.bottomAction;
+                const active = action === 'settings' ? false
+                    : action === this.filterMode;
+                b.classList.toggle('is-active', active);
+            });
+        };
+        DOM.mBottomNav.addEventListener('click', (e) => {
+            const btn = e.target.closest('.m-bottom-btn');
+            if (!btn) return;
+            const action = btn.dataset.bottomAction;
+            if (action === 'settings') {
+                if (DOM.appHamburger) DOM.appHamburger.click();
+                return;
+            }
+            this._setFilterTab(action);
+            updateActive();
+        });
+        // Llama updateActive cada vez que cambia el filter (via _setFilterTab).
+        const origSetFilterTab = this._setFilterTab.bind(this);
+        this._setFilterTab = (value) => {
+            origSetFilterTab(value);
+            updateActive();
+        };
+        updateActive();
+    }
+
+    /**
+     * Date picker custom (modal con calendario propio). Respeta dark/light
+     * mode porque usa tokens semánticos. Reemplaza al <input type='date'>
+     * nativo que no se puede estilear.
+     */
+    _setupDatePicker() {
+        if (!DOM.datePickerModal || !DOM.datePickerGrid) return;
+        this._dpView = new Date();   // mes/año mostrado.
+        this._dpSelected = null;     // YYYY-MM-DD del día seleccionado.
+        this._dpOnConfirm = null;    // callback al hacer Aceptar.
+
+        const close = () => {
+            DOM.datePickerModal.hidden = true;
+            this._dpOnConfirm = null;
+        };
+
+        DOM.datePickerPrev.appendChild(createIcon('chevron-left', { size: 18 }));
+        DOM.datePickerNext.appendChild(createIcon('chevron-right', { size: 18 }));
+        DOM.datePickerPrev.addEventListener('click', () => {
+            this._dpView.setMonth(this._dpView.getMonth() - 1);
+            this._renderDatePicker();
+        });
+        DOM.datePickerNext.addEventListener('click', () => {
+            this._dpView.setMonth(this._dpView.getMonth() + 1);
+            this._renderDatePicker();
+        });
+        DOM.datePickerGrid.addEventListener('click', (e) => {
+            const cell = e.target.closest('[data-date]');
+            if (!cell) return;
+            this._dpSelected = cell.dataset.date;
+            this._renderDatePicker();
+        });
+        DOM.datePickerOk.addEventListener('click', () => {
+            const cb = this._dpOnConfirm;
+            const value = this._dpSelected;
+            close();
+            if (cb) cb(value);
+        });
+        DOM.datePickerClear.addEventListener('click', () => {
+            const cb = this._dpOnConfirm;
+            close();
+            if (cb) cb(null);
+        });
+        DOM.datePickerModal.addEventListener('click', (e) => {
+            if (e.target === DOM.datePickerModal) close();
+            const action = e.target.closest('[data-action]')?.dataset.action;
+            if (action === 'cancel') close();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !DOM.datePickerModal.hidden) close();
+        });
+    }
+
+    _openDatePicker(currentValue, onConfirm) {
+        if (!DOM.datePickerModal) return;
+        this._dpSelected = currentValue || null;
+        // View arranca en el mes del valor actual, o en el mes presente.
+        if (currentValue) {
+            const [y, m] = currentValue.split('-').map(Number);
+            this._dpView = new Date(y, m - 1, 1);
+        } else {
+            const t = new Date();
+            this._dpView = new Date(t.getFullYear(), t.getMonth(), 1);
+        }
+        this._dpOnConfirm = onConfirm;
+        this._renderDatePicker();
+        DOM.datePickerModal.hidden = false;
+    }
+
+    _renderDatePicker() {
+        const view = this._dpView;
+        const monthNames = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+        DOM.datePickerMonth.textContent = `${monthNames[view.getMonth()]} ${view.getFullYear()}`;
+        DOM.datePickerGrid.innerHTML = '';
+        // El botón "Quitar" solo aparece si hay una fecha seleccionada;
+        // en otro caso no tiene sentido mostrarlo.
+        if (DOM.datePickerClear) {
+            DOM.datePickerClear.hidden = !this._dpSelected;
+        }
+        // Días en el mes y day-of-week del primero (lun=0..dom=6).
+        const firstOfMonth = new Date(view.getFullYear(), view.getMonth(), 1);
+        const lastOfMonth = new Date(view.getFullYear(), view.getMonth() + 1, 0);
+        // JS getDay: dom=0..sab=6. Convertimos a lun=0.
+        const startDow = (firstOfMonth.getDay() + 6) % 7;
+        const today = todayISO();
+        // Padding antes del 1° del mes.
+        for (let i = 0; i < startDow; i++) {
+            const empty = document.createElement('span');
+            empty.className = 'date-picker__day is-empty';
+            DOM.datePickerGrid.appendChild(empty);
+        }
+        for (let d = 1; d <= lastOfMonth.getDate(); d++) {
+            const iso = `${view.getFullYear()}-${String(view.getMonth() + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+            const cell = document.createElement('button');
+            cell.type = 'button';
+            cell.className = 'date-picker__day';
+            cell.dataset.date = iso;
+            cell.textContent = String(d);
+            if (iso === today) cell.classList.add('is-today');
+            if (iso === this._dpSelected) cell.classList.add('is-selected');
+            DOM.datePickerGrid.appendChild(cell);
+        }
+    }
+
+    /**
+     * FAB mobile (Fase 9F): boton flotante "+ tarea" abajo-derecha
+     * que abre un modal con input para crear tarea. Reemplaza al form
+     * principal arriba (oculto en mobile via CSS). En desktop el FAB
+     * permanece oculto por CSS.
+     */
+    _setupMobileFab() {
+        if (!DOM.appFab || !DOM.newTaskModal || !DOM.newTaskForm || !DOM.newTaskInput) return;
+        DOM.appFab.appendChild(createIcon('plus', { size: 24 }));
+
+        // Helper: actualizar el botón de fecha con el value actual del input
+        // hidden. "Hoy" si coincide con today, "Sin fecha" si vacío.
+        const refreshDateBtn = () => {
+            if (!DOM.newTaskDateBtn) return;
+            const v = DOM.newTaskDate?.value;
+            DOM.newTaskDateBtn.textContent = !v ? 'Sin fecha'
+                : v === todayISO() ? 'Hoy'
+                : v;
+        };
+
+        const open = () => {
+            DOM.newTaskModal.hidden = false;
+            DOM.newTaskInput.value = '';
+            // Por default sin fecha. El usuario la asigna explícitamente
+            // si quiere via el botón del picker.
+            if (DOM.newTaskDate) DOM.newTaskDate.value = '';
+            if (DOM.newTaskPriority) DOM.newTaskPriority.checked = false;
+            refreshDateBtn();
+            requestAnimationFrame(() => DOM.newTaskInput.focus());
+        };
+        const close = () => {
+            DOM.newTaskModal.hidden = true;
+        };
+
+        DOM.appFab.addEventListener('click', open);
+
+        // Botón de fecha en el modal: abre el date picker custom.
+        if (DOM.newTaskDateBtn) {
+            DOM.newTaskDateBtn.addEventListener('click', () => {
+                this._openDatePicker(DOM.newTaskDate.value || todayISO(), (newValue) => {
+                    DOM.newTaskDate.value = newValue || '';
+                    refreshDateBtn();
+                });
+            });
+        }
+
+        DOM.newTaskForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const value = DOM.newTaskInput.value;
+            if (value.trim() === '') {
+                this.displayAlert('Por favor ingrese un valor', 'danger');
+                return;
+            }
+            // Sin fecha explícita = sin fecha (no asume today).
+            this.store.add(value, {
+                dueDate: DOM.newTaskDate?.value || undefined,
+                priority: !!DOM.newTaskPriority?.checked,
+            });
+            this.displayAlert('Item agregado a la lista', 'success');
+            this.currentPage = 1;
+            this.renderTasks();
+            close();
+        });
+        DOM.newTaskModal.addEventListener('click', (e) => {
+            if (e.target === DOM.newTaskModal) close();
+            const action = e.target.closest('[data-action]')?.dataset.action;
+            if (action === 'cancel') close();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !DOM.newTaskModal.hidden) close();
+        });
+    }
+
+    /**
+     * Drawer mobile (hamburger): el .task-count-row se reposiciona como
+     * panel fixed slide-from-left en mobile. Click en hamburger toggle
+     * la clase .is-open, que activa el slide. Backdrop + Esc cierran.
+     */
+    _setupMobileDrawer() {
+        if (!DOM.appHamburger || !DOM.taskCountRow || !DOM.appDrawerBackdrop) return;
+        const open = () => {
+            DOM.taskCountRow.classList.add('is-open');
+            DOM.appDrawerBackdrop.hidden = false;
+            requestAnimationFrame(() => DOM.appDrawerBackdrop.classList.add('is-open'));
+            DOM.appHamburger.setAttribute('aria-expanded', 'true');
+        };
+        const close = () => {
+            DOM.taskCountRow.classList.remove('is-open');
+            DOM.appDrawerBackdrop.classList.remove('is-open');
+            DOM.appHamburger.setAttribute('aria-expanded', 'false');
+            // Espera fin de transición para hidden=true (evita flash).
+            setTimeout(() => { DOM.appDrawerBackdrop.hidden = true; }, 220);
+        };
+        DOM.appHamburger.addEventListener('click', () => {
+            const isOpen = DOM.taskCountRow.classList.contains('is-open');
+            isOpen ? close() : open();
+        });
+        DOM.appDrawerBackdrop.addEventListener('click', close);
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && DOM.taskCountRow.classList.contains('is-open')) close();
+        });
     }
 
     /**
@@ -292,6 +612,13 @@ class TaskManager {
         if (DOM.bulkExpandAllBtn) {
             DOM.bulkExpandAllBtn.addEventListener('click', this.handleExpandAll.bind(this));
         }
+        // Mini-toolbar mobile (Fase F3): mismos handlers que los del drawer.
+        if (DOM.mCollapseAll) {
+            DOM.mCollapseAll.addEventListener('click', this.handleCollapseAll.bind(this));
+        }
+        if (DOM.mExpandAll) {
+            DOM.mExpandAll.addEventListener('click', this.handleExpandAll.bind(this));
+        }
         if (DOM.promoteZone) {
             DOM.promoteZone.addEventListener('dragover', this.handlePromoteDragOver.bind(this));
             DOM.promoteZone.addEventListener('dragleave', this.handlePromoteDragLeave.bind(this));
@@ -354,12 +681,13 @@ class TaskManager {
     }
 
     _setFilterTab(value) {
-        if (!['all', 'done', 'pending'].includes(value)) return;
+        if (!['all', 'done', 'pending', 'today', 'week', 'priority'].includes(value)) return;
         if (this.filterMode === value) return;
         this.filterMode = value;
         this.currentPage = 1;
-        // Actualiza aria-selected y .is-active en los 3 tabs.
-        DOM.taskFilterRoot.querySelectorAll('.filter-tab').forEach(t => {
+        // Actualiza aria-selected y .is-active en TODOS los sets de tabs
+        // (footer desktop + header mobile via data-filter-tabs).
+        document.querySelectorAll('[data-filter-tabs] .filter-tab').forEach(t => {
             const active = t.dataset.value === value;
             t.classList.toggle('is-active', active);
             t.setAttribute('aria-selected', active ? 'true' : 'false');
@@ -441,6 +769,23 @@ class TaskManager {
     handleEditItem(e) {
         const element = e.currentTarget.closest('.grocery-item');
         this._enterEditMode(element);
+    }
+
+    /**
+     * Edita la dueDate vía el date picker custom (modal con calendario
+     * propio que respeta dark/light mode). Reemplaza al picker nativo
+     * que era inestilable.
+     */
+    _editDueDate(taskId) {
+        const task = this.store.tasks.find(t => t.id === taskId);
+        if (!task || task.parentId !== null) return;
+        this._openDatePicker(task.dueDate || '', (newValue) => {
+            this.store.setDueDate(taskId, newValue || null);
+            this.renderTasks();
+            this.displayAlert(newValue
+                ? `Fecha asignada: ${newValue}`
+                : 'Fecha removida', 'success');
+        });
     }
 
     /**
@@ -939,14 +1284,17 @@ class TaskManager {
         const parentId = btn.dataset.parentId;
         this._toggleCollapsed(parentId);
         const isNowCollapsed = this.collapsedParents.has(parentId);
-        // Actualiza el icono y aria-expanded sin re-renderizar todo —
-        // así se ve la animación CSS al cambiar de clase.
+        // El chevron individual SOLO afecta la visibilidad de las subs.
+        // El form '+ subtarea' (si está expandido) sigue visible — el user
+        // puede agregar una sub aunque las existentes estén colapsadas.
+        // Animación DOM-only (sin renderTasks) para preservar transiciones.
         btn.setAttribute('aria-expanded', String(!isNowCollapsed));
         btn.setAttribute('aria-label', isNowCollapsed ? 'Expandir subtareas' : 'Contraer subtareas');
         btn.replaceChildren(createIcon(isNowCollapsed ? 'chevron-right' : 'chevron-down', { size: 14 }));
-        // Toggle .is-collapsed en las subs del DOM con ese parentId.
         DOM.list.querySelectorAll(`.grocery-item.is-subtask[data-parent-id="${parentId}"]`)
             .forEach(el => el.classList.toggle('is-collapsed', isNowCollapsed));
+        const subsWrap = DOM.list.querySelector(`.m-subs[data-parent-id="${parentId}"]`);
+        subsWrap?.classList.toggle('is-collapsed', isNowCollapsed);
     }
 
     handleSubtaskToggleKeyDown(e) {
@@ -966,6 +1314,10 @@ class TaskManager {
         const ids = this._parentsWithSubs();
         for (const id of ids) this.collapsedParents.add(id);
         saveCollapsed(this.collapsedParents);
+        // 'Colapsar todo' también cierra TODOS los forms '+ subtarea'
+        // expandidos (incluso en padres sin subs). Reinicia al estado
+        // por default: ícono plus, sin input visible.
+        this._showAddSubFor.clear();
         this.renderTasks();
     }
 
@@ -1091,7 +1443,7 @@ class TaskManager {
         }
 
         if (isSubtask) {
-            const promoteBtn = this._makeTouchMoveBtn('chevron-left',
+            const promoteBtn = this._makeTouchMoveBtn('corner-up-left',
                 'Convertir en tarea principal', () => this._touchPromote(id));
             promoteBtn.classList.add('touch-promote-btn');
             out.push(promoteBtn);
@@ -1181,12 +1533,6 @@ class TaskManager {
         this._updateElapsed();
     }
 
-    /**
-     * Muestra el buscador solo si hay más padres que SEARCH_VISIBILITY_THRESHOLD
-     * (10 — el pageSize mínimo). Es un umbral FIJO, NO se ajusta al
-     * pageSize actual: con pageSize=100 y 15 padres el buscador se ve.
-     * Si oculta, limpia el query activo para no dejar filtro fantasma.
-     */
     _updateSearchVisibility() {
         if (!DOM.searchRow) return;
         const totalParents = this.store.tasks.filter(t => t.parentId === null).length;
@@ -1224,6 +1570,19 @@ class TaskManager {
         let parents = ordered.filter(t => t.parentId === null);
         if (this.filterMode === 'done') parents = parents.filter(t => t.done);
         else if (this.filterMode === 'pending') parents = parents.filter(t => !t.done);
+        else if (this.filterMode === 'today') {
+            const today = todayISO();
+            parents = parents.filter(t => t.dueDate === today);
+        }
+        else if (this.filterMode === 'week') {
+            // Próximos 7 días (incluye hoy). Solo tareas con dueDate.
+            const today = todayISO();
+            const t = new Date();
+            t.setDate(t.getDate() + 7);
+            const end = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+            parents = parents.filter(p => p.dueDate && p.dueDate >= today && p.dueDate <= end);
+        }
+        else if (this.filterMode === 'priority') parents = parents.filter(t => !!t.priority);
         // Búsqueda: substring case-insensitive en el value del padre o
         // de cualquiera de sus subs. Match en sub también muestra al
         // padre completo para preservar el contexto.
@@ -1240,11 +1599,160 @@ class TaskManager {
     _renderList(items) {
         DOM.list.innerHTML = '';
         if (items.length > 0) {
-            items.forEach(item => this.createListItem(item));
+            // Group titles temporales (Fase F8): cuando filter='all' o
+            // 'pending', subdivide pendientes por urgencia según dueDate.
+            // Subs van dentro de un wrapper .m-subs que renderiza una guía
+            // vertical en árbol (Fase F-tree) y al final el form
+            // "+ subtarea".
+            let lastGroup = null;
+            let currentSubsWrap = null;
+            let currentParentId = null;
+            const showGroups = ['all', 'pending'].includes(this.filterMode);
+
+            // Renderiza el wrapper .m-subs SOLO si tiene contenido (subs
+            // existentes o form expanded por el usuario). Sin contenido,
+            // el wrapper (y su guía árbol) no se inserta — items sin
+            // subtareas quedan limpios.
+            const closeSubsWrap = () => {
+                if (currentSubsWrap && currentParentId) {
+                    const expanded = this._showAddSubFor.has(currentParentId);
+                    if (expanded) {
+                        currentSubsWrap.appendChild(this._buildSubtaskAddForm(currentParentId));
+                    }
+                    if (currentSubsWrap.children.length > 0) {
+                        DOM.list.appendChild(currentSubsWrap);
+                        this._adjustTreeConnectors(currentSubsWrap);
+                    }
+                }
+                currentSubsWrap = null;
+                currentParentId = null;
+            };
+
+            items.forEach(item => {
+                if (item.parentId === null) {
+                    closeSubsWrap();
+                    if (showGroups) {
+                        const group = this._groupOf(item);
+                        if (group !== lastGroup) {
+                            const title = document.createElement('div');
+                            title.className = 'group-title';
+                            title.textContent = group;
+                            DOM.list.appendChild(title);
+                            lastGroup = group;
+                        }
+                    }
+                    DOM.list.appendChild(this.createListItem(item));
+                    currentParentId = item.id;
+                    currentSubsWrap = document.createElement('div');
+                    currentSubsWrap.className = 'm-subs';
+                    if (this.collapsedParents.has(item.id)) {
+                        currentSubsWrap.classList.add('is-collapsed');
+                    }
+                    if (this._showAddSubFor.has(item.id)) {
+                        currentSubsWrap.classList.add('is-add-expanded');
+                    }
+                    currentSubsWrap.dataset.parentId = item.id;
+                } else {
+                    if (currentSubsWrap) {
+                        currentSubsWrap.appendChild(this.createListItem(item));
+                    } else {
+                        // Fallback: sub sin padre visible — al list directo.
+                        DOM.list.appendChild(this.createListItem(item));
+                    }
+                }
+            });
+            closeSubsWrap();
             DOM.container.classList.add('show-container');
         } else {
-            DOM.container.classList.remove("show-container");
+            // Empty state: cuando un filter (Hoy/Semana/Prioridad/Hechas/etc)
+            // devuelve cero matches Y la app NO está vacía, mostramos un mensaje.
+            // Si la app entera está vacía, ocultamos el container como antes.
+            const totalParents = this.store.tasks.filter(t => t.parentId === null).length;
+            if (totalParents === 0) {
+                DOM.container.classList.remove('show-container');
+            } else {
+                const empty = document.createElement('div');
+                empty.className = 'empty-state';
+                empty.textContent = this._emptyStateMessage();
+                DOM.list.appendChild(empty);
+                DOM.container.classList.add('show-container');
+            }
         }
+    }
+
+    /**
+     * Mide cada child del wrapper .m-subs y setea --connector-up con la
+     * distancia vertical desde el top del child al CENTRO del child
+     * anterior (o al top del wrapper si es el primero). El CSS usa esa
+     * variable para extender el border-left del ::before hacia arriba
+     * y conectar con el sub anterior — generando una línea vertical
+     * continua entre subs y desde el primer sub hasta el padre.
+     */
+    _adjustTreeConnectors(wrap) {
+        requestAnimationFrame(() => {
+            const parentItem = wrap.previousElementSibling;
+            const children = [...wrap.children];
+            children.forEach((child, i) => {
+                let connector;
+                if (i === 0) {
+                    // Distancia EXACTA desde el top del primer sub hasta
+                    // el bottom del padre item (usa rect del viewport para
+                    // incluir cualquier margin/padding entre ambos). La
+                    // línea llega justo a la línea inferior del card padre,
+                    // sin entrar.
+                    if (parentItem) {
+                        const childTop = child.getBoundingClientRect().top;
+                        const parentBottom = parentItem.getBoundingClientRect().bottom;
+                        connector = Math.max(0, childTop - parentBottom);
+                    } else {
+                        connector = child.offsetTop;
+                    }
+                } else {
+                    // El prev tiene border-bottom-left-radius (var(--sp-3)
+                    // = 12px), por lo que su línea vertical TERMINA 12px
+                    // arriba de su centro (la curva ocupa los últimos 12px).
+                    // Compensamos sumando 12 al connector — la línea del
+                    // current arranca donde la del prev realmente terminó.
+                    const prev = children[i - 1];
+                    const prevCenter = prev.offsetTop + prev.offsetHeight / 2;
+                    const radius = 12;
+                    connector = Math.max(0, child.offsetTop - prevCenter + radius);
+                }
+                child.style.setProperty('--connector-up', `${connector}px`);
+            });
+        });
+    }
+
+    _emptyStateMessage() {
+        switch (this.filterMode) {
+            case 'today':    return 'No hay tareas con fecha de hoy.';
+            case 'week':     return 'No hay tareas para los próximos 7 días.';
+            case 'priority': return 'No hay tareas marcadas como prioritarias.';
+            case 'done':     return 'No hay tareas hechas.';
+            case 'pending':  return 'Todo terminado. No hay pendientes.';
+            default:
+                return this.searchQuery
+                    ? 'Sin resultados para tu búsqueda.'
+                    : 'No hay tareas para mostrar.';
+        }
+    }
+
+    /**
+     * Devuelve el nombre del grupo temporal al que pertenece una tarea
+     * top-level, según su done y dueDate vs hoy.
+     */
+    _groupOf(task) {
+        if (task.done) return 'Hechas';
+        if (!task.dueDate) return 'Sin fecha';
+        const today = todayISO();
+        if (task.dueDate < today) return 'Vencidas';
+        if (task.dueDate === today) return 'Hoy';
+        // Próxima semana = los próximos 6 días.
+        const t = new Date();
+        t.setDate(t.getDate() + 7);
+        const weekEnd = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+        if (task.dueDate <= weekEnd) return 'Esta semana';
+        return 'Próximamente';
     }
 
     _renderPagination(totalPages) {
@@ -1390,6 +1898,89 @@ class TaskManager {
             }
         }
 
+        // Bloque title + elapsed (estilo m-task__head del mockup):
+        // wrapper que agrupa visualmente el título arriba y el elapsed
+        // pequeño debajo. Permite que el grid 3-col del item ponga este
+        // bloque en la columna central.
+        const titleBlock = document.createElement('div');
+        titleBlock.className = 'task__title-block';
+
+        const daysSpan = document.createElement('span');
+        daysSpan.className = 'task-days-old task__elapsed';
+        daysSpan.textContent = elapsedText;
+
+        // Badge de due-date — solo padres con dueDate asignada.
+        if (!isSubtask && task.dueDate) {
+            const today = todayISO();
+            if (task.dueDate === today) element.classList.add('is-due-today');
+            else if (task.dueDate < today) element.classList.add('is-overdue');
+            const due = document.createElement('span');
+            due.className = 'task__due-badge';
+            due.textContent = task.dueDate;
+            daysSpan.appendChild(document.createTextNode(' · '));
+            daysSpan.appendChild(due);
+        }
+        // Star inline al lado del título si task.priority.
+        if (!isSubtask && task.priority) {
+            element.classList.add('is-priority');
+            const starInline = createIcon('star', { size: 12, className: 'task__priority-mark' });
+            title.appendChild(document.createTextNode(' '));
+            title.appendChild(starInline);
+        }
+
+        titleBlock.append(title, daysSpan);
+
+        // Botón star (priority): solo padres. Toggle el flag.
+        let priorityBtn = null;
+        let dueBtn = null;
+        if (!isSubtask) {
+            priorityBtn = document.createElement('button');
+            priorityBtn.type = 'button';
+            priorityBtn.className = 'priority-btn btn-icon btn-icon--sm';
+            if (task.priority) priorityBtn.classList.add('is-priority');
+            priorityBtn.setAttribute('aria-label', task.priority ? 'Quitar prioridad' : 'Marcar prioridad');
+            priorityBtn.setAttribute('aria-pressed', task.priority ? 'true' : 'false');
+            priorityBtn.appendChild(createIcon('star'));
+            priorityBtn.addEventListener('click', () => {
+                this.store.togglePriority(id);
+                this.renderTasks();
+            });
+            // Botón calendar (due-date): solo padres. Click abre input date
+            // dinámico que hace setDueDate/clear. Si ya tiene fecha, badge
+            // visible cerca del título y sub.
+            dueBtn = document.createElement('button');
+            dueBtn.type = 'button';
+            dueBtn.className = 'due-btn btn-icon btn-icon--sm';
+            if (task.dueDate) dueBtn.classList.add('is-due');
+            dueBtn.setAttribute('aria-label', task.dueDate ? `Fecha: ${task.dueDate}` : 'Asignar fecha');
+            dueBtn.appendChild(createIcon('calendar'));
+            dueBtn.addEventListener('click', () => this._editDueDate(id));
+        }
+
+        // Botón addsub (plus/minus): solo padres. Toggle el form
+        // "+ subtarea" en el wrapper .m-subs. El plus se vuelve minus
+        // cuando el form está visible.
+        let addSubBtn = null;
+        if (!isSubtask) {
+            const expanded = this._showAddSubFor.has(id);
+            addSubBtn = document.createElement('button');
+            addSubBtn.type = 'button';
+            addSubBtn.className = 'addsub-btn btn-icon btn-icon--sm';
+            if (expanded) addSubBtn.classList.add('is-expanded');
+            addSubBtn.setAttribute('aria-label', expanded ? 'Cerrar agregar subtarea' : 'Agregar subtarea');
+            addSubBtn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+            addSubBtn.appendChild(createIcon(expanded ? 'minus-circle' : 'plus-circle'));
+            addSubBtn.addEventListener('click', () => {
+                // Comportamiento exclusivo: solo UN form '+ subtarea' abierto
+                // a la vez. Click en otro padre cierra el actual y abre el
+                // nuevo. Click en el mismo padre toggla off.
+                const wasExpanded = this._showAddSubFor.has(id);
+                this._showAddSubFor.clear();
+                if (!wasExpanded) this._showAddSubFor.add(id);
+                this.renderTasks();
+            });
+        }
+
         const editBtn = document.createElement('button');
         editBtn.type = 'button';
         editBtn.className = 'edit-btn btn-icon btn-icon--sm';
@@ -1405,34 +1996,33 @@ class TaskManager {
         const actionGroup = document.createElement('div');
         actionGroup.className = 'action-group task__actions';
         const touchControls = this._buildTouchMoveControls(task, isSubtask);
-        actionGroup.append(...touchControls, editBtn, deleteBtn);
-
-        const daysSpan = document.createElement('span');
-        daysSpan.className = 'task-days-old task__elapsed';
-        daysSpan.textContent = elapsedText;
+        const extras = [];
+        if (dueBtn) extras.push(dueBtn);
+        if (priorityBtn) extras.push(priorityBtn);
+        if (addSubBtn) extras.push(addSubBtn);
+        actionGroup.append(...touchControls, ...extras, editBtn, deleteBtn);
 
         const meta = document.createElement('div');
         meta.className = 'meta';
-        meta.append(actionGroup, daysSpan);
+        meta.append(actionGroup);
 
-        // Padres llevan input inline para agregar subtareas, y un
-        // chevron al inicio si tienen al menos una sub. Cuando NO tienen
-        // subs, en su lugar va un placeholder del mismo tamaño para
-        // mantener alineación de columnas entre tareas con/sin chevron.
+        // Padres llevan un chevron al inicio si tienen subs (placeholder
+        // si no). El input para agregar subtarea NO va más dentro del
+        // padre — se renderiza después de las subs como sibling vía
+        // _renderList (estilo .m-subs del mockup).
         if (!isSubtask) {
             const hasSubs = this.store.subsOf(id).length > 0;
             const subSlot = hasSubs ? this._buildSubtaskCollapseBtn(id) : this._buildSubtaskCollapsePlaceholder();
-            const subForm = this._buildSubtaskAddForm(id);
-            element.append(subSlot, toggleBtn, title, subForm, meta);
+            element.append(subSlot, toggleBtn, titleBlock, meta);
         } else {
-            element.append(toggleBtn, title, meta);
+            element.append(toggleBtn, titleBlock, meta);
         }
 
         toggleBtn.addEventListener('click', this.handleMarkTaskAsDone.bind(this));
         deleteBtn.addEventListener('click', this.handleDeleteItem.bind(this));
         editBtn.addEventListener('click', this.handleEditItem.bind(this));
 
-        DOM.list.appendChild(element);
+        return element;
     }
 
     _buildSubtaskAddForm(parentId) {
@@ -1492,11 +2082,34 @@ class TaskManager {
     }
 
     updateTaskCount(filteredCount) {
-        if (!DOM.taskCountDisplay) return;
-        let label = 'Total';
-        if (this.filterMode === 'done') label = 'Completadas';
-        else if (this.filterMode === 'pending') label = 'Pendientes';
-        DOM.taskCountDisplay.textContent = `Tareas: ${label}: ${filteredCount}`;
+        if (DOM.taskCountDisplay) {
+            let label = 'Total';
+            if (this.filterMode === 'done') label = 'Completadas';
+            else if (this.filterMode === 'pending') label = 'Pendientes';
+            else if (this.filterMode === 'today') label = 'Hoy';
+            else if (this.filterMode === 'priority') label = 'Prioridad';
+            DOM.taskCountDisplay.textContent = `Tareas: ${label}: ${filteredCount}`;
+        }
+        if (DOM.mToolbarCount) {
+            DOM.mToolbarCount.innerHTML = `<strong>${filteredCount}</strong> tareas`;
+        }
+        // Header mobile (Fase F1 + dinámico): título refleja el filter activo,
+        // subtítulo muestra "X de Y · DD mes" con stats globales y fecha.
+        if (DOM.appTitleMain) {
+            const titles = {
+                all: 'Todas', pending: 'Pendientes', done: 'Hechas',
+                today: 'Hoy', week: 'Esta semana', priority: 'Prioridad',
+            };
+            DOM.appTitleMain.textContent = titles[this.filterMode] || 'Tareas';
+        }
+        if (DOM.appTitleSub) {
+            const allParents = this.store.tasks.filter(t => t.parentId === null);
+            const doneCount = allParents.filter(p => p.done).length;
+            const today = new Date();
+            const months = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+            const dateStr = `${today.getDate()} ${months[today.getMonth()]}`;
+            DOM.appTitleSub.textContent = `${doneCount} de ${allParents.length} · ${dateStr}`;
+        }
     }
 }
 
