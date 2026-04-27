@@ -450,7 +450,14 @@ Paginación
               margin-top 220ms ease, margin-bottom 220ms ease;
 }
 .grocery-item.is-subtask.is-collapsed {
+  /* Tras Fase 1 el .grocery-item gana min-height: var(--row-h) (44px),
+     y tras Fase 7G card-per-item un border 1px en mobile. Sin estos
+     resets el sub colapsado seguia ocupando 44-46px. Ahora se colapsa
+     a 0 real. */
   max-height: 0;
+  min-height: 0;
+  border-top-width: 0;
+  border-bottom-width: 0;
   opacity: 0;
   padding-top: 0;
   padding-bottom: 0;
