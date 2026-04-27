@@ -472,3 +472,108 @@ describe('TaskStore — subsOf', () => {
         assert.deepEqual(subsB, ['B1']);
     });
 });
+
+describe('TaskStore — add con options (dueDate, priority)', () => {
+    test('add legacy (función como 2do arg) sigue funcionando', () => {
+        const store = newStore();
+        const t = store.add('legacy', () => '1');
+        assert.equal(t.id, '1');
+        assert.equal(t.dueDate, undefined);
+        assert.equal(t.priority, undefined);
+    });
+
+    test('add con options.dueDate setea el campo', () => {
+        const store = newStore();
+        const t = store.add('reunion', { dueDate: '2026-05-01', idFactory: () => '1' });
+        assert.equal(t.dueDate, '2026-05-01');
+    });
+
+    test('add con options.priority=true setea el flag', () => {
+        const store = newStore();
+        const t = store.add('urgente', { priority: true, idFactory: () => '1' });
+        assert.equal(t.priority, true);
+    });
+
+    test('add sin options.dueDate NO crea el campo (undefined)', () => {
+        const store = newStore();
+        const t = store.add('s/fecha', { idFactory: () => '1' });
+        assert.equal('dueDate' in t, false);
+    });
+
+    test('add con options.priority=false NO crea el campo', () => {
+        const store = newStore();
+        const t = store.add('s/prio', { priority: false, idFactory: () => '1' });
+        assert.equal('priority' in t, false);
+    });
+});
+
+describe('TaskStore — setDueDate', () => {
+    test('setea dueDate en una tarea top-level', () => {
+        const store = newStore();
+        store.add('x', () => '1');
+        const ok = store.setDueDate('1', '2026-04-30', 50);
+        assert.equal(ok, true);
+        assert.equal(store.tasks[0].dueDate, '2026-04-30');
+        assert.equal(store.tasks[0].updatedAt, 50);
+    });
+
+    test('limpia dueDate si recibe null/undefined', () => {
+        const store = newStore();
+        store.add('x', () => '1');
+        store.setDueDate('1', '2026-04-30');
+        store.setDueDate('1', null);
+        assert.equal('dueDate' in store.tasks[0], false);
+    });
+
+    test('rechaza setDueDate sobre subtarea (solo top-level)', () => {
+        const store = newStore();
+        store.add('p', () => 'P');
+        store.addSubtask('P', 's', () => 'S');
+        const ok = store.setDueDate('S', '2026-04-30');
+        assert.equal(ok, false);
+        assert.equal('dueDate' in store.tasks.find(t => t.id === 'S'), false);
+    });
+
+    test('rechaza setDueDate sobre id inexistente', () => {
+        const store = newStore();
+        assert.equal(store.setDueDate('nope', '2026-04-30'), false);
+    });
+
+    test('persiste en el adapter', () => {
+        const adapter = new MemoryStorageAdapter();
+        const store = new TaskStore(adapter);
+        store.add('x', () => '1');
+        store.setDueDate('1', '2026-05-15');
+        assert.equal(adapter.get().find(t => t.id === '1').dueDate, '2026-05-15');
+    });
+});
+
+describe('TaskStore — togglePriority', () => {
+    test('cambia false → true', () => {
+        const store = newStore();
+        store.add('x', () => '1');
+        const ok = store.togglePriority('1', 100);
+        assert.equal(ok, true);
+        assert.equal(store.tasks[0].priority, true);
+        assert.equal(store.tasks[0].updatedAt, 100);
+    });
+
+    test('cambia true → false en segunda llamada', () => {
+        const store = newStore();
+        store.add('x', { priority: true, idFactory: () => '1' });
+        store.togglePriority('1');
+        assert.equal(store.tasks[0].priority, false);
+    });
+
+    test('rechaza togglePriority sobre subtarea', () => {
+        const store = newStore();
+        store.add('p', () => 'P');
+        store.addSubtask('P', 's', () => 'S');
+        assert.equal(store.togglePriority('S'), false);
+    });
+
+    test('rechaza togglePriority sobre id inexistente', () => {
+        const store = newStore();
+        assert.equal(store.togglePriority('nope'), false);
+    });
+});

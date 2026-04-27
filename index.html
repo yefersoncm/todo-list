@@ -170,6 +170,26 @@
          nueva tarea para reemplazar al form principal. -->
     <button type="button" class="app-fab" id="appFab" aria-label="Nueva tarea"></button>
 
+    <!-- Bottom nav mobile (Fase F10): 4 tabs. Solo visible en mobile. -->
+    <nav class="m-bottom" id="mBottomNav" aria-label="Navegación">
+        <button type="button" class="m-bottom-btn" data-bottom-action="today">
+            <span class="m-bottom-btn__icon" data-icon-slot="today"></span>
+            <span class="m-bottom-btn__label">Hoy</span>
+        </button>
+        <button type="button" class="m-bottom-btn" data-bottom-action="week">
+            <span class="m-bottom-btn__icon" data-icon-slot="week"></span>
+            <span class="m-bottom-btn__label">Semana</span>
+        </button>
+        <button type="button" class="m-bottom-btn" data-bottom-action="done">
+            <span class="m-bottom-btn__icon" data-icon-slot="done"></span>
+            <span class="m-bottom-btn__label">Hechas</span>
+        </button>
+        <button type="button" class="m-bottom-btn" data-bottom-action="settings">
+            <span class="m-bottom-btn__icon" data-icon-slot="settings"></span>
+            <span class="m-bottom-btn__label">Ajustes</span>
+        </button>
+    </nav>
+
     <!-- Modal "Nueva tarea" — abierto por el FAB en mobile. -->
     <div class="newtask-modal modal-backdrop" id="newTaskModal" hidden>
         <div class="newtask-modal__dialog modal" role="dialog" aria-modal="true" aria-labelledby="newTaskModalTitle">

@@ -73,6 +73,7 @@ const DOM = {
     mToolbarCount: document.getElementById('mToolbarCount'),
     mCollapseAll: document.getElementById('mCollapseAll'),
     mExpandAll: document.getElementById('mExpandAll'),
+    mBottomNav: document.getElementById('mBottomNav'),
 };
 
 function loadPageSize() {
@@ -184,6 +185,7 @@ class TaskManager {
         this._setupFooterHeightTracker();
         this._setupMobileDrawer();
         this._setupMobileFab();
+        this._setupMobileBottomNav();
         this.setupEventListeners();
         this.renderTasks();
         this._startElapsedTicker();
@@ -238,6 +240,51 @@ class TaskManager {
         if (DOM.mExpandAll && !DOM.mExpandAll.firstChild) {
             DOM.mExpandAll.appendChild(createIcon('chevron-down', { size: 16 }));
         }
+        // Bottom nav mobile (Fase F10): iconos en cada slot.
+        if (DOM.mBottomNav) {
+            const iconMap = { today: 'flag', week: 'calendar', done: 'check-circle', settings: 'settings' };
+            DOM.mBottomNav.querySelectorAll('[data-icon-slot]').forEach(slot => {
+                if (slot.firstChild) return;
+                const name = iconMap[slot.dataset.iconSlot];
+                if (name) slot.appendChild(createIcon(name, { size: 20 }));
+            });
+        }
+    }
+
+    /**
+     * Bottom nav mobile (Fase F10): 4 tabs.
+     * - today/week/done: setean filterMode + sincroniza pills.
+     * - settings: abre el drawer existente.
+     * Marca .is-active el tab según filterMode actual.
+     */
+    _setupMobileBottomNav() {
+        if (!DOM.mBottomNav) return;
+        const updateActive = () => {
+            DOM.mBottomNav.querySelectorAll('.m-bottom-btn').forEach(b => {
+                const action = b.dataset.bottomAction;
+                const active = action === 'settings' ? false
+                    : action === this.filterMode;
+                b.classList.toggle('is-active', active);
+            });
+        };
+        DOM.mBottomNav.addEventListener('click', (e) => {
+            const btn = e.target.closest('.m-bottom-btn');
+            if (!btn) return;
+            const action = btn.dataset.bottomAction;
+            if (action === 'settings') {
+                if (DOM.appHamburger) DOM.appHamburger.click();
+                return;
+            }
+            this._setFilterTab(action);
+            updateActive();
+        });
+        // Llama updateActive cada vez que cambia el filter (via _setFilterTab).
+        const origSetFilterTab = this._setFilterTab.bind(this);
+        this._setFilterTab = (value) => {
+            origSetFilterTab(value);
+            updateActive();
+        };
+        updateActive();
     }
 
     /**
@@ -472,7 +519,7 @@ class TaskManager {
     }
 
     _setFilterTab(value) {
-        if (!['all', 'done', 'pending', 'today', 'priority'].includes(value)) return;
+        if (!['all', 'done', 'pending', 'today', 'week', 'priority'].includes(value)) return;
         if (this.filterMode === value) return;
         this.filterMode = value;
         this.currentPage = 1;
@@ -560,6 +607,40 @@ class TaskManager {
     handleEditItem(e) {
         const element = e.currentTarget.closest('.grocery-item');
         this._enterEditMode(element);
+    }
+
+    /**
+     * Edita la dueDate de una tarea top-level vía un <input type='date'>
+     * dinámico que dispara el picker nativo del browser. Al change,
+     * setDueDate; vacío = limpiar.
+     */
+    _editDueDate(taskId) {
+        const task = this.store.tasks.find(t => t.id === taskId);
+        if (!task || task.parentId !== null) return;
+        const input = document.createElement('input');
+        input.type = 'date';
+        input.value = task.dueDate || '';
+        input.style.position = 'fixed';
+        input.style.left = '-9999px';
+        document.body.appendChild(input);
+        const cleanup = () => input.remove();
+        input.addEventListener('change', () => {
+            this.store.setDueDate(taskId, input.value || null);
+            this.renderTasks();
+            this.displayAlert(input.value
+                ? `Fecha asignada: ${input.value}`
+                : 'Fecha removida', 'success');
+            cleanup();
+        });
+        input.addEventListener('blur', cleanup);
+        // showPicker es la API moderna; fallback a focus + click para
+        // browsers viejos (la mayoria abren picker con click).
+        if (typeof input.showPicker === 'function') {
+            try { input.showPicker(); } catch { input.focus(); input.click(); }
+        } else {
+            input.focus();
+            input.click();
+        }
     }
 
     /**
@@ -1329,6 +1410,14 @@ class TaskManager {
             const today = todayISO();
             parents = parents.filter(t => t.dueDate === today);
         }
+        else if (this.filterMode === 'week') {
+            // Próximos 7 días (incluye hoy). Solo tareas con dueDate.
+            const today = todayISO();
+            const t = new Date();
+            t.setDate(t.getDate() + 7);
+            const end = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+            parents = parents.filter(p => p.dueDate && p.dueDate >= today && p.dueDate <= end);
+        }
         else if (this.filterMode === 'priority') parents = parents.filter(t => !!t.priority);
         // Búsqueda: substring case-insensitive en el value del padre o
         // de cualquiera de sus subs. Match en sub también muestra al
@@ -1346,19 +1435,21 @@ class TaskManager {
     _renderList(items) {
         DOM.list.innerHTML = '';
         if (items.length > 0) {
-            // Group titles por estado (Fase 9E): solo cuando filter='all'.
-            // Insertamos un .group-title antes de cada cambio de done state
-            // entre PADRES (subs no disparan cambio de grupo). En desktop
-            // están ocultos por CSS.
-            let lastParentDone = null;
-            const showGroups = this.filterMode === 'all';
+            // Group titles temporales (Fase F8): cuando filter='all' o
+            // 'pending', subdivide pendientes por urgencia según dueDate.
+            // Hechas queda en su propio grupo al final.
+            let lastGroup = null;
+            const showGroups = ['all', 'pending'].includes(this.filterMode);
             items.forEach(item => {
-                if (showGroups && item.parentId === null && item.done !== lastParentDone) {
-                    const title = document.createElement('div');
-                    title.className = 'group-title';
-                    title.textContent = item.done ? 'Hechas' : 'Pendientes';
-                    DOM.list.appendChild(title);
-                    lastParentDone = item.done;
+                if (showGroups && item.parentId === null) {
+                    const group = this._groupOf(item);
+                    if (group !== lastGroup) {
+                        const title = document.createElement('div');
+                        title.className = 'group-title';
+                        title.textContent = group;
+                        DOM.list.appendChild(title);
+                        lastGroup = group;
+                    }
                 }
                 this.createListItem(item);
             });
@@ -1366,6 +1457,24 @@ class TaskManager {
         } else {
             DOM.container.classList.remove("show-container");
         }
+    }
+
+    /**
+     * Devuelve el nombre del grupo temporal al que pertenece una tarea
+     * top-level, según su done y dueDate vs hoy.
+     */
+    _groupOf(task) {
+        if (task.done) return 'Hechas';
+        if (!task.dueDate) return 'Sin fecha';
+        const today = todayISO();
+        if (task.dueDate < today) return 'Vencidas';
+        if (task.dueDate === today) return 'Hoy';
+        // Próxima semana = los próximos 6 días.
+        const t = new Date();
+        t.setDate(t.getDate() + 7);
+        const weekEnd = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+        if (task.dueDate <= weekEnd) return 'Esta semana';
+        return 'Próximamente';
     }
 
     _renderPagination(totalPages) {
@@ -1522,10 +1631,30 @@ class TaskManager {
         daysSpan.className = 'task-days-old task__elapsed';
         daysSpan.textContent = elapsedText;
 
+        // Badge de due-date — solo padres con dueDate asignada.
+        if (!isSubtask && task.dueDate) {
+            const today = todayISO();
+            if (task.dueDate === today) element.classList.add('is-due-today');
+            else if (task.dueDate < today) element.classList.add('is-overdue');
+            const due = document.createElement('span');
+            due.className = 'task__due-badge';
+            due.textContent = task.dueDate;
+            daysSpan.appendChild(document.createTextNode(' · '));
+            daysSpan.appendChild(due);
+        }
+        // Star inline al lado del título si task.priority.
+        if (!isSubtask && task.priority) {
+            element.classList.add('is-priority');
+            const starInline = createIcon('star', { size: 12, className: 'task__priority-mark' });
+            title.appendChild(document.createTextNode(' '));
+            title.appendChild(starInline);
+        }
+
         titleBlock.append(title, daysSpan);
 
         // Botón star (priority): solo padres. Toggle el flag.
         let priorityBtn = null;
+        let dueBtn = null;
         if (!isSubtask) {
             priorityBtn = document.createElement('button');
             priorityBtn.type = 'button';
@@ -1538,6 +1667,16 @@ class TaskManager {
                 this.store.togglePriority(id);
                 this.renderTasks();
             });
+            // Botón calendar (due-date): solo padres. Click abre input date
+            // dinámico que hace setDueDate/clear. Si ya tiene fecha, badge
+            // visible cerca del título y sub.
+            dueBtn = document.createElement('button');
+            dueBtn.type = 'button';
+            dueBtn.className = 'due-btn btn-icon btn-icon--sm';
+            if (task.dueDate) dueBtn.classList.add('is-due');
+            dueBtn.setAttribute('aria-label', task.dueDate ? `Fecha: ${task.dueDate}` : 'Asignar fecha');
+            dueBtn.appendChild(createIcon('calendar'));
+            dueBtn.addEventListener('click', () => this._editDueDate(id));
         }
 
         const editBtn = document.createElement('button');
@@ -1555,7 +1694,9 @@ class TaskManager {
         const actionGroup = document.createElement('div');
         actionGroup.className = 'action-group task__actions';
         const touchControls = this._buildTouchMoveControls(task, isSubtask);
-        const extras = priorityBtn ? [priorityBtn] : [];
+        const extras = [];
+        if (dueBtn) extras.push(dueBtn);
+        if (priorityBtn) extras.push(priorityBtn);
         actionGroup.append(...touchControls, ...extras, editBtn, deleteBtn);
 
         const meta = document.createElement('div');
