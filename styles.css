@@ -429,16 +429,14 @@ Paginación
 .grocery-item .title {
   flex: 1;
   min-width: 0;
-  /* line-height tight aproxima el bbox al alto real del glyph; con
-     align-items:center del flex padre, el texto queda visualmente
-     centrado con el toggle-check en lugar de quedar 1-2px arriba por
-     el espacio descendente del line-height 1.5 default. */
-  line-height: var(--lh-tight);
-  /* align-self: center refuerza el centrado en flex-wrap (mobile)
-     donde el title está en su propia row pero la sub-row con toggle
-     puede cambiar de altura. */
+  /* line-height: 1 = bbox = alto real del glyph. Sin esto, el line-height
+     default (1.5) crea espacio descendente que desfasa el texto 2-3px
+     respecto al centro del toggle-check de 22px. */
+  line-height: 1;
   align-self: center;
 }
+/* SVG del check en display:block para evitar offset por baseline inline. */
+.toggle-check svg { display: block; }
 /* Subtareas: indentación pura, sin línea conectora.
    max-height + transition para animar collapse/expand. */
 .grocery-item.is-subtask {
@@ -798,10 +796,19 @@ solo se ajustan paddings y gaps que en mobile sienten apretados.
     margin-bottom: var(--sp-2);
     gap: var(--sp-2);
   }
-  /* Sub-card: misma estética + indentación + guía vertical. */
+  /* Sub-card: misma estética + indentación + guía vertical.
+     Subimos el max-height del .is-subtask (default 8rem para la
+     animación de collapse) porque en mobile la sub se vuelve card
+     con 3 filas (título / toggle / acciones con border-top) y 8rem
+     no alcanza — los botones edit/delete quedaban recortados por el
+     overflow:hidden del collapse. */
   .grocery-item.is-subtask {
     margin-left: var(--sp-5);
     position: relative;
+    max-height: 16rem;
+  }
+  .grocery-item.is-subtask.is-collapsed {
+    max-height: 0;
   }
   .grocery-item.is-subtask::before {
     content: "";
