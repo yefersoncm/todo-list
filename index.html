@@ -156,6 +156,24 @@
     <!-- Backdrop del drawer mobile. -->
     <div class="app-drawer-backdrop" id="appDrawerBackdrop" hidden></div>
 
+    <!-- FAB (Floating Action Button): solo en mobile. Abre el modal de
+         nueva tarea para reemplazar al form principal. -->
+    <button type="button" class="app-fab" id="appFab" aria-label="Nueva tarea"></button>
+
+    <!-- Modal "Nueva tarea" — abierto por el FAB en mobile. -->
+    <div class="newtask-modal modal-backdrop" id="newTaskModal" hidden>
+        <div class="newtask-modal__dialog modal" role="dialog" aria-modal="true" aria-labelledby="newTaskModalTitle">
+            <h3 class="modal__title" id="newTaskModalTitle">Nueva tarea</h3>
+            <form id="newTaskForm" class="newtask-modal__form">
+                <input type="text" id="newTaskInput" class="field" placeholder="¿Qué hay que hacer?" aria-label="Texto de la nueva tarea" autocomplete="off">
+                <div class="modal__actions">
+                    <button type="button" class="btn btn--secondary" data-action="cancel">Cancelar</button>
+                    <button type="submit" class="btn btn--primary">Agregar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div class="app-toast-container" id="toastContainer" aria-live="polite" aria-atomic="false"></div>
 
     <div class="confirm-modal modal-backdrop" id="confirmModal" hidden>

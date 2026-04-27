@@ -64,6 +64,10 @@ const DOM = {
     appHamburger: document.getElementById('appHamburger'),
     appDrawerBackdrop: document.getElementById('appDrawerBackdrop'),
     taskCountRow: document.querySelector('.task-count-row'),
+    appFab: document.getElementById('appFab'),
+    newTaskModal: document.getElementById('newTaskModal'),
+    newTaskForm: document.getElementById('newTaskForm'),
+    newTaskInput: document.getElementById('newTaskInput'),
 };
 
 function loadPageSize() {
@@ -165,6 +169,7 @@ class TaskManager {
         this._setupChromeToggles();
         this._setupFooterHeightTracker();
         this._setupMobileDrawer();
+        this._setupMobileFab();
         this.setupEventListeners();
         this.renderTasks();
         this._startElapsedTicker();
@@ -212,6 +217,49 @@ class TaskManager {
         if (DOM.appHamburger && !DOM.appHamburger.firstChild) {
             DOM.appHamburger.appendChild(createIcon('menu', { size: 22 }));
         }
+    }
+
+    /**
+     * FAB mobile (Fase 9F): boton flotante "+ tarea" abajo-derecha
+     * que abre un modal con input para crear tarea. Reemplaza al form
+     * principal arriba (oculto en mobile via CSS). En desktop el FAB
+     * permanece oculto por CSS.
+     */
+    _setupMobileFab() {
+        if (!DOM.appFab || !DOM.newTaskModal || !DOM.newTaskForm || !DOM.newTaskInput) return;
+        DOM.appFab.appendChild(createIcon('plus', { size: 24 }));
+
+        const open = () => {
+            DOM.newTaskModal.hidden = false;
+            DOM.newTaskInput.value = '';
+            requestAnimationFrame(() => DOM.newTaskInput.focus());
+        };
+        const close = () => {
+            DOM.newTaskModal.hidden = true;
+        };
+
+        DOM.appFab.addEventListener('click', open);
+        DOM.newTaskForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const value = DOM.newTaskInput.value;
+            if (value.trim() === '') {
+                this.displayAlert('Por favor ingrese un valor', 'danger');
+                return;
+            }
+            this.store.add(value);
+            this.displayAlert('Item agregado a la lista', 'success');
+            this.currentPage = 1;
+            this.renderTasks();
+            close();
+        });
+        DOM.newTaskModal.addEventListener('click', (e) => {
+            if (e.target === DOM.newTaskModal) close();
+            const action = e.target.closest('[data-action]')?.dataset.action;
+            if (action === 'cancel') close();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !DOM.newTaskModal.hidden) close();
+        });
     }
 
     /**
