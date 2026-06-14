@@ -577,3 +577,83 @@ describe('TaskStore — togglePriority', () => {
         assert.equal(store.togglePriority('nope'), false);
     });
 });
+
+describe('TaskStore — tags', () => {
+    test('add con tags normaliza (trim, dedup case-insensitive, sin vacíos)', () => {
+        const store = newStore();
+        const t = store.add('x', { tags: [' Producto ', 'producto', '', 'Diseño'], idFactory: () => '1' });
+        assert.deepEqual(t.tags, ['Producto', 'Diseño']);
+    });
+
+    test('add sin tags (o vacíos) no agrega el campo', () => {
+        const store = newStore();
+        const a = store.add('a', () => '1');
+        assert.equal('tags' in a, false);
+        const b = store.add('b', { tags: ['  ', ''], idFactory: () => '2' });
+        assert.equal('tags' in b, false);
+    });
+
+    test('addTag agrega y actualiza updatedAt', () => {
+        const store = newStore();
+        store.add('x', () => '1');
+        const ok = store.addTag('1', 'Personal', 50);
+        assert.equal(ok, true);
+        assert.deepEqual(store.tasks[0].tags, ['Personal']);
+        assert.equal(store.tasks[0].updatedAt, 50);
+    });
+
+    test('addTag dedup case-insensitive y trim', () => {
+        const store = newStore();
+        store.add('x', { tags: ['Producto'], idFactory: () => '1' });
+        assert.equal(store.addTag('1', ' producto '), false);
+        assert.deepEqual(store.tasks[0].tags, ['Producto']);
+    });
+
+    test('addTag rechaza vacío, subtarea e id inexistente', () => {
+        const store = newStore();
+        store.add('p', () => 'P');
+        store.addSubtask('P', 's', () => 'S');
+        assert.equal(store.addTag('P', '   '), false);
+        assert.equal(store.addTag('S', 'x'), false);
+        assert.equal(store.addTag('nope', 'x'), false);
+    });
+
+    test('removeTag quita y borra el campo si queda vacío', () => {
+        const store = newStore();
+        store.add('x', { tags: ['A', 'B'], idFactory: () => '1' });
+        assert.equal(store.removeTag('1', 'a', 60), true); // case-insensitive
+        assert.deepEqual(store.tasks[0].tags, ['B']);
+        assert.equal(store.tasks[0].updatedAt, 60);
+        store.removeTag('1', 'B');
+        assert.equal('tags' in store.tasks[0], false);
+    });
+
+    test('removeTag devuelve false si la etiqueta no existe', () => {
+        const store = newStore();
+        store.add('x', { tags: ['A'], idFactory: () => '1' });
+        assert.equal(store.removeTag('1', 'Z'), false);
+    });
+
+    test('allTags cuenta padres distintos por etiqueta, ordenado', () => {
+        const store = newStore();
+        store.add('a', { tags: ['Personal', 'Producto'], idFactory: () => '1' });
+        store.add('b', { tags: ['Producto'], idFactory: () => '2' });
+        store.add('c', () => '3');
+        assert.deepEqual(store.allTags(), [
+            { tag: 'Personal', count: 1 },
+            { tag: 'Producto', count: 2 },
+        ]);
+    });
+
+    test('load() normaliza tags y las ignora en subtareas', () => {
+        const adapter = new MemoryStorageAdapter([
+            { id: 'P', value: 'p', done: false, parentId: null, tags: [' Producto ', 'producto', 5] },
+            { id: 'S', value: 's', done: false, parentId: 'P', tags: ['noDebe'] },
+        ]);
+        const store = new TaskStore(adapter);
+        const p = store.tasks.find(t => t.id === 'P');
+        const s = store.tasks.find(t => t.id === 'S');
+        assert.deepEqual(p.tags, ['Producto']);
+        assert.equal('tags' in s, false);
+    });
+});

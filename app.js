@@ -17,6 +17,7 @@ const DEFAULT_SORT = 'created-desc';
 const COLLAPSED_KEY = 'todo-list:collapsedParents';
 const THEME_KEY = 'todo-list:theme';
 const DENSITY_KEY = 'todo-list:density';
+const ACTIVE_TAG_KEY = 'todo-list:activeTag';
 
 function loadTheme() {
     const v = localStorage.getItem(THEME_KEY);
@@ -74,6 +75,7 @@ const DOM = {
     newTaskInput: document.getElementById('newTaskInput'),
     newTaskDate: document.getElementById('newTaskDate'),
     newTaskPriority: document.getElementById('newTaskPriority'),
+    newTaskTags: document.getElementById('newTaskTags'),
     mToolbarCount: document.getElementById('mToolbarCount'),
     mCollapseAll: document.getElementById('mCollapseAll'),
     mExpandAll: document.getElementById('mExpandAll'),
@@ -119,6 +121,32 @@ function loadCollapsed() {
 
 function saveCollapsed(set) {
     localStorage.setItem(COLLAPSED_KEY, JSON.stringify([...set]));
+}
+
+function loadActiveTag() {
+    const raw = localStorage.getItem(ACTIVE_TAG_KEY);
+    return raw || null;
+}
+
+function saveActiveTag(tag) {
+    if (tag) localStorage.setItem(ACTIVE_TAG_KEY, tag);
+    else localStorage.removeItem(ACTIVE_TAG_KEY);
+}
+
+/**
+ * Color determinista por etiqueta: hashea el nombre (lower) a un índice
+ * de una paleta de tokens semánticos, para que cada etiqueta tenga un dot
+ * de color estable entre renders y recargas.
+ */
+const TAG_PALETTE = [
+    'var(--blue-500)', 'var(--amber-500)', 'var(--green-500)',
+    'var(--red-500)', 'var(--blue-400)', 'var(--amber-600)', 'var(--green-600)',
+];
+function tagColor(tag) {
+    const s = String(tag).toLowerCase();
+    let h = 0;
+    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+    return TAG_PALETTE[h % TAG_PALETTE.length];
 }
 
 /** Hoy en formato YYYY-MM-DD (timezone local del browser). */
@@ -174,6 +202,8 @@ class TaskManager {
         this.pageSize = loadPageSize();
         this.currentPage = 1;
         this.collapsedParents = loadCollapsed();
+        this.activeTag = loadActiveTag();   // filtro por etiqueta (sidebar Etiquetas)
+        this._undo = null;                  // snapshot de un nivel para "Deshacer"
         // Set transitorio (no persistido) de IDs de padres con el form
         // "+ subtarea" expandido. Toggle desde el botón addsub-btn.
         this._showAddSubFor = new Set();
@@ -187,10 +217,28 @@ class TaskManager {
                 this._setFilterTab(tab.dataset.value);
             });
         });
+        // Sidebar Etiquetas: delegación en el contenedor estable (los items
+        // se re-renderizan en cada render via _renderSidebarTags).
+        const sidebarTags = document.getElementById('sidebarTags');
+        if (sidebarTags) {
+            sidebarTags.addEventListener('click', (e) => {
+                const item = e.target.closest('.tag-item[data-tag]');
+                if (!item) return;
+                this._setActiveTag(item.dataset.tag);
+            });
+        }
         this.sortByCombo = new Combobox(DOM.sortByRoot, {
             onChange: (value) => this.handleSortChange(value),
         });
         this.sortByCombo.setValue(this.sortBy);
+        // Segundo combo de orden en el page-head desktop (sincronizado).
+        const sortByTopRoot = document.getElementById('sortByTop');
+        if (sortByTopRoot) {
+            this.sortByTopCombo = new Combobox(sortByTopRoot, {
+                onChange: (value) => this.handleSortChange(value),
+            });
+            this.sortByTopCombo.setValue(this.sortBy);
+        }
         this.pageSizeCombo = new Combobox(DOM.pageSizeRoot, {
             onChange: (value) => this.handlePageSizeChange(parseInt(value)),
         });
@@ -198,12 +246,22 @@ class TaskManager {
         // Setups defensivos: un error en uno NO debe romper los siguientes.
         this._safeRun('mountStaticIcons', () => this._mountStaticIcons());
         this._safeRun('setupChromeToggles', () => this._setupChromeToggles());
+        this._safeRun('setupSidebar', () => this._setupSidebar());
         this._safeRun('setupFooterHeightTracker', () => this._setupFooterHeightTracker());
         this._safeRun('setupMobileDrawer', () => this._setupMobileDrawer());
         this._safeRun('setupMobileFab', () => this._setupMobileFab());
         this._safeRun('setupMobileBottomNav', () => this._setupMobileBottomNav());
         this._safeRun('setupDatePicker', () => this._setupDatePicker());
+        this._safeRun('setupTagsModal', () => this._setupTagsModal());
         this.setupEventListeners();
+        // Si arranca con una etiqueta activa persistida, los filter-tabs no
+        // deben mostrarse activos (la selección vive en la sección Etiquetas).
+        if (this.activeTag) {
+            document.querySelectorAll('[data-filter-tabs] .filter-tab').forEach(t => {
+                t.classList.remove('is-active');
+                t.setAttribute('aria-selected', 'false');
+            });
+        }
         this.renderTasks();
         this._startElapsedTicker();
     }
@@ -254,10 +312,33 @@ class TaskManager {
         if (clearIconSlot && !clearIconSlot.firstChild) {
             clearIconSlot.appendChild(createIcon('trash', { size: 14 }));
         }
+        // Iconos de Colapsar/Expandir todo (chevron-up/down, como desktop.html).
+        const collapseSlot = DOM.bulkCollapseAllBtn?.querySelector('.bulk-btn-icon');
+        if (collapseSlot && !collapseSlot.firstChild) {
+            collapseSlot.appendChild(createIcon('chevron-up', { size: 14 }));
+        }
+        const expandSlot = DOM.bulkExpandAllBtn?.querySelector('.bulk-btn-icon');
+        if (expandSlot && !expandSlot.firstChild) {
+            expandSlot.appendChild(createIcon('chevron-down', { size: 14 }));
+        }
         // Hamburger icon (menu) — solo se ve en mobile vía CSS.
         if (DOM.appHamburger && !DOM.appHamburger.firstChild) {
             DOM.appHamburger.appendChild(createIcon('menu', { size: 22 }));
         }
+        // Iconos del sidebar desktop (Fase Web): un icono por nav-item según
+        // su data-value (vista/estado). Solo visibles en ≥1024px vía CSS.
+        const navIconMap = {
+            all: 'list', today: 'flag', week: 'calendar', priority: 'star',
+            pending: 'circle', done: 'circle-check',
+        };
+        document.querySelectorAll('.app-sidebar .nav-item[data-value]').forEach(item => {
+            const slot = item.querySelector('.nav-item__icon');
+            if (!slot || slot.firstChild) return;
+            const name = navIconMap[item.dataset.value];
+            if (!name) return;
+            try { slot.appendChild(createIcon(name, { size: 16 })); }
+            catch (err) { console.error(`[sidebar nav icon ${name}]`, err); }
+        });
         // Mini-toolbar mobile (Fase F3): iconos collapse-all/expand-all.
         if (DOM.mCollapseAll && !DOM.mCollapseAll.firstChild) {
             DOM.mCollapseAll.appendChild(createIcon('chevron-up', { size: 16 }));
@@ -451,6 +532,7 @@ class TaskManager {
             // si quiere via el botón del picker.
             if (DOM.newTaskDate) DOM.newTaskDate.value = '';
             if (DOM.newTaskPriority) DOM.newTaskPriority.checked = false;
+            if (DOM.newTaskTags) DOM.newTaskTags.value = '';
             refreshDateBtn();
             requestAnimationFrame(() => DOM.newTaskInput.focus());
         };
@@ -478,9 +560,13 @@ class TaskManager {
                 return;
             }
             // Sin fecha explícita = sin fecha (no asume today).
+            const tags = (DOM.newTaskTags?.value || '')
+                .split(',').map(s => s.trim()).filter(Boolean);
+            this._pushUndo('Agregar tarea');
             this.store.add(value, {
                 dueDate: DOM.newTaskDate?.value || undefined,
                 priority: !!DOM.newTaskPriority?.checked,
+                tags: tags.length ? tags : undefined,
             });
             this.displayAlert('Item agregado a la lista', 'success');
             this.currentPage = 1;
@@ -557,7 +643,12 @@ class TaskManager {
      * sobre <html> para que los tokens.css los lean.
      */
     _setupChromeToggles() {
-        if (!DOM.themeSeg || !DOM.densitySeg) return;
+        // Puede haber MÚLTIPLES sets de toggles en el DOM: el del header
+        // mobile (.app-chrome) y el del sidebar desktop. Se identifican por
+        // [data-theme-seg] / [data-density-seg] y se mantienen sincronizados.
+        const themeSegs = document.querySelectorAll('[data-theme-seg]');
+        const densitySegs = document.querySelectorAll('[data-density-seg]');
+        if (!themeSegs.length && !densitySegs.length) return;
 
         // Estado inicial.
         const theme = loadTheme();
@@ -565,42 +656,63 @@ class TaskManager {
         applyTheme(theme);
         applyDensity(density);
 
-        // Iconos en los botones del seg de tema.
-        const sunBtn = DOM.themeSeg.querySelector('[data-theme="light"]');
-        const moonBtn = DOM.themeSeg.querySelector('[data-theme="dark"]');
-        sunBtn?.appendChild(createIcon('sun', { size: 14 }));
-        moonBtn?.appendChild(createIcon('moon', { size: 14 }));
+        const syncTheme = (value) => themeSegs.forEach(seg =>
+            seg.querySelectorAll('.seg__btn').forEach(b =>
+                b.classList.toggle('is-active', b.dataset.theme === value)));
+        const syncDensity = (value) => densitySegs.forEach(seg =>
+            seg.querySelectorAll('.seg__btn').forEach(b =>
+                b.classList.toggle('is-active', b.dataset.density === value)));
 
-        // Iconos en los botones del seg de densidad.
-        const rowsBtn = DOM.densitySeg.querySelector('[data-density="comfy"]');
-        const tightBtn = DOM.densitySeg.querySelector('[data-density="compact"]');
-        rowsBtn?.appendChild(createIcon('rows', { size: 14 }));
-        tightBtn?.appendChild(createIcon('align-justify', { size: 14 }));
-
-        const setActive = (seg, attr, value) => {
-            seg.querySelectorAll('.seg__btn').forEach(b => {
-                b.classList.toggle('is-active', b.dataset[attr] === value);
+        themeSegs.forEach(seg => {
+            seg.querySelector('[data-theme="light"]')?.appendChild(createIcon('sun', { size: 14 }));
+            seg.querySelector('[data-theme="dark"]')?.appendChild(createIcon('moon', { size: 14 }));
+            seg.addEventListener('click', (e) => {
+                const btn = e.target.closest('.seg__btn');
+                if (!btn) return;
+                const v = btn.dataset.theme;
+                if (v !== 'light' && v !== 'dark') return;
+                applyTheme(v);
+                syncTheme(v);
             });
-        };
-        setActive(DOM.themeSeg, 'theme', theme);
-        setActive(DOM.densitySeg, 'density', density);
+        });
+        densitySegs.forEach(seg => {
+            seg.querySelector('[data-density="comfy"]')?.appendChild(createIcon('rows', { size: 14 }));
+            seg.querySelector('[data-density="compact"]')?.appendChild(createIcon('align-justify', { size: 14 }));
+            seg.addEventListener('click', (e) => {
+                const btn = e.target.closest('.seg__btn');
+                if (!btn) return;
+                const v = btn.dataset.density;
+                if (v !== 'comfy' && v !== 'compact') return;
+                applyDensity(v);
+                syncDensity(v);
+            });
+        });
 
-        DOM.themeSeg.addEventListener('click', (e) => {
-            const btn = e.target.closest('.seg__btn');
-            if (!btn) return;
-            const v = btn.dataset.theme;
-            if (v !== 'light' && v !== 'dark') return;
-            applyTheme(v);
-            setActive(DOM.themeSeg, 'theme', v);
+        syncTheme(theme);
+        syncDensity(density);
+    }
+
+    /**
+     * App-shell desktop (Fase Web): botón del topbar que colapsa/expande el
+     * sidebar seteando data-sidebar en #appShell (el CSS hace el resto).
+     */
+    _setupSidebar() {
+        const shell = document.getElementById('appShell');
+        const toggle = document.getElementById('sidebarToggle');
+        if (!shell || !toggle) return;
+        if (!toggle.firstChild) toggle.appendChild(createIcon('panel-left', { size: 18 }));
+        toggle.addEventListener('click', () => {
+            shell.dataset.sidebar = shell.dataset.sidebar === 'hidden' ? 'open' : 'hidden';
         });
-        DOM.densitySeg.addEventListener('click', (e) => {
-            const btn = e.target.closest('.seg__btn');
-            if (!btn) return;
-            const v = btn.dataset.density;
-            if (v !== 'comfy' && v !== 'compact') return;
-            applyDensity(v);
-            setActive(DOM.densitySeg, 'density', v);
-        });
+
+        // Botón "Deshacer" del page-head (undo de un nivel).
+        const undoBtn = document.getElementById('undoBtn');
+        if (undoBtn) {
+            const slot = undoBtn.querySelector('.undo-icon');
+            if (slot && !slot.firstChild) slot.appendChild(createIcon('corner-up-left', { size: 16 }));
+            undoBtn.addEventListener('click', () => this.handleUndo());
+            this._updateUndoButton();
+        }
     }
 
     setupEventListeners() {
@@ -644,11 +756,14 @@ class TaskManager {
             this.displayAlert("Por favor ingrese un valor", "danger");
             return;
         }
+        this._pushUndo('Agregar tarea');
         this.store.add(value);
         this.displayAlert("Item agregado a la lista", "success");
         this.currentPage = 1;
         this.renderTasks();
         DOM.groceryInput.value = "";
+        // Focus de vuelta al input para encadenar tareas sin re-clic.
+        DOM.groceryInput.focus();
     }
 
     async handleClearItems() {
@@ -662,6 +777,7 @@ class TaskManager {
         // presiona 'Deshacer' en el toast (5s de ventana).
         const tasksSnapshot = this.store.snapshot();
         const collapsedSnapshot = new Set(this.collapsedParents);
+        this._pushUndo('Limpiar lista');
         this.store.clear();
         this.currentPage = 1;
         this.renderTasks();
@@ -682,17 +798,74 @@ class TaskManager {
 
     _setFilterTab(value) {
         if (!['all', 'done', 'pending', 'today', 'week', 'priority'].includes(value)) return;
-        if (this.filterMode === value) return;
+        // Elegir una Vista/Estado limpia el filtro por etiqueta (selección
+        // mutuamente excluyente en el sidebar, como el mockup).
+        const hadTag = this.activeTag !== null;
+        if (hadTag) {
+            this.activeTag = null;
+            saveActiveTag(null);
+        }
+        if (this.filterMode === value && !hadTag) return;
         this.filterMode = value;
         this.currentPage = 1;
         // Actualiza aria-selected y .is-active en TODOS los sets de tabs
-        // (footer desktop + header mobile via data-filter-tabs).
+        // (footer desktop + header mobile + sidebar via data-filter-tabs).
         document.querySelectorAll('[data-filter-tabs] .filter-tab').forEach(t => {
             const active = t.dataset.value === value;
             t.classList.toggle('is-active', active);
             t.setAttribute('aria-selected', active ? 'true' : 'false');
         });
         this.renderTasks();
+    }
+
+    /**
+     * Filtro por etiqueta (sidebar Etiquetas). Excluyente con las Vistas:
+     * fuerza filterMode='all' y des-resalta los filter-tabs. Click en la
+     * etiqueta ya activa la des-selecciona (vuelve a 'all').
+     */
+    _setActiveTag(tag) {
+        const next = this.activeTag === tag ? null : tag;
+        this.activeTag = next;
+        saveActiveTag(next);
+        // Al activar una etiqueta, la vista base es "Todas".
+        this.filterMode = 'all';
+        this.currentPage = 1;
+        document.querySelectorAll('[data-filter-tabs] .filter-tab').forEach(t => {
+            const active = !next && t.dataset.value === 'all';
+            t.classList.toggle('is-active', active);
+            t.setAttribute('aria-selected', active ? 'true' : 'false');
+        });
+        this.renderTasks();
+    }
+
+    /**
+     * Deshacer de un nivel: captura un snapshot (tasks + colapsados) ANTES
+     * de una mutación. Llamar al inicio de cada handler que cambia datos.
+     */
+    _pushUndo(label) {
+        this._undo = {
+            tasks: this.store.snapshot(),
+            collapsed: new Set(this.collapsedParents),
+            label: label || 'acción',
+        };
+        this._updateUndoButton();
+    }
+
+    handleUndo() {
+        if (!this._undo) return;
+        const snap = this._undo;
+        this.store.restore(snap.tasks);
+        this.collapsedParents = snap.collapsed;
+        saveCollapsed(this.collapsedParents);
+        this._undo = null;
+        this.currentPage = 1;
+        this.renderTasks();
+        this.displayAlert('Acción deshecha', 'success');
+    }
+
+    _updateUndoButton() {
+        const btn = document.getElementById('undoBtn');
+        if (btn) btn.disabled = !this._undo;
     }
 
     handlePageSizeChange(size) {
@@ -713,6 +886,9 @@ class TaskManager {
         if (!SORT_MODES.includes(mode)) return;
         this.sortBy = mode;
         saveSortBy(mode);
+        // Mantener ambos combos en sync (setValue no dispara onChange).
+        this.sortByCombo?.setValue(mode);
+        this.sortByTopCombo?.setValue(mode);
         this.currentPage = 1;
         this.renderTasks();
     }
@@ -729,6 +905,7 @@ class TaskManager {
         const id = element.dataset.id;
         const isDone = element.dataset.done !== "true";
 
+        this._pushUndo('Marcar tarea');
         this.store.toggle(id, isDone);
         this.currentPage = 1;
         this.renderTasks();
@@ -746,6 +923,7 @@ class TaskManager {
             : '¿Estás seguro de que quieres eliminar esta tarea?';
         const ok = await confirmDialog(message);
         if (!ok) return;
+        this._pushUndo('Eliminar tarea');
         // Limpieza del Set de colapsados:
         if (isParent && this.collapsedParents.has(id)) {
             this.collapsedParents.delete(id);
@@ -780,6 +958,7 @@ class TaskManager {
         const task = this.store.tasks.find(t => t.id === taskId);
         if (!task || task.parentId !== null) return;
         this._openDatePicker(task.dueDate || '', (newValue) => {
+            this._pushUndo('Cambiar fecha');
             this.store.setDueDate(taskId, newValue || null);
             this.renderTasks();
             this.displayAlert(newValue
@@ -826,6 +1005,7 @@ class TaskManager {
             taskEl.draggable = wasDraggable;
             const newValue = input.value.trim();
             if (save && newValue && newValue !== oldText) {
+                this._pushUndo('Editar tarea');
                 this.store.update(id, newValue);
                 this.displayAlert('Tarea actualizada', 'success');
             }
@@ -1079,6 +1259,7 @@ class TaskManager {
 
         if (!action || action.type === 'invalid') return;
 
+        this._pushUndo('Reordenar');
         let ok = false;
         let msg = '';
         if (action.type === 'reorder') {
@@ -1095,6 +1276,11 @@ class TaskManager {
             this.currentPage = 1;
             this.renderTasks();
             this.displayAlert(msg, 'success');
+        } else {
+            // Movimiento rechazado: descartar el snapshot para no habilitar
+            // un "Deshacer" que no cambiaría nada.
+            this._undo = null;
+            this._updateUndoButton();
         }
     }
 
@@ -1339,6 +1525,7 @@ class TaskManager {
         if (idx < 0) return;
         const newIdx = e.key === 'ArrowUp' ? idx - 1 : idx + 1;
         if (newIdx < 0 || newIdx >= parents.length) return;
+        this._pushUndo('Reordenar');
         this.store.move(idx, newIdx);
         this.renderTasks();
         const moved = DOM.list.querySelector(`.grocery-item[data-id="${id}"]`);
@@ -1530,7 +1717,167 @@ class TaskManager {
         this.updateTaskCount(filteredParents.length);
         this._updateBulkCollapseVisibility();
         this._updateSearchVisibility();
+        this._renderSidebarTags();
+        this._updateUndoButton();
         this._updateElapsed();
+    }
+
+    /**
+     * Pinta la sección Etiquetas del sidebar desde store.allTags(): un item
+     * por etiqueta con dot de color + contador. Marca la etiqueta activa.
+     */
+    _renderSidebarTags() {
+        const root = document.getElementById('sidebarTags');
+        if (!root) return;
+        const tags = this.store.allTags();
+        root.innerHTML = '';
+        if (tags.length === 0) {
+            const empty = document.createElement('div');
+            empty.className = 'nav-group__empty';
+            empty.textContent = 'Sin etiquetas';
+            root.appendChild(empty);
+            return;
+        }
+        const activeKey = this.activeTag ? this.activeTag.toLowerCase() : null;
+        for (const { tag, count } of tags) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'nav-item tag-item';
+            btn.dataset.tag = tag;
+            btn.setAttribute('role', 'listitem');
+            if (activeKey && tag.toLowerCase() === activeKey) btn.classList.add('is-active');
+            const dot = document.createElement('span');
+            dot.className = 'tag-dot';
+            dot.style.background = tagColor(tag);
+            const label = document.createElement('span');
+            label.className = 'nav-item__label';
+            label.textContent = tag;
+            const cnt = document.createElement('span');
+            cnt.className = 'nav-item__count';
+            cnt.textContent = String(count);
+            btn.append(dot, label, cnt);
+            root.appendChild(btn);
+        }
+    }
+
+    /**
+     * Modal "Editar etiquetas": wiring una sola vez. Agregar (form +
+     * sugerencias) y quitar (× en cada chip). Cierra con Listo/backdrop/Esc.
+     */
+    _setupTagsModal() {
+        const modal = document.getElementById('tagsModal');
+        const form = document.getElementById('tagsModalForm');
+        const input = document.getElementById('tagsModalInput');
+        if (!modal || !form || !input) return;
+        this._tagsModalEls = {
+            modal, form, input,
+            task: document.getElementById('tagsModalTask'),
+            current: document.getElementById('tagsModalCurrent'),
+            suggest: document.getElementById('tagsModalSuggest'),
+        };
+        this._tagsModalTaskId = null;
+
+        const close = () => { modal.hidden = true; this._tagsModalTaskId = null; };
+
+        const applyAdd = (tag) => {
+            if (!tag || !this._tagsModalTaskId) return;
+            this._pushUndo('Etiquetas');
+            const changed = this.store.addTag(this._tagsModalTaskId, tag);
+            if (!changed) { this._undo = null; this._updateUndoButton(); }
+            this.renderTasks();
+            this._renderTagsModal();
+            input.focus();
+        };
+
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const v = input.value.trim();
+            input.value = '';
+            applyAdd(v);
+        });
+        this._tagsModalEls.current.addEventListener('click', (e) => {
+            const chip = e.target.closest('[data-remove-tag]');
+            if (!chip || !this._tagsModalTaskId) return;
+            this._pushUndo('Etiquetas');
+            this.store.removeTag(this._tagsModalTaskId, chip.dataset.removeTag);
+            this.renderTasks();
+            this._renderTagsModal();
+        });
+        this._tagsModalEls.suggest.addEventListener('click', (e) => {
+            const s = e.target.closest('[data-add-tag]');
+            if (!s) return;
+            applyAdd(s.dataset.addTag);
+        });
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal || e.target.closest('[data-action="close"]')) close();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !modal.hidden) close();
+        });
+    }
+
+    /** Abre el modal de etiquetas para una tarea top-level. */
+    _editTags(taskId) {
+        if (!this._tagsModalEls) return;
+        const task = this.store.tasks.find(t => t.id === taskId);
+        if (!task || task.parentId !== null) return;
+        this._tagsModalTaskId = taskId;
+        if (this._tagsModalEls.task) this._tagsModalEls.task.textContent = task.value;
+        this._tagsModalEls.input.value = '';
+        this._renderTagsModal();
+        this._tagsModalEls.modal.hidden = false;
+        requestAnimationFrame(() => this._tagsModalEls.input.focus());
+    }
+
+    /** Pinta chips actuales (removibles) y sugerencias del modal de etiquetas. */
+    _renderTagsModal() {
+        if (!this._tagsModalEls || !this._tagsModalTaskId) return;
+        const { current, suggest } = this._tagsModalEls;
+        const task = this.store.tasks.find(t => t.id === this._tagsModalTaskId);
+        const tags = (task && Array.isArray(task.tags)) ? task.tags : [];
+
+        current.innerHTML = '';
+        if (tags.length === 0) {
+            const empty = document.createElement('span');
+            empty.className = 'tags-modal__empty';
+            empty.textContent = 'Sin etiquetas todavía';
+            current.appendChild(empty);
+        } else {
+            for (const tg of tags) {
+                const chip = document.createElement('span');
+                chip.className = 'tags-modal__chip';
+                chip.style.setProperty('--tag-color', tagColor(tg));
+                const label = document.createElement('span');
+                label.textContent = tg;
+                const rm = document.createElement('button');
+                rm.type = 'button';
+                rm.className = 'tags-modal__chip-x';
+                rm.dataset.removeTag = tg;
+                rm.setAttribute('aria-label', `Quitar ${tg}`);
+                rm.appendChild(createIcon('x', { size: 12 }));
+                chip.append(label, rm);
+                current.appendChild(chip);
+            }
+        }
+
+        const have = new Set(tags.map(t => t.toLowerCase()));
+        const sugg = this.store.allTags().filter(({ tag }) => !have.has(tag.toLowerCase()));
+        suggest.innerHTML = '';
+        if (sugg.length) {
+            const lbl = document.createElement('span');
+            lbl.className = 'tags-modal__suggest-label';
+            lbl.textContent = 'Sugerencias:';
+            suggest.appendChild(lbl);
+            for (const { tag } of sugg) {
+                const b = document.createElement('button');
+                b.type = 'button';
+                b.className = 'tags-modal__suggest-item';
+                b.dataset.addTag = tag;
+                b.style.setProperty('--tag-color', tagColor(tag));
+                b.textContent = tag;
+                suggest.appendChild(b);
+            }
+        }
     }
 
     _updateSearchVisibility() {
@@ -1583,6 +1930,13 @@ class TaskManager {
             parents = parents.filter(p => p.dueDate && p.dueDate >= today && p.dueDate <= end);
         }
         else if (this.filterMode === 'priority') parents = parents.filter(t => !!t.priority);
+        // Filtro por etiqueta (excluyente con las Vistas; cuando hay tag
+        // activa, filterMode siempre es 'all').
+        if (this.activeTag) {
+            const key = this.activeTag.toLowerCase();
+            parents = parents.filter(p =>
+                Array.isArray(p.tags) && p.tags.some(t => t.toLowerCase() === key));
+        }
         // Búsqueda: substring case-insensitive en el value del padre o
         // de cualquiera de sus subs. Match en sub también muestra al
         // padre completo para preservar el contexto.
@@ -1928,7 +2282,22 @@ class TaskManager {
             title.appendChild(starInline);
         }
 
-        titleBlock.append(title, daysSpan);
+        // Chips de etiquetas (solo padres con tags). Cada chip lleva su
+        // color determinista vía la custom property --tag-color.
+        if (!isSubtask && Array.isArray(task.tags) && task.tags.length) {
+            const tagsWrap = document.createElement('span');
+            tagsWrap.className = 'task__tags';
+            for (const tg of task.tags) {
+                const chip = document.createElement('span');
+                chip.className = 'task__tag-chip';
+                chip.textContent = tg;
+                chip.style.setProperty('--tag-color', tagColor(tg));
+                tagsWrap.appendChild(chip);
+            }
+            titleBlock.append(title, tagsWrap, daysSpan);
+        } else {
+            titleBlock.append(title, daysSpan);
+        }
 
         // Botón star (priority): solo padres. Toggle el flag.
         let priorityBtn = null;
@@ -1942,6 +2311,7 @@ class TaskManager {
             priorityBtn.setAttribute('aria-pressed', task.priority ? 'true' : 'false');
             priorityBtn.appendChild(createIcon('star'));
             priorityBtn.addEventListener('click', () => {
+                this._pushUndo('Cambiar prioridad');
                 this.store.togglePriority(id);
                 this.renderTasks();
             });
@@ -1955,6 +2325,19 @@ class TaskManager {
             dueBtn.setAttribute('aria-label', task.dueDate ? `Fecha: ${task.dueDate}` : 'Asignar fecha');
             dueBtn.appendChild(createIcon('calendar'));
             dueBtn.addEventListener('click', () => this._editDueDate(id));
+        }
+
+        // Botón etiquetas (🏷): solo padres. Abre el modal "Editar etiquetas".
+        let tagBtn = null;
+        if (!isSubtask) {
+            tagBtn = document.createElement('button');
+            tagBtn.type = 'button';
+            tagBtn.className = 'tag-btn btn-icon btn-icon--sm';
+            const tagCount = Array.isArray(task.tags) ? task.tags.length : 0;
+            if (tagCount) tagBtn.classList.add('is-tagged');
+            tagBtn.setAttribute('aria-label', tagCount ? `Etiquetas (${tagCount})` : 'Agregar etiquetas');
+            tagBtn.appendChild(createIcon('tag'));
+            tagBtn.addEventListener('click', () => this._editTags(id));
         }
 
         // Botón addsub (plus/minus): solo padres. Toggle el form
@@ -1999,6 +2382,7 @@ class TaskManager {
         const extras = [];
         if (dueBtn) extras.push(dueBtn);
         if (priorityBtn) extras.push(priorityBtn);
+        if (tagBtn) extras.push(tagBtn);
         if (addSubBtn) extras.push(addSubBtn);
         actionGroup.append(...touchControls, ...extras, editBtn, deleteBtn);
 
@@ -2041,6 +2425,7 @@ class TaskManager {
             e.preventDefault();
             const value = input.value.trim();
             if (!value) return;
+            this._pushUndo('Agregar subtarea');
             this.store.addSubtask(parentId, value);
             input.value = '';
             // Auto-expandir si estaba colapsado: si no, la sub nueva queda invisible.
@@ -2105,22 +2490,79 @@ class TaskManager {
         if (DOM.mToolbarCount) {
             DOM.mToolbarCount.innerHTML = `<strong>${filteredCount}</strong> tareas`;
         }
+        // Stats globales sobre PADRES (compartidos por header mobile,
+        // page-head desktop, topbar y contadores del sidebar).
+        const allParents = this.store.tasks.filter(t => t.parentId === null);
+        const totalCount = allParents.length;
+        const doneCount = allParents.filter(p => p.done).length;
+        const pendingCount = totalCount - doneCount;
+        const today = todayISO();
+        const todayCount = allParents.filter(p => p.dueDate === today).length;
+        const priorityCount = allParents.filter(p => !!p.priority).length;
+        const weekEndDate = new Date();
+        weekEndDate.setDate(weekEndDate.getDate() + 7);
+        const weekEnd = `${weekEndDate.getFullYear()}-${String(weekEndDate.getMonth() + 1).padStart(2, '0')}-${String(weekEndDate.getDate()).padStart(2, '0')}`;
+        const weekCount = allParents.filter(p => p.dueDate && p.dueDate >= today && p.dueDate <= weekEnd).length;
+
+        const viewTitles = {
+            all: 'Todas', pending: 'Pendientes', done: 'Hechas',
+            today: 'Hoy', week: 'Esta semana', priority: 'Prioridad',
+        };
+
         // Header mobile (Fase F1 + dinámico): título refleja el filter activo,
         // subtítulo muestra "X de Y · DD mes" con stats globales y fecha.
         if (DOM.appTitleMain) {
-            const titles = {
-                all: 'Todas', pending: 'Pendientes', done: 'Hechas',
-                today: 'Hoy', week: 'Esta semana', priority: 'Prioridad',
-            };
-            DOM.appTitleMain.textContent = titles[this.filterMode] || 'Tareas';
+            DOM.appTitleMain.textContent = viewTitles[this.filterMode] || 'Tareas';
         }
         if (DOM.appTitleSub) {
-            const allParents = this.store.tasks.filter(t => t.parentId === null);
-            const doneCount = allParents.filter(p => p.done).length;
-            const today = new Date();
+            const now = new Date();
             const months = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
-            const dateStr = `${today.getDate()} ${months[today.getMonth()]}`;
-            DOM.appTitleSub.textContent = `${doneCount} de ${allParents.length} · ${dateStr}`;
+            const dateStr = `${now.getDate()} ${months[now.getMonth()]}`;
+            DOM.appTitleSub.textContent = `${doneCount} de ${totalCount} · ${dateStr}`;
+        }
+
+        // ─── App-shell desktop (Fase Web) ───
+        // Contadores por vista en el sidebar.
+        const navCounts = {
+            all: totalCount, pending: pendingCount, done: doneCount,
+            today: todayCount, week: weekCount, priority: priorityCount,
+        };
+        document.querySelectorAll('[data-count]').forEach(el => {
+            const k = el.dataset.count;
+            if (k in navCounts) el.textContent = navCounts[k];
+        });
+
+        // Topbar: título de la vista activa + progreso global a la derecha.
+        const topbarTitle = document.getElementById('topbarTitle');
+        if (topbarTitle) topbarTitle.textContent = viewTitles[this.filterMode] || 'Tareas';
+        const topbarStats = document.getElementById('topbarStats');
+        if (topbarStats) {
+            topbarStats.innerHTML =
+                `<strong>${pendingCount}</strong> pendientes · <strong>${doneCount}</strong> hechas`;
+        }
+
+        // Page-head: eyebrow con la fecha, saludo según la hora, y línea de stats.
+        const phDate = document.getElementById('pageHeadDate');
+        if (phDate) {
+            const now = new Date();
+            const days = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+            const monthsFull = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+            phDate.textContent = `${days[now.getDay()]}, ${now.getDate()} de ${monthsFull[now.getMonth()]}`;
+        }
+        const phTitle = document.getElementById('pageHeadTitle');
+        if (phTitle) {
+            const h = new Date().getHours();
+            const greet = h < 12 ? 'Buen día' : (h < 19 ? 'Buenas tardes' : 'Buenas noches');
+            phTitle.textContent = `${greet} — sigamos.`;
+        }
+        const phSub = document.getElementById('pageHeadSub');
+        if (phSub) {
+            phSub.innerHTML =
+                `<span><strong>${pendingCount}</strong> activas</span>` +
+                `<span class="dot"></span>` +
+                `<span><strong>${doneCount}</strong> hechas</span>` +
+                `<span class="dot"></span>` +
+                `<span><strong>${totalCount}</strong> en total</span>`;
         }
     }
 }

@@ -10,6 +10,8 @@
  *     para subtareas. Profundidad máxima: 1 nivel.
  *   - dueDate (opcional): fecha límite YYYY-MM-DD. Solo aplica a top-level.
  *   - priority (opcional): boolean (estrella destacada).
+ *   - tags (opcional): string[] de etiquetas. Solo aplica a top-level.
+ *     Únicas (case-insensitive), sin vacíos. Se omite si está vacío.
  *
  * Reglas de propagación (sólo entre padre y sus subs):
  *   - Toggle padre → propaga el done a TODAS sus subs.
@@ -25,6 +27,26 @@
  * Para visualizar con cualquier sort se usa getOrderedTasks(sortBy)
  * que ordena los PADRES y mantiene a las subs pegadas a su padre.
  */
+
+/**
+ * Normaliza un array de etiquetas: solo strings, trim, sin vacíos y únicas
+ * (case-insensitive, conservando la primera forma escrita).
+ */
+export function normalizeTags(arr) {
+    if (!Array.isArray(arr)) return [];
+    const seen = new Set();
+    const out = [];
+    for (const t of arr) {
+        if (typeof t !== 'string') continue;
+        const v = t.trim();
+        if (!v) continue;
+        const key = v.toLowerCase();
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push(v);
+    }
+    return out;
+}
 
 export const SORT_MODES = [
     'created-desc',
@@ -58,7 +80,16 @@ export class TaskStore {
                 ? item.updatedAt
                 : (Number.isFinite(fallbackTs) ? fallbackTs : Date.now());
             const parentId = typeof item.parentId === 'string' ? item.parentId : null;
-            return { ...item, done, updatedAt, parentId };
+            const normalized = { ...item, done, updatedAt, parentId };
+            // tags solo en top-level; se normaliza y se omite si queda vacío.
+            if (parentId === null) {
+                const tags = normalizeTags(item.tags);
+                if (tags.length) normalized.tags = tags;
+                else delete normalized.tags;
+            } else {
+                delete normalized.tags;
+            }
+            return normalized;
         });
     }
 
@@ -81,6 +112,10 @@ export class TaskStore {
         const task = { id, value, done: false, updatedAt: createdAt, parentId: null };
         if (opts.dueDate) task.dueDate = opts.dueDate;
         if (opts.priority) task.priority = true;
+        if (opts.tags) {
+            const tags = normalizeTags(opts.tags);
+            if (tags.length) task.tags = tags;
+        }
         this.tasks.unshift(task);
         this.save();
         return task;
@@ -105,6 +140,54 @@ export class TaskStore {
         t.updatedAt = now;
         this.save();
         return true;
+    }
+
+    /** Agrega una etiqueta a una tarea top-level (dedup case-insensitive). */
+    addTag(taskId, tag, now = Date.now()) {
+        const t = this.tasks.find(x => x.id === taskId);
+        if (!t || t.parentId !== null) return false;
+        const v = typeof tag === 'string' ? tag.trim() : '';
+        if (!v) return false;
+        const existing = Array.isArray(t.tags) ? t.tags : [];
+        if (existing.some(x => x.toLowerCase() === v.toLowerCase())) return false;
+        t.tags = [...existing, v];
+        t.updatedAt = now;
+        this.save();
+        return true;
+    }
+
+    /** Quita una etiqueta de una tarea top-level. Borra el campo si queda vacío. */
+    removeTag(taskId, tag, now = Date.now()) {
+        const t = this.tasks.find(x => x.id === taskId);
+        if (!t || !Array.isArray(t.tags)) return false;
+        const key = typeof tag === 'string' ? tag.toLowerCase() : '';
+        const next = t.tags.filter(x => x.toLowerCase() !== key);
+        if (next.length === t.tags.length) return false;
+        if (next.length) t.tags = next;
+        else delete t.tags;
+        t.updatedAt = now;
+        this.save();
+        return true;
+    }
+
+    /**
+     * Devuelve [{ tag, count }] de las etiquetas distintas en uso sobre
+     * tareas top-level, ordenadas alfabéticamente (es). El conteo es por
+     * cuántos padres usan cada etiqueta.
+     */
+    allTags() {
+        const counts = new Map(); // key(lower) → { tag, count }
+        for (const t of this.tasks) {
+            if (t.parentId !== null || !Array.isArray(t.tags)) continue;
+            for (const tag of t.tags) {
+                const key = tag.toLowerCase();
+                if (counts.has(key)) counts.get(key).count++;
+                else counts.set(key, { tag, count: 1 });
+            }
+        }
+        return [...counts.values()].sort(
+            (a, b) => a.tag.localeCompare(b.tag, 'es', { sensitivity: 'base' })
+        );
     }
 
     /**

@@ -14,6 +14,76 @@
     <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+  <!-- App-shell desktop (Fase Web): sidebar + topbar + contenido.
+       Solo se materializa como grid en ≥1024px; debajo es un passthrough
+       transparente y el layout mobile/tablet queda intacto. -->
+  <div class="app-shell" id="appShell" data-sidebar="open">
+
+    <!-- ─── Sidebar (solo desktop ≥1024) ─── -->
+    <aside class="app-sidebar" aria-label="Vistas y navegación">
+      <div class="app-sidebar__brand">
+        <span class="brand-mark">T</span>
+        <span class="brand-name">ToDo</span>
+      </div>
+      <nav class="app-sidebar__nav">
+        <span class="nav-group__title">Vistas</span>
+        <!-- data-filter-tabs: el JS engancha estos botones a _setFilterTab
+             automáticamente (mismo mecanismo que footer/pills). -->
+        <div class="nav-group" data-filter-tabs role="tablist" aria-label="Vistas">
+          <button type="button" class="nav-item filter-tab is-active" role="tab" aria-selected="true" data-value="all">
+            <span class="nav-item__icon"></span><span class="nav-item__label">Todas</span><span class="nav-item__count" data-count="all"></span>
+          </button>
+          <button type="button" class="nav-item filter-tab" role="tab" aria-selected="false" data-value="today">
+            <span class="nav-item__icon"></span><span class="nav-item__label">Hoy</span><span class="nav-item__count" data-count="today"></span>
+          </button>
+          <button type="button" class="nav-item filter-tab" role="tab" aria-selected="false" data-value="week">
+            <span class="nav-item__icon"></span><span class="nav-item__label">Esta semana</span><span class="nav-item__count" data-count="week"></span>
+          </button>
+          <button type="button" class="nav-item filter-tab" role="tab" aria-selected="false" data-value="priority">
+            <span class="nav-item__icon"></span><span class="nav-item__label">Prioritarias</span><span class="nav-item__count" data-count="priority"></span>
+          </button>
+        </div>
+        <span class="nav-group__title">Estado</span>
+        <div class="nav-group" data-filter-tabs role="tablist" aria-label="Estado">
+          <button type="button" class="nav-item filter-tab" role="tab" aria-selected="false" data-value="pending">
+            <span class="nav-item__icon"></span><span class="nav-item__label">Pendientes</span><span class="nav-item__count" data-count="pending"></span>
+          </button>
+          <button type="button" class="nav-item filter-tab" role="tab" aria-selected="false" data-value="done">
+            <span class="nav-item__icon"></span><span class="nav-item__label">Hechas</span><span class="nav-item__count" data-count="done"></span>
+          </button>
+        </div>
+        <span class="nav-group__title">Etiquetas</span>
+        <!-- Poblado dinámicamente por _renderSidebarTags() desde store.allTags(). -->
+        <div class="nav-group nav-group--tags" id="sidebarTags" role="list" aria-label="Etiquetas"></div>
+      </nav>
+      <div class="app-sidebar__footer">
+        <div class="sidebar-pref">
+          <span class="sidebar-pref__label">Tema</span>
+          <div class="seg" data-theme-seg role="group" aria-label="Tema">
+            <button type="button" class="seg__btn" data-theme="light" aria-label="Tema claro" title="Claro"></button>
+            <button type="button" class="seg__btn" data-theme="dark" aria-label="Tema oscuro" title="Oscuro"></button>
+          </div>
+        </div>
+        <div class="sidebar-pref">
+          <span class="sidebar-pref__label">Densidad</span>
+          <div class="seg" data-density-seg role="group" aria-label="Densidad">
+            <button type="button" class="seg__btn" data-density="comfy" aria-label="Densidad cómoda" title="Cómoda"></button>
+            <button type="button" class="seg__btn" data-density="compact" aria-label="Densidad compacta" title="Compacta"></button>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ─── Columna principal ─── -->
+    <div class="app-main">
+      <!-- Topbar (solo desktop ≥1024) -->
+      <header class="app-topbar">
+        <button type="button" class="btn-icon app-topbar__toggle" id="sidebarToggle" aria-label="Mostrar u ocultar panel"></button>
+        <div class="app-topbar__title" id="topbarTitle">Tareas</div>
+        <div class="app-topbar__spacer"></div>
+        <div class="app-topbar__stats" id="topbarStats"></div>
+      </header>
+
     <main class="app-scroll">
     <section class="section-center">
         <!-- App chrome: toggles de tema y densidad (Fase 7H). Iconos
@@ -27,15 +97,53 @@
                 <div class="app-title__main" id="appTitleMain">Tareas</div>
                 <div class="app-title__sub" id="appTitleSub"></div>
             </div>
-            <div class="seg" id="themeSeg" role="group" aria-label="Tema">
+            <div class="seg" id="themeSeg" data-theme-seg role="group" aria-label="Tema">
                 <button type="button" class="seg__btn" data-theme="light" aria-label="Tema claro" title="Claro"></button>
                 <button type="button" class="seg__btn" data-theme="dark" aria-label="Tema oscuro" title="Oscuro"></button>
             </div>
-            <div class="seg" id="densitySeg" role="group" aria-label="Densidad">
+            <div class="seg" id="densitySeg" data-density-seg role="group" aria-label="Densidad">
                 <button type="button" class="seg__btn" data-density="comfy" aria-label="Densidad cómoda" title="Cómoda"></button>
                 <button type="button" class="seg__btn" data-density="compact" aria-label="Densidad compacta" title="Compacta"></button>
             </div>
         </div>
+        <!-- Page-head (solo desktop ≥1024): saludo dinámico + stats. Se
+             hidrata en updateTaskCount(). -->
+        <div class="page-head">
+            <div class="page-head__text">
+                <div class="page-head__eyebrow" id="pageHeadDate"></div>
+                <h1 class="page-head__title" id="pageHeadTitle">Tareas</h1>
+                <div class="page-head__sub" id="pageHeadSub"></div>
+            </div>
+            <div class="page-head__actions">
+                <button type="button" class="btn btn--ghost" id="undoBtn" aria-label="Deshacer la última acción" disabled>
+                    <span class="undo-icon" aria-hidden="true"></span>
+                    <span>Deshacer</span>
+                </button>
+                <div class="sort-control sort-control--top">
+                    <span id="sortByTopLabel" class="sort-label">Ordenar</span>
+                    <div class="combo combo-sort" id="sortByTop">
+                        <button type="button" class="combo-toggle" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="sortByTopLabel">
+                            <span class="combo-toggle-label">Más recientes primero</span>
+                            <span class="combo-arrow" aria-hidden="true">▾</span>
+                        </button>
+                        <ul class="combo-listbox" role="listbox" tabindex="-1" aria-labelledby="sortByTopLabel" hidden>
+                            <li role="option" data-value="created-desc" aria-selected="true" id="opt-st-created-desc">Más recientes primero</li>
+                            <li role="option" data-value="created-asc" aria-selected="false" id="opt-st-created-asc">Más antiguas primero</li>
+                            <li role="option" data-value="alpha-asc" aria-selected="false" id="opt-st-alpha-asc">Alfabético: A → Z</li>
+                            <li role="option" data-value="alpha-desc" aria-selected="false" id="opt-st-alpha-desc">Alfabético: Z → A</li>
+                            <li role="option" data-value="length-asc" aria-selected="false" id="opt-st-length-asc">Más cortas primero</li>
+                            <li role="option" data-value="length-desc" aria-selected="false" id="opt-st-length-desc">Más largas primero</li>
+                            <li role="option" data-value="pending-first" aria-selected="false" id="opt-st-pending-first">Pendientes primero</li>
+                            <li role="option" data-value="done-first" aria-selected="false" id="opt-st-done-first">Hechas primero</li>
+                            <li role="option" data-value="modified-desc" aria-selected="false" id="opt-st-modified-desc">Modificadas recientemente</li>
+                            <li role="option" data-value="modified-asc" aria-selected="false" id="opt-st-modified-asc">Modificadas hace tiempo</li>
+                            <li role="option" data-value="manual" aria-selected="false" id="opt-st-manual">Orden manual (arrastrar)</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <form class="grocery-form">
             <h3>Todo List</h3>
             <div class="form-control1">
@@ -70,10 +178,23 @@
             </div>
             <div class="task-count-row">
                 <p class="task-count"></p>
+                <!-- Filter-tabs inline del toolbar (estilo desktop.html). Solo
+                     visibles en ≥1024px; sincronizadas vía data-filter-tabs. -->
+                <div class="filter-tabs toolbar-filters" data-filter-tabs role="tablist" aria-label="Filtro de estado">
+                    <button type="button" class="filter-tab is-active" role="tab" aria-selected="true" data-value="all">Todas</button>
+                    <button type="button" class="filter-tab" role="tab" aria-selected="false" data-value="pending">Pendientes</button>
+                    <button type="button" class="filter-tab" role="tab" aria-selected="false" data-value="done">Hechas</button>
+                </div>
                 <div class="task-count-controls">
                     <div class="bulk-collapse" id="bulkCollapse" hidden>
-                        <button type="button" class="bulk-btn bulk-collapse-all btn btn--ghost btn--sm" aria-label="Colapsar todas las tareas con subtareas">Colapsar todo</button>
-                        <button type="button" class="bulk-btn bulk-expand-all btn btn--ghost btn--sm" aria-label="Expandir todas las tareas con subtareas">Expandir todo</button>
+                        <button type="button" class="bulk-btn bulk-collapse-all btn btn--ghost btn--sm" aria-label="Colapsar todas las tareas con subtareas">
+                            <span class="bulk-btn-icon" aria-hidden="true"></span>
+                            <span class="bulk-btn-label">Colapsar todo</span>
+                        </button>
+                        <button type="button" class="bulk-btn bulk-expand-all btn btn--ghost btn--sm" aria-label="Expandir todas las tareas con subtareas">
+                            <span class="bulk-btn-icon" aria-hidden="true"></span>
+                            <span class="bulk-btn-label">Expandir todo</span>
+                        </button>
                     </div>
                     <button type="button" class="bulk-btn bulk-btn-danger clear-btn btn btn--danger btn--sm" aria-label="Limpiar toda la lista de tareas">
                         <span class="bulk-btn-icon" aria-hidden="true"></span>
@@ -151,6 +272,8 @@
 
     </section>
     </main>
+    </div><!-- /.app-main -->
+  </div><!-- /.app-shell -->
 
     <!-- Footer fijo: filtro siempre visible al pie de la pantalla. -->
     <footer class="app-footer" role="contentinfo">
@@ -224,6 +347,10 @@
                     <button type="button" class="btn btn--secondary" id="newTaskDateBtn" aria-label="Seleccionar fecha">Sin fecha</button>
                     <input type="hidden" id="newTaskDate" value="">
                 </div>
+                <div class="newtask-modal__row">
+                    <label class="newtask-modal__label" for="newTaskTags">Etiquetas</label>
+                    <input type="text" id="newTaskTags" class="field" placeholder="separadas por coma" aria-label="Etiquetas separadas por coma" autocomplete="off">
+                </div>
                 <label class="newtask-modal__check">
                     <input type="checkbox" id="newTaskPriority">
                     <span>Prioridad alta</span>
@@ -233,6 +360,23 @@
                     <button type="submit" class="btn btn--primary">Agregar</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Modal "Editar etiquetas" — abierto por el botón 🏷 de cada tarea. -->
+    <div class="tags-modal modal-backdrop" id="tagsModal" hidden>
+        <div class="tags-modal__dialog modal" role="dialog" aria-modal="true" aria-labelledby="tagsModalTitle">
+            <h3 class="modal__title" id="tagsModalTitle">Etiquetas</h3>
+            <p class="tags-modal__task" id="tagsModalTask"></p>
+            <div class="tags-modal__current" id="tagsModalCurrent" aria-live="polite"></div>
+            <form id="tagsModalForm" class="tags-modal__form">
+                <input type="text" id="tagsModalInput" class="field" placeholder="Nueva etiqueta…" aria-label="Nueva etiqueta" autocomplete="off">
+                <button type="submit" class="btn btn--secondary">Agregar</button>
+            </form>
+            <div class="tags-modal__suggest" id="tagsModalSuggest"></div>
+            <div class="modal__actions">
+                <button type="button" class="btn btn--primary" data-action="close">Listo</button>
+            </div>
         </div>
     </div>
 
