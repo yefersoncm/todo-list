@@ -482,8 +482,32 @@ con mayor especificidad y haría invisibles nuestras notificaciones.
 }
 .tags-modal__chip-x:hover { background: color-mix(in oklch, var(--tag-color, var(--fg-muted)) 25%, transparent); }
 .tags-modal__chip-x .icon { display: block; }
-.tags-modal__form { display: flex; gap: var(--sp-2); margin-bottom: var(--sp-3); }
-.tags-modal__form .field { flex: 1; min-width: 0; }
+.tags-modal__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-3);
+}
+.tags-modal__addrow { display: flex; gap: var(--sp-2); }
+.tags-modal__addrow .field { flex: 1; min-width: 0; }
+/* Selector de color: 10 swatches fijos. */
+.tags-modal__swatches { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.tags-swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid var(--bg-surface);
+  box-shadow: 0 0 0 1px var(--border-default);
+  cursor: pointer;
+  padding: 0;
+  transition: transform var(--dur-fast) var(--ease-out),
+              box-shadow var(--dur-fast) var(--ease-out);
+}
+.tags-swatch:hover { transform: scale(1.1); }
+.tags-swatch.is-selected {
+  box-shadow: 0 0 0 2px var(--accent);
+  transform: scale(1.1);
+}
 .tags-modal__suggest {
   display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2);
   margin-bottom: var(--sp-2);
