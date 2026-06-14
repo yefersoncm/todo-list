@@ -18,6 +18,7 @@ const COLLAPSED_KEY = 'todo-list:collapsedParents';
 const THEME_KEY = 'todo-list:theme';
 const DENSITY_KEY = 'todo-list:density';
 const ACTIVE_TAG_KEY = 'todo-list:activeTag';
+const TAG_COLORS_KEY = 'todo-list:tagColors';
 
 function loadTheme() {
     const v = localStorage.getItem(THEME_KEY);
@@ -134,19 +135,45 @@ function saveActiveTag(tag) {
 }
 
 /**
- * Color determinista por etiqueta: hashea el nombre (lower) a un índice
- * de una paleta de tokens semánticos, para que cada etiqueta tenga un dot
- * de color estable entre renders y recargas.
+ * Paleta FIJA de 10 colores para etiquetas (sin RGB libre). Valores OKLCH
+ * concretos para que color-mix() funcione en chips y dots.
  */
 const TAG_PALETTE = [
-    'var(--blue-500)', 'var(--amber-500)', 'var(--green-500)',
-    'var(--red-500)', 'var(--blue-400)', 'var(--amber-600)', 'var(--green-600)',
+    'oklch(62% 0.17 245)',   // azul
+    'oklch(60% 0.16 200)',   // cian
+    'oklch(60% 0.15 150)',   // verde
+    'oklch(70% 0.16 130)',   // lima
+    'oklch(74% 0.15 85)',    // ámbar
+    'oklch(68% 0.17 55)',    // naranja
+    'oklch(60% 0.19 25)',    // rojo
+    'oklch(62% 0.19 350)',   // rosa
+    'oklch(58% 0.20 300)',   // púrpura
+    'oklch(56% 0.05 250)',   // gris azulado
 ];
-function tagColor(tag) {
+
+/**
+ * Color determinista de respaldo: hashea el nombre (lower) a un índice de
+ * la paleta. Se usa cuando la etiqueta no tiene color elegido guardado.
+ */
+function autoTagColor(tag) {
     const s = String(tag).toLowerCase();
     let h = 0;
     for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
     return TAG_PALETTE[h % TAG_PALETTE.length];
+}
+
+function loadTagColors() {
+    try {
+        const raw = localStorage.getItem(TAG_COLORS_KEY);
+        const obj = raw ? JSON.parse(raw) : {};
+        return (obj && typeof obj === 'object') ? obj : {};
+    } catch {
+        return {};
+    }
+}
+
+function saveTagColors(map) {
+    localStorage.setItem(TAG_COLORS_KEY, JSON.stringify(map));
 }
 
 /** Hoy en formato YYYY-MM-DD (timezone local del browser). */
@@ -203,6 +230,7 @@ class TaskManager {
         this.currentPage = 1;
         this.collapsedParents = loadCollapsed();
         this.activeTag = loadActiveTag();   // filtro por etiqueta (sidebar Etiquetas)
+        this.tagColors = loadTagColors();   // { tagLower: color } elegido en el picker
         this._undo = null;                  // snapshot de un nivel para "Deshacer"
         // Set transitorio (no persistido) de IDs de padres con el form
         // "+ subtarea" expandido. Toggle desde el botón addsub-btn.
@@ -866,6 +894,18 @@ class TaskManager {
     _updateUndoButton() {
         const btn = document.getElementById('undoBtn');
         if (btn) btn.disabled = !this._undo;
+    }
+
+    /** Color de una etiqueta: el elegido en el picker, o el de respaldo. */
+    _tagColor(tag) {
+        return this.tagColors[String(tag).toLowerCase()] || autoTagColor(tag);
+    }
+
+    /** Guarda el color elegido para una etiqueta (persistido). */
+    _setTagColor(tag, color) {
+        if (!tag || !color) return;
+        this.tagColors[String(tag).toLowerCase()] = color;
+        saveTagColors(this.tagColors);
     }
 
     handlePageSizeChange(size) {
@@ -1748,7 +1788,7 @@ class TaskManager {
             if (activeKey && tag.toLowerCase() === activeKey) btn.classList.add('is-active');
             const dot = document.createElement('span');
             dot.className = 'tag-dot';
-            dot.style.background = tagColor(tag);
+            dot.style.background = this._tagColor(tag);
             const label = document.createElement('span');
             label.className = 'nav-item__label';
             label.textContent = tag;
@@ -1777,12 +1817,42 @@ class TaskManager {
         };
         this._tagsModalTaskId = null;
 
+        // Selector de color: 10 swatches fijos de la paleta.
+        const swatchWrap = document.getElementById('tagsModalSwatches');
+        this._selectedTagColor = TAG_PALETTE[0];
+        if (swatchWrap && !swatchWrap.firstChild) {
+            TAG_PALETTE.forEach((color, i) => {
+                const sw = document.createElement('button');
+                sw.type = 'button';
+                sw.className = 'tags-swatch' + (i === 0 ? ' is-selected' : '');
+                sw.style.background = color;
+                sw.dataset.color = color;
+                sw.setAttribute('role', 'radio');
+                sw.setAttribute('aria-checked', i === 0 ? 'true' : 'false');
+                sw.setAttribute('aria-label', `Color ${i + 1}`);
+                swatchWrap.appendChild(sw);
+            });
+            swatchWrap.addEventListener('click', (e) => {
+                const sw = e.target.closest('.tags-swatch');
+                if (!sw) return;
+                this._selectedTagColor = sw.dataset.color;
+                swatchWrap.querySelectorAll('.tags-swatch').forEach(x => {
+                    const on = x === sw;
+                    x.classList.toggle('is-selected', on);
+                    x.setAttribute('aria-checked', on ? 'true' : 'false');
+                });
+            });
+        }
+
         const close = () => { modal.hidden = true; this._tagsModalTaskId = null; };
 
-        const applyAdd = (tag) => {
+        // color opcional: si se provee, se guarda como color de la etiqueta
+        // (crear con color o re-colorear). Las sugerencias no pasan color.
+        const applyAdd = (tag, color) => {
             if (!tag || !this._tagsModalTaskId) return;
             this._pushUndo('Etiquetas');
             const changed = this.store.addTag(this._tagsModalTaskId, tag);
+            if (color) this._setTagColor(tag, color);
             if (!changed) { this._undo = null; this._updateUndoButton(); }
             this.renderTasks();
             this._renderTagsModal();
@@ -1793,7 +1863,7 @@ class TaskManager {
             e.preventDefault();
             const v = input.value.trim();
             input.value = '';
-            applyAdd(v);
+            applyAdd(v, this._selectedTagColor);
         });
         this._tagsModalEls.current.addEventListener('click', (e) => {
             const chip = e.target.closest('[data-remove-tag]');
@@ -1846,7 +1916,7 @@ class TaskManager {
             for (const tg of tags) {
                 const chip = document.createElement('span');
                 chip.className = 'tags-modal__chip';
-                chip.style.setProperty('--tag-color', tagColor(tg));
+                chip.style.setProperty('--tag-color', this._tagColor(tg));
                 const label = document.createElement('span');
                 label.textContent = tg;
                 const rm = document.createElement('button');
@@ -1873,7 +1943,7 @@ class TaskManager {
                 b.type = 'button';
                 b.className = 'tags-modal__suggest-item';
                 b.dataset.addTag = tag;
-                b.style.setProperty('--tag-color', tagColor(tag));
+                b.style.setProperty('--tag-color', this._tagColor(tag));
                 b.textContent = tag;
                 suggest.appendChild(b);
             }
@@ -2291,7 +2361,7 @@ class TaskManager {
                 const chip = document.createElement('span');
                 chip.className = 'task__tag-chip';
                 chip.textContent = tg;
-                chip.style.setProperty('--tag-color', tagColor(tg));
+                chip.style.setProperty('--tag-color', this._tagColor(tg));
                 tagsWrap.appendChild(chip);
             }
             titleBlock.append(title, tagsWrap, daysSpan);
