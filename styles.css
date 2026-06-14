@@ -283,6 +283,8 @@ con mayor especificidad y haría invisibles nuestras notificaciones.
 /* Pills mobile ocultas en desktop por default. Se muestran en mobile
    via override en @media (max-width: 480px). */
 .filter-tabs.m-pills { display: none; }
+/* Filter-tabs inline del toolbar: solo en el app-shell desktop (≥1024). */
+.toolbar-filters { display: none; }
 /* Bloque title + elapsed: wrapper que en mobile muestra el title
    arriba y el elapsed pequeño debajo. En desktop comporta como flex
    item normal con el title — el elapsed dentro queda en su mismo flow. */
@@ -438,6 +440,67 @@ con mayor especificidad y haría invisibles nuestras notificaciones.
 .task.is-due-today .task__due-badge {
   background: var(--warning-soft);
   color: var(--warning);
+}
+/* Etiquetas — chips en la fila de la tarea + botón 🏷 activo. */
+.task__tags { display: inline-flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
+.task__tag-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 8px;
+  border-radius: var(--r-pill);
+  font-family: var(--ff-mono);
+  font-size: 10px;
+  letter-spacing: 0;
+  white-space: nowrap;
+  color: var(--tag-color, var(--fg-muted));
+  background: color-mix(in oklch, var(--tag-color, var(--fg-muted)) 14%, transparent);
+  border: 1px solid color-mix(in oklch, var(--tag-color, var(--fg-muted)) 35%, transparent);
+}
+.tag-btn.is-tagged { color: var(--accent); }
+
+/* Modal "Editar etiquetas" (reusa .modal-backdrop/.modal). */
+.tags-modal[hidden] { display: none; }
+.tags-modal__task { font-size: var(--fs-sm); color: var(--fg-muted); margin-bottom: var(--sp-3); }
+.tags-modal__current {
+  display: flex; flex-wrap: wrap; gap: var(--sp-2);
+  min-height: 30px; margin-bottom: var(--sp-3);
+}
+.tags-modal__empty { font-size: var(--fs-sm); color: var(--fg-subtle); }
+.tags-modal__chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 4px 2px 10px;
+  border-radius: var(--r-pill);
+  font-size: var(--fs-xs);
+  color: var(--tag-color, var(--fg-default));
+  background: color-mix(in oklch, var(--tag-color, var(--fg-muted)) 14%, transparent);
+  border: 1px solid color-mix(in oklch, var(--tag-color, var(--fg-muted)) 35%, transparent);
+}
+.tags-modal__chip-x {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px; border-radius: 50%;
+  color: inherit; cursor: pointer; border: none; background: transparent;
+}
+.tags-modal__chip-x:hover { background: color-mix(in oklch, var(--tag-color, var(--fg-muted)) 25%, transparent); }
+.tags-modal__chip-x .icon { display: block; }
+.tags-modal__form { display: flex; gap: var(--sp-2); margin-bottom: var(--sp-3); }
+.tags-modal__form .field { flex: 1; min-width: 0; }
+.tags-modal__suggest {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2);
+  margin-bottom: var(--sp-2);
+}
+.tags-modal__suggest-label { font-size: var(--fs-xs); color: var(--fg-subtle); }
+.tags-modal__suggest-item {
+  padding: 2px 10px;
+  border-radius: var(--r-pill);
+  font-size: var(--fs-xs);
+  color: var(--fg-muted);
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border-subtle);
+  cursor: pointer;
+}
+.tags-modal__suggest-item:hover {
+  color: var(--tag-color, var(--fg-default));
+  border-color: var(--tag-color, var(--border-strong));
 }
 /* Drawer backdrop (oculto en desktop por hidden attribute). */
 .app-drawer-backdrop {
@@ -1691,6 +1754,422 @@ color/shadow del :hover para esos selectores, y reforzamos `:active`.
   .grocery-item .toggle-check:active,
   .touch-move-btn:active {
     transform: scale(0.96);
+  }
+}
+
+/*
+=====================================================================
+App-shell desktop (Fase Web)
+=====================================================================
+Estructura nueva:
+  body (flex col, 100dvh, overflow hidden)
+    .app-shell      ← passthrough flex / grid en ≥1024
+      .app-sidebar  ← solo ≥1024
+      .app-main     ← columna: topbar + scroller
+        .app-topbar ← solo ≥1024
+        main.app-scroll  (único scroller, igual que antes)
+    footer.app-footer / .m-bottom / FAB / modales  (siguen siendo
+    hijos del body — no se ven afectados)
+
+En ≤1023px el sidebar/topbar/page-head están ocultos y el layout
+mobile (≤480) y desktop legacy (481–1023) quedan EXACTAMENTE igual.
+*/
+
+/* ── Defaults estructurales (todas las anchuras) ── */
+.app-shell {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+}
+.app-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.app-sidebar,
+.app-topbar,
+.page-head { display: none; }
+
+/* ── Activación del shell en desktop ── */
+@media (min-width: 1024px) {
+  .app-shell {
+    display: grid;
+    grid-template-columns: var(--sidebar-w) 1fr;
+    transition: grid-template-columns var(--dur-base) var(--ease-out);
+  }
+  .app-shell[data-sidebar="hidden"] {
+    grid-template-columns: 0 1fr;
+  }
+
+  /* ─── Sidebar ─── */
+  .app-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-5);
+    background: var(--bg-surface);
+    border-right: 1px solid var(--border-subtle);
+    padding: var(--sp-5) var(--sp-3);
+    overflow: hidden auto;
+    min-height: 0;
+  }
+  .app-shell[data-sidebar="hidden"] .app-sidebar {
+    padding: 0;
+    border-right: 0;
+  }
+  .app-sidebar__brand {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    padding: 0 var(--sp-3);
+  }
+  .brand-mark {
+    width: 28px; height: 28px;
+    border-radius: 8px;
+    background: var(--accent);
+    color: var(--accent-fg);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--ff-mono);
+    font-weight: var(--fw-bold);
+    font-size: 14px;
+    flex: none;
+  }
+  .brand-name {
+    font-size: var(--fs-md);
+    font-weight: var(--fw-semibold);
+    letter-spacing: var(--tracking-tight);
+    color: var(--fg-default);
+    white-space: nowrap;
+  }
+
+  .app-sidebar__nav {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-1);
+  }
+  .nav-group__title {
+    font-family: var(--ff-mono);
+    font-size: 10px;
+    color: var(--fg-subtle);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-caps);
+    padding: var(--sp-3) var(--sp-3) var(--sp-1);
+    white-space: nowrap;
+  }
+  .nav-group {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  /* nav-item reescribe el look base de .filter-tab → fila completa. */
+  .app-sidebar .nav-item {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    width: 100%;
+    height: 34px;
+    padding: 0 var(--sp-3);
+    border: none;
+    border-radius: var(--r-sm);
+    background: transparent;
+    color: var(--fg-muted);
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-medium);
+    text-align: left;
+    white-space: nowrap;
+    cursor: pointer;
+    box-shadow: none;
+    transition: background-color var(--dur-fast) var(--ease-out),
+                color var(--dur-fast) var(--ease-out);
+  }
+  .app-sidebar .nav-item:hover {
+    background: var(--bg-surface-2);
+    color: var(--fg-default);
+  }
+  .app-sidebar .nav-item.is-active {
+    background: var(--accent-soft);
+    color: var(--accent);
+    box-shadow: none;
+  }
+  .nav-item__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: currentColor;
+    flex: none;
+  }
+  .nav-item__icon .icon { display: block; }
+  .nav-item__label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .nav-item__count {
+    font-family: var(--ff-mono);
+    font-size: 11px;
+    color: var(--fg-subtle);
+    flex: none;
+  }
+  .app-sidebar .nav-item.is-active .nav-item__count { color: var(--accent); }
+
+  /* Sección Etiquetas: dot de color por etiqueta + estado vacío. */
+  .app-sidebar .tag-item .tag-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex: none;
+  }
+  .app-sidebar .nav-group__empty {
+    padding: var(--sp-1) var(--sp-3);
+    font-size: var(--fs-xs);
+    color: var(--fg-subtle);
+  }
+
+  .app-sidebar__footer {
+    margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-2);
+  }
+  .sidebar-pref {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    padding: 0 var(--sp-3);
+  }
+  .sidebar-pref__label {
+    font-family: var(--ff-mono);
+    font-size: 10px;
+    color: var(--fg-subtle);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-caps);
+    margin-right: auto;
+  }
+  .app-sidebar .seg__btn .icon { display: block; }
+
+  /* ─── Topbar ─── */
+  .app-topbar {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    height: 56px;
+    flex: none;
+    padding: 0 var(--sp-5);
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .app-topbar__toggle { flex: none; }
+  .app-topbar__toggle .icon { display: block; }
+  .app-topbar__title {
+    font-size: var(--fs-md);
+    font-weight: var(--fw-semibold);
+    letter-spacing: var(--tracking-tight);
+    color: var(--fg-default);
+  }
+  .app-topbar__spacer { flex: 1; }
+  .app-topbar__stats {
+    font-size: var(--fs-sm);
+    color: var(--fg-muted);
+    white-space: nowrap;
+  }
+  .app-topbar__stats strong { color: var(--fg-default); font-weight: var(--fw-semibold); }
+
+  /* ─── Área de contenido ─── */
+  /* La sección deja de ser un "card": pasa a ser el cuerpo sobre bg-app. */
+  .app-main .section-center {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    max-width: var(--container-max);   /* 1200px — aprovecha el ancho */
+    width: 100%;
+    margin: 0 auto;
+    padding: var(--sp-7) var(--sp-6);
+  }
+
+  /* El chrome legacy y el footer ceden su función al sidebar/topbar. */
+  .app-chrome { display: none; }
+  .app-footer { display: none; }
+  .grocery-form h3 { display: none; }
+
+  /* page-head: eyebrow + saludo + stats. */
+  .page-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--sp-5);
+    margin-bottom: var(--sp-5);
+    flex-wrap: wrap;
+  }
+  .page-head__eyebrow {
+    font-family: var(--ff-mono);
+    font-size: var(--fs-xs);
+    color: var(--fg-subtle);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-caps);
+    margin-bottom: var(--sp-2);
+  }
+  .page-head__title {
+    font-size: var(--fs-3xl);
+    line-height: 1.05;
+    font-weight: var(--fw-semibold);
+    letter-spacing: -0.015em;
+    text-transform: none;
+    color: var(--fg-default);
+    margin: 0 0 var(--sp-1);
+  }
+  .page-head__sub {
+    font-size: var(--fs-sm);
+    color: var(--fg-muted);
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    flex-wrap: wrap;
+  }
+  .page-head__sub strong { color: var(--fg-default); font-weight: var(--fw-medium); }
+  .page-head__sub .dot {
+    width: 4px; height: 4px;
+    border-radius: 50%;
+    background: var(--border-strong);
+    flex: none;
+  }
+
+  /* Acciones del page-head: Deshacer + Ordenar (arriba a la derecha). */
+  .page-head__actions {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    flex: none;
+  }
+  .page-head__actions .undo-icon { display: inline-flex; align-items: center; }
+  .page-head__actions .undo-icon .icon { display: block; }
+  .page-head__actions .btn[disabled] { opacity: 0.5; cursor: not-allowed; }
+  .page-head__actions .sort-control {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+  }
+  .page-head__actions .sort-label {
+    font-family: var(--ff-mono);
+    font-size: 10px;
+    color: var(--fg-subtle);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-caps);
+  }
+  .page-head__actions .combo-sort .combo-toggle { min-width: 13rem; }
+
+  /* El orden vive en el page-head → se oculta el del toolbar. */
+  .task-count-row .sort-control { display: none; }
+
+  /* quick-add (form): input grande, alineado a la izquierda. */
+  .grocery-form { margin: 0 0 var(--sp-5); }
+  .grocery-form .form-control1 { justify-content: flex-start; }
+  .grocery-form .form-control1 #grocery { max-width: none; height: 44px; }
+  .grocery-form .form-control1 .submit-btn { height: 44px; }
+
+  /* grocery-container: el page-head ya aportó separación arriba. */
+  .grocery-container { margin-top: 0; }
+  .search-row { margin-bottom: var(--sp-4); }
+
+  /* Toolbar (task-count-row): layout estilo .toolbar de desktop.html —
+     count + filter-tabs a la izquierda, controles empujados a la derecha. */
+  .task-count-row {
+    justify-content: flex-start;
+    gap: var(--sp-3);
+    border-bottom: 1px solid var(--border-subtle);
+    padding-bottom: var(--sp-3);
+    margin-bottom: var(--sp-3);
+  }
+  .task-count-row .task-count {
+    flex: none;
+    font-size: var(--fs-sm);
+    color: var(--fg-muted);
+  }
+  .toolbar-filters { display: inline-flex; }
+  .task-count-row .task-count-controls { margin-left: auto; }
+
+  .grocery-list { padding: var(--sp-2) 0; }
+
+  /* Neutraliza el estilo legacy de .done (fondo azul sólido + título
+     oscuro forzado) que chocaba con el sistema del design. En el shell
+     las tareas hechas usan el patrón del design: tachado + texto atenuado. */
+  .app-main .grocery-item.done,
+  .app-main .grocery-item.done:hover {
+    background: transparent;
+    color: inherit;
+  }
+  .app-main .grocery-item.done:hover {
+    background: var(--bg-surface-2);
+  }
+  .app-main .grocery-item.done .title {
+    color: var(--fg-subtle) !important;
+    text-decoration: line-through;
+    text-decoration-color: var(--border-strong);
+  }
+
+  /* ── Árbol de subtareas (mismo patrón curvado que mobile) ──
+     El wrapper .m-subs indenta el bloque; cada sub dibuja su propia "L"
+     curvada con border-left + border-bottom + radius, y el JS
+     (_adjustTreeConnectors) extiende la vertical hasta el sub anterior
+     vía --connector-up. Se anula la línea recta de components.css
+     (.task.is-sub::before). */
+  .app-main .m-subs {
+    position: relative;
+    margin-left: var(--sp-5);
+    margin-bottom: var(--sp-2);
+  }
+  .app-main .m-subs .grocery-item.is-subtask {
+    position: relative;
+    margin-left: var(--sp-3);
+    padding-left: var(--sp-2);
+    overflow: visible;          /* deja salir el ::before hacia la izquierda */
+  }
+  /* La "L" curvada — reemplaza la guía recta de .task.is-sub::before. */
+  .app-main .m-subs .grocery-item.is-subtask::before,
+  .app-main .m-subs > .subtask-add-form::before {
+    content: "";
+    position: absolute;
+    left: calc(var(--sp-5) * -1);
+    top: calc(var(--connector-up, 0px) * -1);
+    width: var(--sp-5);
+    height: calc(50% + var(--connector-up, 0px));
+    border-left: 2px solid var(--border-subtle);
+    border-bottom: 2px solid var(--border-subtle);
+    border-bottom-left-radius: var(--sp-3);
+    background: transparent;
+  }
+  .app-main .m-subs > .subtask-add-form {
+    position: relative;
+    margin-left: var(--sp-3);
+    margin-top: var(--sp-1);
+  }
+  .app-main .m-subs > .subtask-add-form .subtask-add-input {
+    width: clamp(12rem, 32vw, 22rem);
+    background: transparent;
+    border-style: dashed;
+  }
+  .app-main .m-subs.is-collapsed > .subtask-add-form { display: none; }
+  .app-main .m-subs.is-collapsed.is-add-expanded > .subtask-add-form { display: flex; }
+
+  /* Paginación con tokens semánticos (reemplaza los colores legacy
+     --clr-* que rompían la coherencia con la paleta OKLCH). */
+  .pagination { justify-content: flex-end; }
+  .page-num, .page-prev, .page-next {
+    border-color: var(--border-default);
+    border-radius: var(--r-sm);
+    color: var(--fg-muted);
+    background: var(--bg-surface);
+  }
+  .page-num:hover, .page-prev:hover, .page-next:hover {
+    background: var(--bg-surface-2);
+    border-color: var(--border-strong);
+    color: var(--fg-default);
+  }
+  .page-num.is-current,
+  .page-num.is-current:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-fg);
   }
 }
 
