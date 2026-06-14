@@ -176,13 +176,31 @@ function saveTagColors(map) {
     localStorage.setItem(TAG_COLORS_KEY, JSON.stringify(map));
 }
 
-/** Hoy en formato YYYY-MM-DD (timezone local del browser). */
-function todayISO() {
-    const d = new Date();
+/** Formatea un Date a YYYY-MM-DD (timezone local). */
+function toISO(d) {
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
     return `${y}-${m}-${day}`;
+}
+
+/** Hoy en formato YYYY-MM-DD (timezone local del browser). */
+function todayISO() {
+    return toISO(new Date());
+}
+
+/** Hoy desplazado N días, en YYYY-MM-DD. */
+function shiftISO(days) {
+    const d = new Date();
+    d.setDate(d.getDate() + days);
+    return toISO(d);
+}
+
+/** Fecha de creación de la tarea (YYYY-MM-DD) derivada de su id (epoch ms). */
+function createdISO(task) {
+    const ts = parseInt(task.id);
+    if (!Number.isFinite(ts)) return null;
+    return toISO(new Date(ts));
 }
 
 // Modal de confirmación que reemplaza al confirm() nativo.
@@ -356,8 +374,8 @@ class TaskManager {
         // Iconos del sidebar desktop (Fase Web): un icono por nav-item según
         // su data-value (vista/estado). Solo visibles en ≥1024px vía CSS.
         const navIconMap = {
-            all: 'list', today: 'flag', week: 'calendar', priority: 'star',
-            pending: 'circle', done: 'circle-check',
+            all: 'list', today: 'flag', week: 'calendar', month: 'calendar-days',
+            priority: 'star', pending: 'circle', done: 'circle-check',
         };
         document.querySelectorAll('.app-sidebar .nav-item[data-value]').forEach(item => {
             const slot = item.querySelector('.nav-item__icon');
@@ -584,7 +602,7 @@ class TaskManager {
             e.preventDefault();
             const value = DOM.newTaskInput.value;
             if (value.trim() === '') {
-                this.displayAlert('Por favor ingrese un valor', 'danger');
+                this._notify('Falta el texto', 'warning', { detail: 'Escribe una tarea antes de agregar' });
                 return;
             }
             // Sin fecha explícita = sin fecha (no asume today).
@@ -596,7 +614,7 @@ class TaskManager {
                 priority: !!DOM.newTaskPriority?.checked,
                 tags: tags.length ? tags : undefined,
             });
-            this.displayAlert('Item agregado a la lista', 'success');
+            this._notify('Tarea agregada', 'success', { detail: `"${value.trim()}"`, undo: true });
             this.currentPage = 1;
             this.renderTasks();
             close();
@@ -781,12 +799,12 @@ class TaskManager {
         e.preventDefault();
         const value = DOM.groceryInput.value;
         if (value.trim() === "") {
-            this.displayAlert("Por favor ingrese un valor", "danger");
+            this._notify('Falta el texto', 'warning', { detail: 'Escribe una tarea antes de agregar' });
             return;
         }
         this._pushUndo('Agregar tarea');
         this.store.add(value);
-        this.displayAlert("Item agregado a la lista", "success");
+        this._notify('Tarea agregada', 'success', { detail: `"${value.trim()}"`, undo: true });
         this.currentPage = 1;
         this.renderTasks();
         DOM.groceryInput.value = "";
@@ -796,36 +814,25 @@ class TaskManager {
 
     async handleClearItems() {
         if (this.store.isEmpty()) {
-            this.displayAlert("La lista ya está vacía", "danger");
+            this._notify('La lista ya está vacía', 'warning', { detail: 'No hay nada que limpiar' });
             return;
         }
         const ok = await confirmDialog("¿Estás seguro de que quieres limpiar toda la lista?");
         if (!ok) return;
-        // Snapshot ANTES del clear para poder revertir si el usuario
-        // presiona 'Deshacer' en el toast (5s de ventana).
-        const tasksSnapshot = this.store.snapshot();
-        const collapsedSnapshot = new Set(this.collapsedParents);
+        const n = this.store.tasks.filter(t => t.parentId === null).length;
+        // _pushUndo captura tasks + colapsados; "Deshacer" usa handleUndo.
         this._pushUndo('Limpiar lista');
         this.store.clear();
         this.currentPage = 1;
         this.renderTasks();
-        this.toast.show("Lista vacía", "danger", {
-            action: {
-                label: 'Deshacer',
-                onClick: () => {
-                    this.store.restore(tasksSnapshot);
-                    this.collapsedParents = collapsedSnapshot;
-                    saveCollapsed(this.collapsedParents);
-                    this.currentPage = 1;
-                    this.renderTasks();
-                    this.displayAlert('Lista restaurada', 'success');
-                },
-            },
+        this._notify('Lista vaciada', 'danger', {
+            detail: `Se eliminaron ${n} tarea${n === 1 ? '' : 's'}`,
+            undo: true,
         });
     }
 
     _setFilterTab(value) {
-        if (!['all', 'done', 'pending', 'today', 'week', 'priority'].includes(value)) return;
+        if (!['all', 'done', 'pending', 'today', 'week', 'month', 'priority'].includes(value)) return;
         // Elegir una Vista/Estado limpia el filtro por etiqueta (selección
         // mutuamente excluyente en el sidebar, como el mockup).
         const hadTag = this.activeTag !== null;
@@ -888,7 +895,7 @@ class TaskManager {
         this._undo = null;
         this.currentPage = 1;
         this.renderTasks();
-        this.displayAlert('Acción deshecha', 'success');
+        this._notify('Acción deshecha', 'success', { detail: 'Se restauró el estado anterior' });
     }
 
     _updateUndoButton() {
@@ -945,11 +952,16 @@ class TaskManager {
         const id = element.dataset.id;
         const isDone = element.dataset.done !== "true";
 
+        const task = this.store.tasks.find(t => t.id === id);
         this._pushUndo('Marcar tarea');
         this.store.toggle(id, isDone);
         this.currentPage = 1;
         this.renderTasks();
-        this.displayAlert(isDone ? 'Tarea marcada como hecha' : 'Tarea pendiente', isDone ? 'success' : 'warning');
+        this._notify(
+            isDone ? 'Tarea marcada como hecha' : 'Tarea reabierta',
+            isDone ? 'success' : 'warning',
+            { detail: task ? `"${task.value}"` : undefined, undo: true }
+        );
     }
 
     async handleDeleteItem(e) {
@@ -981,7 +993,11 @@ class TaskManager {
         }
         this.currentPage = 1;
         this.renderTasks();
-        this.displayAlert("Item eliminado", "danger");
+        this._notify(
+            subs.length > 0 ? 'Tarea y subtareas eliminadas' : 'Tarea eliminada',
+            'danger',
+            { detail: task ? `"${task.value}"` : undefined, undo: true }
+        );
     }
 
     handleEditItem(e) {
@@ -1001,9 +1017,10 @@ class TaskManager {
             this._pushUndo('Cambiar fecha');
             this.store.setDueDate(taskId, newValue || null);
             this.renderTasks();
-            this.displayAlert(newValue
-                ? `Fecha asignada: ${newValue}`
-                : 'Fecha removida', 'success');
+            this._notify(newValue ? 'Fecha asignada' : 'Fecha removida', 'success', {
+                detail: newValue ? `Vence el ${newValue}` : undefined,
+                undo: true,
+            });
         });
     }
 
@@ -1047,7 +1064,7 @@ class TaskManager {
             if (save && newValue && newValue !== oldText) {
                 this._pushUndo('Editar tarea');
                 this.store.update(id, newValue);
-                this.displayAlert('Tarea actualizada', 'success');
+                this._notify('Tarea actualizada', 'success', { detail: `"${newValue}"`, undo: true });
             }
             this.renderTasks();
         };
@@ -1315,7 +1332,7 @@ class TaskManager {
         if (ok) {
             this.currentPage = 1;
             this.renderTasks();
-            this.displayAlert(msg, 'success');
+            this._notify(msg, 'success', { undo: true });
         } else {
             // Movimiento rechazado: descartar el snapshot para no habilitar
             // un "Deshacer" que no cambiaría nada.
@@ -1521,6 +1538,14 @@ class TaskManager {
             .forEach(el => el.classList.toggle('is-collapsed', isNowCollapsed));
         const subsWrap = DOM.list.querySelector(`.m-subs[data-parent-id="${parentId}"]`);
         subsWrap?.classList.toggle('is-collapsed', isNowCollapsed);
+        // Al expandir (animación DOM-only, sin renderTasks) hay que recalcular
+        // el árbol: si el último render ocurrió con el padre colapsado, los
+        // --connector-up se midieron en altura 0 y el árbol queda desajustado.
+        // Se recalcula al terminar la transición de max-height (~220ms), ya
+        // con las subs a su altura real.
+        if (!isNowCollapsed && subsWrap) {
+            setTimeout(() => this._adjustTreeConnectors(subsWrap), 240);
+        }
     }
 
     handleSubtaskToggleKeyDown(e) {
@@ -1619,7 +1644,7 @@ class TaskManager {
 
         if (ok) {
             this.renderTasks();
-            if (msg) this.displayAlert(msg, 'success');
+            if (msg) this._notify(msg, 'success', { undo: true });
             const moved = DOM.list.querySelector(`.grocery-item[data-id="${id}"]`);
             if (moved) moved.focus();
         }
@@ -1981,24 +2006,54 @@ class TaskManager {
         if (changed) saveCollapsed(this.collapsedParents);
     }
 
+    /**
+     * "Hoy": la tarea vence hoy O fue creada hoy. Así el filtro es útil
+     * aunque la tarea no tenga fecha límite asignada.
+     */
+    _isToday(task) {
+        const today = todayISO();
+        return task.dueDate === today || createdISO(task) === today;
+    }
+
+    /**
+     * "Esta semana": vence en los próximos 7 días O fue creada en los
+     * últimos 7 días (ventana que incluye hoy).
+     */
+    _isThisWeek(task) {
+        const today = todayISO();
+        const dueEnd = shiftISO(7);
+        const createdStart = shiftISO(-6);
+        const dueIn = task.dueDate && task.dueDate >= today && task.dueDate <= dueEnd;
+        const created = createdISO(task);
+        const createdIn = created && created >= createdStart && created <= today;
+        return dueIn || createdIn;
+    }
+
+    /**
+     * "Este mes": vence o fue creada dentro del mes calendario actual
+     * (mismo año y mes que hoy).
+     */
+    _isThisMonth(task) {
+        const now = new Date();
+        const y = now.getFullYear();
+        const m = now.getMonth();
+        const inMonth = (iso) => {
+            if (!iso) return false;
+            const [yy, mm] = iso.split('-').map(Number);
+            return yy === y && (mm - 1) === m;
+        };
+        return inMonth(task.dueDate) || inMonth(createdISO(task));
+    }
+
     _filteredParents() {
         // Sort sólo aplica a padres; el filtro también sólo aplica a padres.
         const ordered = this.store.getOrderedTasks(this.sortBy);
         let parents = ordered.filter(t => t.parentId === null);
         if (this.filterMode === 'done') parents = parents.filter(t => t.done);
         else if (this.filterMode === 'pending') parents = parents.filter(t => !t.done);
-        else if (this.filterMode === 'today') {
-            const today = todayISO();
-            parents = parents.filter(t => t.dueDate === today);
-        }
-        else if (this.filterMode === 'week') {
-            // Próximos 7 días (incluye hoy). Solo tareas con dueDate.
-            const today = todayISO();
-            const t = new Date();
-            t.setDate(t.getDate() + 7);
-            const end = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
-            parents = parents.filter(p => p.dueDate && p.dueDate >= today && p.dueDate <= end);
-        }
+        else if (this.filterMode === 'today') parents = parents.filter(t => this._isToday(t));
+        else if (this.filterMode === 'week') parents = parents.filter(t => this._isThisWeek(t));
+        else if (this.filterMode === 'month') parents = parents.filter(t => this._isThisMonth(t));
         else if (this.filterMode === 'priority') parents = parents.filter(t => !!t.priority);
         // Filtro por etiqueta (excluyente con las Vistas; cuando hay tag
         // activa, filterMode siempre es 'all').
@@ -2149,8 +2204,9 @@ class TaskManager {
 
     _emptyStateMessage() {
         switch (this.filterMode) {
-            case 'today':    return 'No hay tareas con fecha de hoy.';
-            case 'week':     return 'No hay tareas para los próximos 7 días.';
+            case 'today':    return 'No hay tareas creadas hoy ni que venzan hoy.';
+            case 'week':     return 'No hay tareas de esta semana.';
+            case 'month':    return 'No hay tareas de este mes.';
             case 'priority': return 'No hay tareas marcadas como prioritarias.';
             case 'done':     return 'No hay tareas hechas.';
             case 'pending':  return 'Todo terminado. No hay pendientes.';
@@ -2429,8 +2485,18 @@ class TaskManager {
                 // nuevo. Click en el mismo padre toggla off.
                 const wasExpanded = this._showAddSubFor.has(id);
                 this._showAddSubFor.clear();
-                if (!wasExpanded) this._showAddSubFor.add(id);
+                const willExpand = !wasExpanded;
+                if (willExpand) this._showAddSubFor.add(id);
                 this.renderTasks();
+                // Al abrir, focus directo al input para empezar a escribir ya.
+                if (willExpand) {
+                    requestAnimationFrame(() => {
+                        const input = DOM.list.querySelector(
+                            `.m-subs[data-parent-id="${id}"] .subtask-add-input`
+                        );
+                        input?.focus();
+                    });
+                }
             });
         }
 
@@ -2504,7 +2570,7 @@ class TaskManager {
             this._showAddSubFor.add(parentId);
             this.currentPage = 1;
             this.renderTasks();
-            this.displayAlert('Subtarea agregada', 'success');
+            this._notify('Subtarea agregada', 'success', { detail: `"${value}"`, undo: true });
             // Re-focus en el input del form NUEVO (renderTasks reconstruye
             // el DOM y el form anterior ya no existe). Sin esto el teclado
             // mobile se cierra entre cada submit y agregar varias subs es
@@ -2548,12 +2614,26 @@ class TaskManager {
         this.toast.show(text, type);
     }
 
+    /**
+     * Toast con el estilo completo (título + detalle + acción), igual que
+     * el botón de debug. Si `undo` es true, agrega "Deshacer" cableado al
+     * undo de un nivel (handleUndo).
+     */
+    _notify(title, type, { detail, undo } = {}) {
+        this.toast.show(title, type, {
+            detail,
+            action: undo ? { label: 'Deshacer', onClick: () => this.handleUndo() } : undefined,
+        });
+    }
+
     updateTaskCount(filteredCount) {
         if (DOM.taskCountDisplay) {
             let label = 'Total';
             if (this.filterMode === 'done') label = 'Completadas';
             else if (this.filterMode === 'pending') label = 'Pendientes';
             else if (this.filterMode === 'today') label = 'Hoy';
+            else if (this.filterMode === 'week') label = 'Esta semana';
+            else if (this.filterMode === 'month') label = 'Este mes';
             else if (this.filterMode === 'priority') label = 'Prioridad';
             DOM.taskCountDisplay.textContent = `Tareas: ${label}: ${filteredCount}`;
         }
@@ -2566,17 +2646,14 @@ class TaskManager {
         const totalCount = allParents.length;
         const doneCount = allParents.filter(p => p.done).length;
         const pendingCount = totalCount - doneCount;
-        const today = todayISO();
-        const todayCount = allParents.filter(p => p.dueDate === today).length;
+        const todayCount = allParents.filter(p => this._isToday(p)).length;
+        const weekCount = allParents.filter(p => this._isThisWeek(p)).length;
+        const monthCount = allParents.filter(p => this._isThisMonth(p)).length;
         const priorityCount = allParents.filter(p => !!p.priority).length;
-        const weekEndDate = new Date();
-        weekEndDate.setDate(weekEndDate.getDate() + 7);
-        const weekEnd = `${weekEndDate.getFullYear()}-${String(weekEndDate.getMonth() + 1).padStart(2, '0')}-${String(weekEndDate.getDate()).padStart(2, '0')}`;
-        const weekCount = allParents.filter(p => p.dueDate && p.dueDate >= today && p.dueDate <= weekEnd).length;
 
         const viewTitles = {
             all: 'Todas', pending: 'Pendientes', done: 'Hechas',
-            today: 'Hoy', week: 'Esta semana', priority: 'Prioridad',
+            today: 'Hoy', week: 'Esta semana', month: 'Este mes', priority: 'Prioridad',
         };
 
         // Header mobile (Fase F1 + dinámico): título refleja el filter activo,
@@ -2595,7 +2672,7 @@ class TaskManager {
         // Contadores por vista en el sidebar.
         const navCounts = {
             all: totalCount, pending: pendingCount, done: doneCount,
-            today: todayCount, week: weekCount, priority: priorityCount,
+            today: todayCount, week: weekCount, month: monthCount, priority: priorityCount,
         };
         document.querySelectorAll('[data-count]').forEach(el => {
             const k = el.dataset.count;
