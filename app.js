@@ -55,10 +55,16 @@ const DOM = {
     bulkCollapseRoot: document.getElementById('bulkCollapse'),
     bulkCollapseAllBtn: document.querySelector('.bulk-collapse-all'),
     bulkExpandAllBtn: document.querySelector('.bulk-expand-all'),
+    bulkSelectBar: document.getElementById('bulkSelectBar'),
+    bulkSelectCount: document.getElementById('bulkSelectCount'),
+    bulkDeleteBtn: document.getElementById('bulkDeleteBtn'),
+    bulkDeselectBtn: document.getElementById('bulkDeselect'),
     promoteZone: document.getElementById('promoteZone'),
     searchInput: document.getElementById('searchInput'),
     searchRow: document.getElementById('searchRow'),
     paginationNav: document.querySelector('.pagination'),
+    listFooter: document.getElementById('listFooter'),
+    listFooterInfo: document.getElementById('listFooterInfo'),
     taskCountDisplay: document.querySelector('.task-count'),
     toastContainer: document.getElementById('toastContainer'),
     confirmModal: document.getElementById('confirmModal'),
@@ -249,6 +255,7 @@ class TaskManager {
         this.collapsedParents = loadCollapsed();
         this.activeTag = loadActiveTag();   // filtro por etiqueta (sidebar Etiquetas)
         this.tagColors = loadTagColors();   // { tagLower: color } elegido en el picker
+        this.selectedIds = new Set();       // selección múltiple (desktop) para acciones masivas
         this._undo = null;                  // snapshot de un nivel para "Deshacer"
         // Set transitorio (no persistido) de IDs de padres con el form
         // "+ subtarea" expandido. Toggle desde el botón addsub-btn.
@@ -366,6 +373,10 @@ class TaskManager {
         const expandSlot = DOM.bulkExpandAllBtn?.querySelector('.bulk-btn-icon');
         if (expandSlot && !expandSlot.firstChild) {
             expandSlot.appendChild(createIcon('chevron-down', { size: 14 }));
+        }
+        const bulkDelSlot = DOM.bulkDeleteBtn?.querySelector('.bulk-btn-icon');
+        if (bulkDelSlot && !bulkDelSlot.firstChild) {
+            bulkDelSlot.appendChild(createIcon('trash', { size: 14 }));
         }
         // Hamburger icon (menu) — solo se ve en mobile vía CSS.
         if (DOM.appHamburger && !DOM.appHamburger.firstChild) {
@@ -759,6 +770,16 @@ class TaskManager {
             undoBtn.addEventListener('click', () => this.handleUndo());
             this._updateUndoButton();
         }
+
+        // Stats clicables del page-head: cada chip activa su filtro. Delegado
+        // en el contenedor estable (el contenido se re-renderiza por render).
+        const pageHeadSub = document.getElementById('pageHeadSub');
+        if (pageHeadSub) {
+            pageHeadSub.addEventListener('click', (e) => {
+                const chip = e.target.closest('[data-filter]');
+                if (chip) this._setFilterTab(chip.dataset.filter);
+            });
+        }
     }
 
     setupEventListeners() {
@@ -776,6 +797,12 @@ class TaskManager {
         }
         if (DOM.mExpandAll) {
             DOM.mExpandAll.addEventListener('click', this.handleExpandAll.bind(this));
+        }
+        if (DOM.bulkDeleteBtn) {
+            DOM.bulkDeleteBtn.addEventListener('click', this.handleBulkDelete.bind(this));
+        }
+        if (DOM.bulkDeselectBtn) {
+            DOM.bulkDeselectBtn.addEventListener('click', () => this._clearSelection());
         }
         if (DOM.promoteZone) {
             DOM.promoteZone.addEventListener('dragover', this.handlePromoteDragOver.bind(this));
@@ -827,6 +854,77 @@ class TaskManager {
         this.renderTasks();
         this._notify('Lista vaciada', 'danger', {
             detail: `Se eliminaron ${n} tarea${n === 1 ? '' : 's'}`,
+            undo: true,
+        });
+    }
+
+    // ----- Selección múltiple (desktop) + acciones masivas -----------------
+
+    _buildSelectBox(id) {
+        const checked = this.selectedIds.has(id);
+        const box = document.createElement('button');
+        box.type = 'button';
+        box.className = 'select-box' + (checked ? ' is-checked' : '');
+        box.setAttribute('role', 'checkbox');
+        box.setAttribute('aria-checked', String(checked));
+        box.setAttribute('aria-label', 'Seleccionar tarea');
+        box.appendChild(createIcon('check', { size: 12 }));
+        box.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this._toggleSelect(id, box, box.closest('.grocery-item'));
+        });
+        return box;
+    }
+
+    _toggleSelect(id, box, row) {
+        const nowChecked = !this.selectedIds.has(id);
+        if (nowChecked) this.selectedIds.add(id);
+        else this.selectedIds.delete(id);
+        box.classList.toggle('is-checked', nowChecked);
+        box.setAttribute('aria-checked', String(nowChecked));
+        if (row) row.classList.toggle('is-selected', nowChecked);
+        this._renderBulkBar();
+    }
+
+    /** Muestra/oculta la barra de acción masiva y refleja el conteo. */
+    _renderBulkBar() {
+        if (DOM.list) DOM.list.classList.toggle('has-selection', this.selectedIds.size > 0);
+        const bar = DOM.bulkSelectBar;
+        if (!bar) return;
+        const n = this.selectedIds.size;
+        bar.hidden = n === 0;
+        if (DOM.bulkSelectCount) {
+            DOM.bulkSelectCount.textContent = `${n} seleccionada${n === 1 ? '' : 's'}`;
+        }
+    }
+
+    _clearSelection() {
+        if (this.selectedIds.size === 0) return;
+        this.selectedIds.clear();
+        this.renderTasks();
+    }
+
+    async handleBulkDelete() {
+        const ids = [...this.selectedIds].filter(
+            id => this.store.tasks.some(t => t.id === id && t.parentId === null)
+        );
+        if (ids.length === 0) return;
+        const ok = await confirmDialog(
+            `¿Eliminar ${ids.length} tarea${ids.length === 1 ? '' : 's'} seleccionada${ids.length === 1 ? '' : 's'}? Se borran también sus subtareas.`
+        );
+        if (!ok) return;
+        this._pushUndo('Eliminar selección');
+        for (const id of ids) {
+            if (this.collapsedParents.has(id)) this.collapsedParents.delete(id);
+            this.store.remove(id);
+        }
+        saveCollapsed(this.collapsedParents);
+        const count = ids.length;
+        this.selectedIds.clear();
+        this.currentPage = 1;
+        this.renderTasks();
+        this._notify('Tareas eliminadas', 'danger', {
+            detail: `Se eliminaron ${count} tarea${count === 1 ? '' : 's'}`,
             undo: true,
         });
     }
@@ -1763,6 +1861,12 @@ class TaskManager {
     renderTasks() {
         // Limpia entradas obsoletas del Set de colapsados antes del render.
         this._pruneCollapsedSet();
+        // Limpia de la selección los ids que ya no son padres existentes.
+        for (const id of [...this.selectedIds]) {
+            if (!this.store.tasks.some(t => t.id === id && t.parentId === null)) {
+                this.selectedIds.delete(id);
+            }
+        }
         // La paginación cuenta sólo PADRES; cada padre arrastra a sus subs.
         const filteredParents = this._filteredParents();
         const totalPages = Math.max(1, Math.ceil(filteredParents.length / this.pageSize));
@@ -1779,10 +1883,12 @@ class TaskManager {
 
         this._renderList(pageItems);
         this._renderPagination(totalPages);
+        this._renderListFooter(filteredParents.length);
         this.updateTaskCount(filteredParents.length);
         this._updateBulkCollapseVisibility();
         this._updateSearchVisibility();
         this._renderSidebarTags();
+        this._renderBulkBar();
         this._updateUndoButton();
         this._updateElapsed();
     }
@@ -2244,68 +2350,69 @@ class TaskManager {
         }
         nav.hidden = false;
 
-        // Anterior — sólo si current > 1.
-        if (this.currentPage > 1) {
-            nav.append(this._buildPageNav('prev', this.currentPage - 1));
-        }
+        // Anterior (icon-only, deshabilitado en la primera página) — estilo desktop.html.
+        nav.append(this._buildPageNav('prev', this.currentPage - 1, this.currentPage <= 1));
 
-        const items = paginate(totalPages, this.currentPage);
-        const list = document.createElement('ul');
-        list.className = 'page-list';
-        for (const item of items) {
-            const li = document.createElement('li');
+        // Números + elipsis como botones .page-btn directos (sin <ul>).
+        for (const item of paginate(totalPages, this.currentPage)) {
             if (item === ELLIPSIS) {
-                li.className = 'page-ellipsis';
-                li.setAttribute('aria-hidden', 'true');
-                li.textContent = '…';
-            } else {
-                const isCurrent = item === this.currentPage;
-                const btn = document.createElement('button');
-                btn.type = 'button';
-                btn.className = 'page-num';
-                btn.textContent = String(item);
-                if (isCurrent) {
-                    btn.classList.add('is-current');
-                    btn.disabled = true;
-                    btn.setAttribute('aria-current', 'page');
-                } else {
-                    btn.setAttribute('aria-label', `Ir a la página ${item}`);
-                    btn.addEventListener('click', () => this.handlePageClick(item));
-                }
-                li.appendChild(btn);
+                const span = document.createElement('span');
+                span.className = 'ellipsis';
+                span.setAttribute('aria-hidden', 'true');
+                span.textContent = '…';
+                nav.appendChild(span);
+                continue;
             }
-            list.appendChild(li);
+            const isCurrent = item === this.currentPage;
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'page-btn';
+            btn.textContent = String(item);
+            if (isCurrent) {
+                btn.classList.add('is-current');
+                btn.disabled = true;
+                btn.setAttribute('aria-current', 'page');
+            } else {
+                btn.setAttribute('aria-label', `Ir a la página ${item}`);
+                btn.addEventListener('click', () => this.handlePageClick(item));
+            }
+            nav.appendChild(btn);
         }
-        nav.appendChild(list);
 
-        // Siguiente — sólo si current < totalPages.
-        if (this.currentPage < totalPages) {
-            nav.append(this._buildPageNav('next', this.currentPage + 1));
-        }
+        // Siguiente (icon-only, deshabilitado en la última página).
+        nav.append(this._buildPageNav('next', this.currentPage + 1, this.currentPage >= totalPages));
     }
 
-    _buildPageNav(direction, targetPage) {
+    _buildPageNav(direction, targetPage, disabled) {
+        const isPrev = direction === 'prev';
         const btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = `page-${direction}`;
-        const isPrev = direction === 'prev';
+        btn.className = 'page-btn page-nav';
         btn.setAttribute('aria-label', isPrev ? 'Página anterior' : 'Página siguiente');
-        if (isPrev) {
-            btn.append(createIcon('chevron-left', { size: 16 }));
-            btn.append(this._navLabel('Anterior'));
+        btn.append(createIcon(isPrev ? 'chevron-left' : 'chevron-right', { size: 14 }));
+        if (disabled) {
+            btn.disabled = true;
         } else {
-            btn.append(this._navLabel('Siguiente'));
-            btn.append(createIcon('chevron-right', { size: 16 }));
+            btn.addEventListener('click', () => this.handlePageClick(targetPage));
         }
-        btn.addEventListener('click', () => this.handlePageClick(targetPage));
         return btn;
     }
 
-    _navLabel(text) {
-        const span = document.createElement('span');
-        span.className = 'page-nav-label';
-        span.textContent = text;
-        return span;
+    /**
+     * Footer-bar de la lista (estilo desktop.html): "Mostrando X–Y de N".
+     * Visible en desktop; se oculta si no hay items en el filtro actual.
+     */
+    _renderListFooter(filteredCount) {
+        const footer = DOM.listFooter;
+        if (!footer) return;
+        if (filteredCount === 0) { footer.hidden = true; return; }
+        footer.hidden = false;
+        if (DOM.listFooterInfo) {
+            const start = (this.currentPage - 1) * this.pageSize + 1;
+            const end = Math.min(this.currentPage * this.pageSize, filteredCount);
+            DOM.listFooterInfo.innerHTML =
+                `Mostrando <strong>${start}–${end}</strong> de <strong>${filteredCount}</strong>`;
+        }
     }
 
     createListItem(task) {
@@ -2327,6 +2434,7 @@ class TaskManager {
         element.dataset.id = id;
         element.dataset.done = String(done);
         if (done) element.classList.add('done', 'is-done');
+        if (!isSubtask && this.selectedIds.has(id)) element.classList.add('is-selected');
 
         // Drag-and-drop en modo manual sin filtro:
         //   - dragstart/dragend van en cada item (cycle del drag).
@@ -2533,7 +2641,9 @@ class TaskManager {
         if (!isSubtask) {
             const hasSubs = this.store.subsOf(id).length > 0;
             const subSlot = hasSubs ? this._buildSubtaskCollapseBtn(id) : this._buildSubtaskCollapsePlaceholder();
-            element.append(subSlot, toggleBtn, titleBlock, meta);
+            // Checkbox de selección múltiple (solo desktop vía CSS, posición
+            // absoluta en el gutter izquierdo — no afecta el layout mobile).
+            element.append(this._buildSelectBox(id), subSlot, toggleBtn, titleBlock, meta);
         } else {
             element.append(toggleBtn, titleBlock, meta);
         }
@@ -2696,20 +2806,54 @@ class TaskManager {
             const monthsFull = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
             phDate.textContent = `${days[now.getDay()]}, ${now.getDate()} de ${monthsFull[now.getMonth()]}`;
         }
+        // Titular contextual: refleja el estado real (vacío / vencidas /
+        // al día / saludo según la hora).
+        const overdueCount = allParents.filter(
+            p => p.dueDate && p.dueDate < todayISO() && !p.done
+        ).length;
+        const dueTodayCount = allParents.filter(
+            p => !p.done && p.dueDate === todayISO()
+        ).length;
         const phTitle = document.getElementById('pageHeadTitle');
         if (phTitle) {
-            const h = new Date().getHours();
-            const greet = h < 12 ? 'Buen día' : (h < 19 ? 'Buenas tardes' : 'Buenas noches');
-            phTitle.textContent = `${greet} — sigamos.`;
+            let text;
+            if (totalCount === 0) {
+                text = 'Tu lista está vacía';
+            } else if (overdueCount > 0) {
+                text = `Tienes ${overdueCount} ${overdueCount === 1 ? 'tarea vencida' : 'tareas vencidas'}`;
+            } else if (pendingCount === 0) {
+                text = '¡Todo al día! 🎉';
+            } else if (dueTodayCount > 0) {
+                // Hay tareas con fecha de hoy: enfoca en ellas.
+                text = `${dueTodayCount} ${dueTodayCount === 1 ? 'tarea' : 'tareas'} para hoy`;
+            } else {
+                // Uso normal: titular vivo con el conteo de pendientes,
+                // anteponiendo el saludo según la hora.
+                const h = new Date().getHours();
+                const greet = h < 12 ? 'Buenos días' : (h < 19 ? 'Buenas tardes' : 'Buenas noches');
+                text = `${greet} · ${pendingCount} ${pendingCount === 1 ? 'pendiente' : 'pendientes'}`;
+            }
+            phTitle.textContent = text;
+            phTitle.classList.toggle('is-alert', overdueCount > 0);
         }
+
+        // Stats clicables: cada chip activa su filtro (data-filter). El chip
+        // del filtro activo queda resaltado. La delegación de click vive en
+        // _setupSidebar.
         const phSub = document.getElementById('pageHeadSub');
         if (phSub) {
-            phSub.innerHTML =
-                `<span><strong>${pendingCount}</strong> activas</span>` +
-                `<span class="dot"></span>` +
-                `<span><strong>${doneCount}</strong> hechas</span>` +
-                `<span class="dot"></span>` +
-                `<span><strong>${totalCount}</strong> en total</span>`;
+            if (totalCount === 0) {
+                phSub.innerHTML = '<span class="page-head__hint">Agrega tu primera tarea abajo.</span>';
+            } else {
+                const chip = (filter, count, label) =>
+                    `<button type="button" class="page-head__stat${this.filterMode === filter ? ' is-active' : ''}" data-filter="${filter}">` +
+                    `<strong>${count}</strong> ${label}</button>`;
+                const chips = [chip('pending', pendingCount, 'pendientes')];
+                if (todayCount > 0) chips.push(chip('today', todayCount, 'hoy'));
+                if (priorityCount > 0) chips.push(chip('priority', priorityCount, 'prioritarias'));
+                if (doneCount > 0) chips.push(chip('done', doneCount, 'hechas'));
+                phSub.innerHTML = chips.join('<span class="dot"></span>');
+            }
         }
     }
 }

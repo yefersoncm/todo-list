@@ -266,11 +266,26 @@
                     </div>
                 </div>
             </div>
+            <!-- Barra de acción masiva: aparece al seleccionar varias tareas
+                 (checkbox por fila, solo desktop). -->
+            <div class="bulk-select-bar" id="bulkSelectBar" hidden>
+                <span class="bulk-select-bar__count" id="bulkSelectCount"></span>
+                <span class="bulk-select-bar__spacer"></span>
+                <button type="button" class="btn btn--ghost btn--sm" id="bulkDeselect">Deseleccionar</button>
+                <button type="button" class="btn btn--danger btn--sm" id="bulkDeleteBtn">
+                    <span class="bulk-btn-icon" aria-hidden="true"></span>
+                    <span>Eliminar seleccionadas</span>
+                </button>
+            </div>
             <div class="promote-zone" id="promoteZone" hidden aria-label="Zona de promoción">
                 <span class="promote-zone-label">Soltar aquí para convertir en tarea principal</span>
             </div>
             <div class="grocery-list"></div>
-            <nav class="pagination" aria-label="Paginación" hidden></nav>
+            <!-- Footer-bar (estilo desktop.html): "Mostrando X–Y de N" + paginación. -->
+            <div class="list-footer" id="listFooter" hidden>
+                <span class="list-footer__info" id="listFooterInfo"></span>
+                <nav class="pagination" aria-label="Paginación" hidden></nav>
+            </div>
         </div>
 
     </section>
