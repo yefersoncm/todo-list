@@ -14,6 +14,14 @@ import { createIcon } from './icons.js';
 const MAX_TOASTS = 5;
 const AUTO_DISMISS_MS = 5000;
 
+// Icono por tipo (estilo desktop.html).
+const ICON_FOR = {
+    success: 'circle-check',
+    danger: 'x-circle',
+    warning: 'alert',
+    info: 'info',
+};
+
 export class ToastManager {
     constructor(container) {
         this.container = container;
@@ -22,18 +30,20 @@ export class ToastManager {
     }
 
     /**
-     * options.action: { label, onClick } — agrega un botón inline al
-     * toast que ejecuta onClick y cierra. Útil para "Deshacer" tras
-     * acciones destructivas.
+     * Muestra un toast con título (obligatorio) y, opcionalmente, una línea
+     * de detalle. Estilo desktop.html: icono por tipo + cuerpo + acción + X.
+     *   options.detail: string — segunda línea (descripción).
+     *   options.action: { label, onClick } — botón inline (ej. "Deshacer")
+     *     que ejecuta onClick y cierra el toast.
      */
-    show(text, type = 'success', options = {}) {
+    show(title, type = 'success', options = {}) {
         // Si ya hay 5 visibles, cerrar la más antigua primero.
         while (this.toasts.length >= MAX_TOASTS) {
             this._dismiss(this.toasts[0].id);
         }
 
         const id = ++this._idCounter;
-        const element = this._buildToast(id, text, type, options);
+        const element = this._buildToast(id, title, type, options);
 
         // Inserta arriba (más nueva primero en el DOM).
         this.container.insertBefore(element, this.container.firstChild);
@@ -46,7 +56,7 @@ export class ToastManager {
         this.toasts.push({ id, element, timer });
     }
 
-    _buildToast(id, text, type, options = {}) {
+    _buildToast(id, title, type, options = {}) {
         const el = document.createElement('div');
         // Clases dobles: app-toast* para compat JS legacy + .toast .toast--* del rediseño.
         const designVariant = { success: 'success', danger: 'danger', warning: 'warning', info: 'info' }[type] || 'info';
@@ -55,9 +65,25 @@ export class ToastManager {
         el.setAttribute('aria-live', 'polite');
         el.dataset.toastId = String(id);
 
-        const message = document.createElement('p');
-        message.className = 'app-toast-message toast__msg';
-        message.textContent = text;
+        // Icono por tipo (color via .toast--* en CSS).
+        const icon = document.createElement('span');
+        icon.className = 'toast__icon';
+        icon.setAttribute('aria-hidden', 'true');
+        try { icon.appendChild(createIcon(ICON_FOR[type] || 'info', { size: 18 })); } catch {}
+
+        // Cuerpo: título + (opcional) detalle.
+        const body = document.createElement('div');
+        body.className = 'app-toast-message toast__body';
+        const titleEl = document.createElement('p');
+        titleEl.className = 'toast__title';
+        titleEl.textContent = title;
+        body.appendChild(titleEl);
+        if (options.detail) {
+            const detailEl = document.createElement('p');
+            detailEl.className = 'toast__detail';
+            detailEl.textContent = options.detail;
+            body.appendChild(detailEl);
+        }
 
         const closeBtn = document.createElement('button');
         closeBtn.type = 'button';
@@ -66,7 +92,7 @@ export class ToastManager {
         closeBtn.appendChild(createIcon('x', { size: 14 }));
         closeBtn.addEventListener('click', () => this._dismiss(id));
 
-        el.append(message);
+        el.append(icon, body);
         if (options.action && typeof options.action.onClick === 'function') {
             const actionBtn = document.createElement('button');
             actionBtn.type = 'button';

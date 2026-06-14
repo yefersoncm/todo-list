@@ -232,6 +232,12 @@ con mayor especificidad y haría invisibles nuestras notificaciones.
         right: var(--sp-3);
         max-width: none;
     }
+    /* En mobile el toast llena el ancho disponible (sin min/max de desktop). */
+    .toast {
+        min-width: 0;
+        max-width: none;
+        width: 100%;
+    }
 }
 /* Anim slide-from-right (design es estático, mantenemos esta del legacy). */
 .app-toast {
@@ -250,6 +256,40 @@ con mayor especificidad y haría invisibles nuestras notificaciones.
 }
 .app-toast-action,
 .app-toast-close { pointer-events: auto; }
+
+/* Toast con título + detalle (estilo desktop.html). El grid base
+   (icono | cuerpo | acción | X) y la paleta por tipo vienen de
+   components.css (.toast / .toast--*); aquí solo el cuerpo de 2 líneas. */
+.toast { align-items: flex-start; }
+.toast .toast__icon { margin-top: 1px; }
+.toast__body {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+}
+.toast__title {
+    margin: 0;
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-semibold);
+    color: var(--fg-default);
+    line-height: var(--lh-snug);
+}
+.toast__detail {
+    margin: 0;
+    font-size: var(--fs-xs);
+    color: var(--fg-muted);
+    line-height: var(--lh-snug);
+    overflow-wrap: anywhere;
+    /* Recorta a 2 líneas con ellipsis para que el toast no crezca de más. */
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.toast__action { align-self: center; white-space: nowrap; }
+.toast__close { align-self: flex-start; }
 
 /* App chrome con toggles theme + density (Fase 7H) y, en mobile (Fase 8A),
    el título con stats. En desktop el título permanece oculto y solo se
@@ -2144,18 +2184,22 @@ mobile (≤480) y desktop legacy (481–1023) quedan EXACTAMENTE igual.
   }
   .app-main .m-subs .grocery-item.is-subtask {
     position: relative;
-    margin-left: var(--sp-3);
+    /* Indent generoso para que la sub se lea claramente ANIDADA bajo el
+       padre (su toggle queda ~bajo el título del padre, no a su mismo nivel). */
+    margin-left: 36px;
     padding-left: var(--sp-2);
     overflow: visible;          /* deja salir el ::before hacia la izquierda */
   }
-  /* La "L" curvada — reemplaza la guía recta de .task.is-sub::before. */
+  /* La "L" curvada — reemplaza la guía recta de .task.is-sub::before. El
+     brazo (36px) llega desde el "spine" (bajo el chevron del padre) hasta
+     la sub. */
   .app-main .m-subs .grocery-item.is-subtask::before,
   .app-main .m-subs > .subtask-add-form::before {
     content: "";
     position: absolute;
-    left: calc(var(--sp-5) * -1);
+    left: -36px;
     top: calc(var(--connector-up, 0px) * -1);
-    width: var(--sp-5);
+    width: 36px;
     height: calc(50% + var(--connector-up, 0px));
     border-left: 2px solid var(--border-subtle);
     border-bottom: 2px solid var(--border-subtle);
@@ -2164,7 +2208,7 @@ mobile (≤480) y desktop legacy (481–1023) quedan EXACTAMENTE igual.
   }
   .app-main .m-subs > .subtask-add-form {
     position: relative;
-    margin-left: var(--sp-3);
+    margin-left: 36px;
     margin-top: var(--sp-1);
   }
   .app-main .m-subs > .subtask-add-form .subtask-add-input {

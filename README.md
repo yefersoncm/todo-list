@@ -10,8 +10,8 @@ App para gestionar tareas por hacer: agregar, editar, marcar como hechas y elimi
 - Editar el texto de una tarea existente.
 - Marcar / desmarcar como hecha (la fila queda destacada y el texto tachado).
 - Eliminar una tarea (con confirmación) o limpiar la lista entera.
-- Filtrar la vista por: Todas / Pendientes / Hechas, más **Hoy**, **Esta semana** y **Prioritarias**.
-- **Fechas límite y prioridad**: cada tarea principal puede llevar fecha (con date picker custom que respeta dark/light) y marcarse como prioritaria (estrella). Los filtros Hoy / Esta semana / Prioritarias operan sobre ellas; las tareas con fecha de hoy o vencidas se resaltan.
+- Filtrar la vista por: Todas / Pendientes / Hechas, más **Hoy**, **Esta semana**, **Este mes** y **Prioritarias**. Hoy / Esta semana / Este mes consideran tanto la **fecha de creación** como la **fecha límite** (así son útiles aunque la tarea no tenga fecha asignada).
+- **Fechas límite y prioridad**: cada tarea principal puede llevar fecha (con date picker custom que respeta dark/light) y marcarse como prioritaria (estrella). Las tareas con fecha de hoy o vencidas se resaltan.
 - **Etiquetas**: etiquetas libres por tarea principal, cada una con un **color elegido de una paleta fija de 10 colores** (persistido). Se asignan al crear la tarea o desde un modal por tarea, se muestran como chips de color, y permiten filtrar desde el panel lateral.
 - **Subtareas** (1 nivel de profundidad): cada tarea puede tener subtareas que se agregan desde un input inline en la fila del padre. El padre muestra un contador `(X/Y)` con el progreso. Marcar el padre propaga a sus subs (y viceversa), agregar una sub a un padre hecho lo re-abre, borrar el padre borra todas las subs en cascada con confirmación. Filtros, sort y paginación operan sobre padres; las subs van pegadas a su padre. Cada padre con subs puede **colapsarse / expandirse** con un chevron (animación CSS slide), persistido en `localStorage`. Atajo de teclado: `←` colapsa, `→` expande sobre el chevron enfocado. Botones globales `Colapsar todo / Expandir todo` en la cabecera de la lista. **Drag-and-drop entre niveles** (sólo en sort manual + filtro Todas): arrastrar una sub sobre otro padre la re-parenta; arrastrar una sub a la zona "Soltar aquí para convertir en tarea principal" (que aparece arriba de la lista durante el drag) la promueve a top-level.
 - Ordenamiento configurable (persistido en `localStorage`) por: tiempo de creación, alfabético, longitud del texto, estado, última modificación, o **manual**. En modo manual se puede reordenar arrastrando o con `Alt+↑` / `Alt+↓` cuando el item está enfocado.
@@ -20,7 +20,7 @@ App para gestionar tareas por hacer: agregar, editar, marcar como hechas y elimi
 - Contador de tareas según el filtro activo.
 - Persistencia en `localStorage` — al recargar, las tareas siguen ahí.
 - Modal de confirmación custom (sin `confirm()` nativo) con soporte de teclado (`Esc` cancela, `Enter` confirma).
-- Notificaciones tipo toast en la esquina superior derecha (success / danger / warning), con auto-dismiss a 5 s o cierre con la X. Máximo 5 visibles — al exceder, la más antigua se cierra. Slide-in desde la derecha + fade.
+- Notificaciones tipo toast (success / danger / warning) con **icono por tipo, título y línea de detalle** (el detalle se recorta a 2 líneas). Las acciones reversibles incluyen un botón **Deshacer**. Auto-dismiss a 5 s o cierre con la X; máximo 5 visibles — al exceder, la más antigua se cierra. Arriba a la derecha en desktop, abajo a todo el ancho en mobile.
 - **Deshacer** de un nivel: revierte la última acción (agregar, editar, marcar, eliminar, limpiar, prioridad, fecha, subtarea, etiqueta o reordenar) restaurando el estado anterior.
 
 ## Diseño y layout
@@ -33,9 +33,12 @@ es responsive con tres modos:
 - **Mobile (≤480px):** header condensado, pills de filtro, FAB para nueva tarea,
   bottom-nav y drawer de ajustes. Toques ≥44px y botones ↑/↓ que reemplazan al drag.
 - **Tablet (481–1023px):** layout centrado tipo "card".
-- **Desktop / web (≥1024px):** app-shell con **sidebar** (Vistas, Estado y
-  Etiquetas con contadores), **topbar**, **page-head** con saludo y stats, y una
-  barra de herramientas con orden, filtros, colapsar/expandir, limpiar y paginación.
+- **Desktop / web (≥1024px):** app-shell con **sidebar** colapsable de 3 secciones
+  (Vistas: Todas/Hoy/Esta semana/Este mes/Prioritarias · Estado: Pendientes/Hechas ·
+  Etiquetas con contadores), **topbar**, **page-head** con saludo, stats y los
+  controles **Ordenar** + **Deshacer**, y una barra de herramientas con filtros,
+  colapsar/expandir, limpiar y paginación. Las subtareas se muestran con un árbol
+  conector indentado bajo su padre.
 
 ## Stack
 
