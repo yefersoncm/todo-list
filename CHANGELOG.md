@@ -4,6 +4,13 @@ Todos los cambios notables de este proyecto se documentan aquí.
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.0.0/)
 y versionado según [SemVer](https://semver.org/lang/es/).
 
+## [1.2.1] - 2026-06-15
+
+### Changed
+- El chip del atajo de búsqueda muestra **⌘ K** en macOS/iOS y **Ctrl K** en el
+  resto (detección por `navigator.userAgentData.platform` / `navigator.platform`).
+  El atajo ya respondía a Cmd y Ctrl. Probado en Mac.
+
 ## [1.2.0] - 2026-06-15
 
 ### Added
@@ -80,6 +87,7 @@ y versionado según [SemVer](https://semver.org/lang/es/).
   transcurrido, modal de confirmación y refactor responsive mobile-first.
 - Integración del sistema de diseño (tokens + componentes, tema claro/oscuro).
 
+[1.2.1]: https://github.com/yefersoncm/todo-list/releases/tag/v1.2.1
 [1.2.0]: https://github.com/yefersoncm/todo-list/releases/tag/v1.2.0
 [1.1.1]: https://github.com/yefersoncm/todo-list/releases/tag/v1.1.1
 [1.1.0]: https://github.com/yefersoncm/todo-list/releases/tag/v1.1.0
