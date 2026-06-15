@@ -2299,10 +2299,51 @@ mobile (≤480) y desktop legacy (481–1023) quedan EXACTAMENTE igual.
   .app-shell[data-view="cards"] .search-row,
   .app-shell[data-view="cards"] .list-footer { display: none; }
 
+  /* Cards usan TODO el ancho disponible (sin el cap de 1200px centrado). */
+  .app-shell[data-view="cards"] .section-center {
+    max-width: none;
+    padding: var(--sp-5) var(--sp-5);
+  }
+
+  /* En cards el sidebar NO empuja el contenido: el grid lo deja a ancho
+     completo y el sidebar se SUPERPONE (overlay) deslizándose por encima,
+     debajo del topbar (que queda siempre accesible para cerrarlo). */
+  /* Una sola columna: el sidebar sale del flujo (position:fixed) y app-main
+     ocupa todo el ancho. */
+  .app-shell[data-view="cards"] { grid-template-columns: 1fr; }
+  .app-shell[data-view="cards"] .app-sidebar {
+    position: fixed;
+    top: 56px;            /* alto del topbar */
+    bottom: 0;
+    left: 0;
+    width: var(--sidebar-w);
+    z-index: 200;
+    padding: var(--sp-5) var(--sp-3);
+    border-right: 1px solid var(--border-subtle);
+    overflow: hidden auto;
+    transform: translateX(-100%);
+    transition: transform var(--dur-base) var(--ease-out);
+  }
+  .app-shell[data-view="cards"][data-sidebar="open"] .app-sidebar {
+    transform: translateX(0);
+    box-shadow: var(--shadow-overlay);
+  }
+  /* Backdrop del sidebar-overlay (solo en cards + abierto). */
+  .cards-sb-backdrop {
+    position: fixed;
+    inset: 56px 0 0 0;
+    background: color-mix(in oklch, var(--slate-950) 30%, transparent);
+    z-index: 190;
+    display: none;
+  }
+  .app-shell[data-view="cards"][data-sidebar="open"] ~ .cards-sb-backdrop { display: block; }
+
   /* ── Vista de tarjetas (debug) ── */
   .card-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    /* Cards de tamaño cómodo; las columnas se multiplican porque el contenido
+       usa todo el ancho en vista cards (ver .section-center más abajo). */
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
     gap: var(--sp-3);
     padding: var(--sp-2) 0;
   }
@@ -2310,8 +2351,8 @@ mobile (≤480) y desktop legacy (481–1023) quedan EXACTAMENTE igual.
     display: flex;
     flex-direction: column;
     gap: var(--sp-2);
-    min-height: 124px;
-    padding: var(--sp-3);
+    min-height: 140px;
+    padding: var(--sp-4);
     cursor: pointer;
     background: var(--bg-surface);
     border: 1px solid var(--border-subtle);

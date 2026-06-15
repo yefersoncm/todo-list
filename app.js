@@ -782,6 +782,12 @@ class TaskManager {
             shell.dataset.sidebar = shell.dataset.sidebar === 'hidden' ? 'open' : 'hidden';
         });
 
+        // Backdrop del sidebar-overlay en cards: clic cierra (colapsa) el sidebar.
+        const sbBackdrop = document.getElementById('cardsSidebarBackdrop');
+        if (sbBackdrop) {
+            sbBackdrop.addEventListener('click', () => { shell.dataset.sidebar = 'hidden'; });
+        }
+
         // DEBUG TEMPORAL: alterna vista Lista ⇄ Cards. Eliminar luego junto con
         // el <button id="viewToggleBtn"> de index.html.
         const viewBtn = document.getElementById('viewToggleBtn');
