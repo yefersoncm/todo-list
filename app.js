@@ -2973,11 +2973,6 @@ class TaskManager {
         // Topbar: título de la vista activa + progreso global a la derecha.
         const topbarTitle = document.getElementById('topbarTitle');
         if (topbarTitle) topbarTitle.textContent = viewTitles[this.filterMode] || 'Tareas';
-        const topbarStats = document.getElementById('topbarStats');
-        if (topbarStats) {
-            topbarStats.innerHTML =
-                `<strong>${pendingCount}</strong> pendientes · <strong>${doneCount}</strong> hechas`;
-        }
 
         // Page-head: eyebrow con la fecha, saludo según la hora, y línea de stats.
         const phDate = document.getElementById('pageHeadDate');

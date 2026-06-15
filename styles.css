@@ -2084,12 +2084,6 @@ mobile (≤480) y desktop legacy (481–1023) quedan EXACTAMENTE igual.
   .app-topbar__filters .filters-icon .icon { display: block; }
   .app-shell[data-sidebar="hidden"] .app-topbar__filters { display: inline-flex; }
   .app-shell[data-sidebar="hidden"] .app-topbar__toggle { display: none; }
-  .app-topbar__stats {
-    font-size: var(--fs-sm);
-    color: var(--fg-muted);
-    white-space: nowrap;
-  }
-  .app-topbar__stats strong { color: var(--fg-default); font-weight: var(--fw-semibold); }
 
   /* ─── Área de contenido ─── */
   /* La sección deja de ser un "card": pasa a ser el cuerpo sobre bg-app. */
