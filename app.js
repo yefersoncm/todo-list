@@ -885,6 +885,14 @@ class TaskManager {
         if (!box.querySelector('.icon')) {
             box.insertBefore(createIcon('search', { size: 18 }), box.firstChild);
         }
+        // Chip del atajo según el SO: ⌘ K en Mac, Ctrl K en el resto.
+        const kbd = box.querySelector('.kbd');
+        if (kbd) {
+            const plat = (navigator.userAgentData && navigator.userAgentData.platform)
+                || navigator.platform || navigator.userAgent || '';
+            const isMac = /Mac|iPhone|iPad|iPod/i.test(plat);
+            kbd.textContent = isMac ? '⌘ K' : 'Ctrl K';
+        }
         const mql = window.matchMedia('(min-width: 1024px)');
         const place = () => {
             if (mql.matches) {
