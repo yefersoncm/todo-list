@@ -4,6 +4,36 @@ App para gestionar tareas por hacer: agregar, editar, marcar como hechas y elimi
 
 **Demo:** https://yefersoncm-todo-list.netlify.app
 
+## Vistazo
+
+En desktop (≥1024px) la app es un *app-shell*: panel lateral con vistas y
+etiquetas, barra superior con búsqueda y ajustes, encabezado con un titular
+que reacciona al estado, y la lista con subtareas en árbol.
+
+| Claro | Oscuro |
+|---|---|
+| ![Todo List en tema claro](docs/desktop-light.png) | ![Todo List en tema oscuro](docs/desktop-dark.png) |
+
+En esa captura se ven, de un vistazo: el **panel lateral** (Vistas: Todas/Hoy/
+Esta semana/Este mes/Prioritarias · Estado · Etiquetas con color), la
+**búsqueda** con atajo (⌘K / Ctrl+K), el **titular contextual** ("2 tareas para
+hoy") con stats clicables, una tarea con **subtareas en árbol**, **etiquetas**
+de color, **prioridad** (estrella), tareas **hechas** tachadas, la **selección
+múltiple** (checkbox por fila) y la **paginación** ("Mostrando 1–5 de 5").
+
+```mermaid
+flowchart LR
+  subgraph Tarea["Tarea (top-level)"]
+    A["texto · hecha"]
+    B["fecha límite (opcional)"]
+    C["prioridad (opcional)"]
+    D["etiquetas[] con color (opcional)"]
+  end
+  Tarea -->|"1 nivel"| S1["Subtarea"]
+  Tarea --> S2["Subtarea"]
+  S1 -.->|"propaga hecho ⇅"| Tarea
+```
+
 ## Características
 
 - Agregar tareas con un input de texto.
@@ -94,6 +124,8 @@ todo-list/
 │   ├── taskStore.test.js   # Suite con node --test
 │   ├── elapsed.test.js
 │   └── pagination.test.js
+├── docs/                   # Capturas para el README (desktop claro/oscuro)
+├── CHANGELOG.md            # Historial de versiones (SemVer)
 ├── logo.svg
 └── *-svgrepo-*.svg         # Iconos auxiliares
 ```
