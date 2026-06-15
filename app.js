@@ -20,7 +20,7 @@ const DENSITY_KEY = 'todo-list:density';
 const ACTIVE_TAG_KEY = 'todo-list:activeTag';
 const TAG_COLORS_KEY = 'todo-list:tagColors';
 // Fallback de versión si no se puede leer package.json (mantener en sync).
-const APP_VERSION = '1.2.1';
+const APP_VERSION = '1.2.2';
 
 function loadTheme() {
     const v = localStorage.getItem(THEME_KEY);
