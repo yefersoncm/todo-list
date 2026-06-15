@@ -688,6 +688,85 @@ Paginación
    necesita ocultarse explícitamente cuando lleva el atributo hidden. */
 .bulk-delete-sel[hidden] { display: none; }
 
+/* Panel de detalle (vista cards): drawer al ~60% derecha. */
+.detail-backdrop {
+    position: fixed;
+    inset: 0;
+    background: color-mix(in oklch, var(--slate-950) 30%, transparent);
+    z-index: 1150;
+}
+.detail-backdrop[hidden] { display: none; }
+.detail-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 60vw;
+    max-width: 820px;
+    background: var(--bg-surface);
+    border-left: 1px solid var(--border-subtle);
+    box-shadow: var(--shadow-overlay);
+    z-index: 1160;
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform var(--dur-base) var(--ease-out);
+    overflow: hidden;
+}
+.detail-panel.is-open { transform: translateX(0); }
+.detail-panel[hidden] { display: none; }
+.detail-panel__bar {
+    flex: none;
+    display: flex;
+    justify-content: flex-end;
+    padding: var(--sp-3) var(--sp-4);
+    border-bottom: 1px solid var(--border-subtle);
+}
+.detail-panel__close .icon { display: block; }
+.detail-panel__body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: var(--sp-5) var(--sp-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-4);
+}
+.detail__head { display: flex; align-items: flex-start; gap: var(--sp-3); }
+.detail__title {
+    flex: 1;
+    margin: 0;
+    font-size: var(--fs-2xl);
+    font-weight: var(--fw-semibold);
+    color: var(--fg-default);
+    letter-spacing: var(--tracking-tight);
+    text-transform: none;   /* anula el capitalize global de h2 */
+    line-height: var(--lh-snug);
+    cursor: text;
+    word-break: break-word;
+}
+.detail__title.is-done { color: var(--fg-subtle); text-decoration: line-through; }
+.detail__title-input { flex: 1; font-size: var(--fs-xl); font-weight: var(--fw-semibold); }
+.detail__meta { display: flex; flex-direction: column; gap: var(--sp-3); }
+.detail__metaline { margin: 0; font-size: var(--fs-sm); color: var(--fg-muted); }
+.detail__metaline strong { color: var(--fg-default); }
+.detail__row { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-2); }
+.detail__tags { gap: var(--sp-2); }
+.detail__subs { display: flex; flex-direction: column; gap: var(--sp-2); border-top: 1px solid var(--border-subtle); padding-top: var(--sp-4); }
+.detail__subs-title { margin: 0; font-size: var(--fs-md); font-weight: var(--fw-semibold); color: var(--fg-default); text-transform: none; letter-spacing: var(--tracking-tight); }
+.detail__sub {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    padding: var(--sp-2) 0;
+    border-bottom: 1px solid var(--border-subtle);
+}
+.detail__sub-text { flex: 1; min-width: 0; color: var(--fg-default); }
+.detail__sub.is-done .detail__sub-text { color: var(--fg-subtle); text-decoration: line-through; }
+.detail__sub-add { display: flex; gap: var(--sp-2); margin-top: var(--sp-2); }
+.detail__sub-add .field { flex: 1; }
+.detail__danger { margin-top: auto; padding-top: var(--sp-4); border-top: 1px solid var(--border-subtle); }
+
 /* Modal de Ajustes (reusa .modal-backdrop/.modal). */
 .settings-modal[hidden] { display: none; }
 .settings-modal__row {
@@ -2211,6 +2290,84 @@ mobile (≤480) y desktop legacy (481–1023) quedan EXACTAMENTE igual.
   .task-count-row .task-count-controls { margin-left: auto; }
 
   .grocery-list { padding: var(--sp-2) 0; }
+
+  /* En vista cards: solo topbar + cards. Se ocultan los elementos superiores
+     (page-head, quick-add, toolbar, búsqueda del contenido, footer/paginación). */
+  .app-shell[data-view="cards"] .page-head,
+  .app-shell[data-view="cards"] .grocery-form,
+  .app-shell[data-view="cards"] .task-count-row,
+  .app-shell[data-view="cards"] .search-row,
+  .app-shell[data-view="cards"] .list-footer { display: none; }
+
+  /* ── Vista de tarjetas (debug) ── */
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: var(--sp-3);
+    padding: var(--sp-2) 0;
+  }
+  .task-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-2);
+    min-height: 124px;
+    padding: var(--sp-3);
+    cursor: pointer;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-flat);
+    transition: box-shadow var(--dur-fast) var(--ease-out),
+                border-color var(--dur-fast) var(--ease-out);
+  }
+  .task-card:hover { box-shadow: var(--shadow-raised); border-color: var(--border-default); }
+  .task-card.is-due-today { border-left: 3px solid var(--warning); }
+  .task-card.is-overdue { border-left: 3px solid var(--danger); }
+  .task-card__head { display: flex; align-items: center; gap: var(--sp-2); }
+  .task-card__spacer { flex: 1; }
+  .task-card .priority-btn.is-priority { color: var(--warning); }
+  .task-card .priority-btn.is-priority svg { fill: currentColor; }
+  .task-card__actions {
+    display: inline-flex;
+    gap: 2px;
+    opacity: 0;
+    transition: opacity var(--dur-fast) var(--ease-out);
+  }
+  .task-card:hover .task-card__actions,
+  .task-card:focus-within .task-card__actions { opacity: 1; }
+  .task-card__title {
+    margin: 0;
+    font-size: var(--fs-md);
+    font-weight: var(--fw-medium);
+    color: var(--fg-default);
+    line-height: var(--lh-snug);
+    letter-spacing: var(--tracking-tight);
+    cursor: text;
+    /* Recorta a 3 líneas para que la card no crezca de más. */
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    word-break: break-word;
+  }
+  .task-card .task__counter { font-weight: var(--fw-regular); }
+  .task-card.is-done .task-card__title {
+    color: var(--fg-subtle);
+    text-decoration: line-through;
+    text-decoration-color: var(--border-strong);
+  }
+  .task-card .task__tags { display: flex; flex-wrap: wrap; gap: 4px; }
+  .task-card__foot {
+    margin-top: auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-2);
+    font-family: var(--ff-mono);
+    font-size: var(--fs-xs);
+    color: var(--fg-subtle);
+  }
 
   /* ── Selección múltiple (desktop) ──
      Checkbox como PRIMERA COLUMNA REAL de cada tarea padre (en el flujo):

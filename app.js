@@ -60,6 +60,10 @@ const DOM = {
     selectAll: document.getElementById('selectAll'),
     bulkDeleteBtn: document.getElementById('bulkDeleteBtn'),
     bulkDeleteLabel: document.getElementById('bulkDeleteLabel'),
+    detailPanel: document.getElementById('detailPanel'),
+    detailBackdrop: document.getElementById('detailBackdrop'),
+    detailClose: document.getElementById('detailClose'),
+    detailBody: document.getElementById('detailBody'),
     settingsBtn: document.getElementById('settingsBtn'),
     settingsModal: document.getElementById('settingsModal'),
     exportBtn: document.getElementById('exportBtn'),
@@ -265,6 +269,8 @@ class TaskManager {
         this.activeTag = loadActiveTag();   // filtro por etiqueta (sidebar Etiquetas)
         this.tagColors = loadTagColors();   // { tagLower: color } elegido en el picker
         this.selectedIds = new Set();       // selección múltiple (desktop) para acciones masivas
+        this.viewMode = 'list';             // 'list' | 'cards' (debug, runtime)
+        this._detailId = null;              // tarea abierta en el panel de detalle
         this._undo = null;                  // snapshot de un nivel para "Deshacer"
         // Set transitorio (no persistido) de IDs de padres con el form
         // "+ subtarea" expandido. Toggle desde el botón addsub-btn.
@@ -312,6 +318,7 @@ class TaskManager {
         this._safeRun('setupVersion', () => this._setupVersion());
         this._safeRun('setupSearchPlacement', () => this._setupSearchPlacement());
         this._safeRun('setupSettings', () => this._setupSettings());
+        this._safeRun('setupDetail', () => this._setupDetail());
         this._safeRun('setupFooterHeightTracker', () => this._setupFooterHeightTracker());
         this._safeRun('setupMobileDrawer', () => this._setupMobileDrawer());
         this._safeRun('setupMobileFab', () => this._setupMobileFab());
@@ -343,7 +350,8 @@ class TaskManager {
         // cortos y de ancho similar. Ya no necesitamos un probe oculto
         // para medir el max-width y alinear columnas — un min-width CSS
         // pequeño basta. Solo actualizamos el textContent.
-        const items = DOM.list.querySelectorAll('.grocery-item');
+        // [data-id] cubre filas (.grocery-item) y tarjetas (.task-card).
+        const items = DOM.list.querySelectorAll('[data-id]');
         if (items.length === 0) return;
         const now = new Date();
         for (const el of items) {
@@ -773,6 +781,23 @@ class TaskManager {
         toggle.addEventListener('click', () => {
             shell.dataset.sidebar = shell.dataset.sidebar === 'hidden' ? 'open' : 'hidden';
         });
+
+        // DEBUG TEMPORAL: alterna vista Lista ⇄ Cards. Eliminar luego junto con
+        // el <button id="viewToggleBtn"> de index.html.
+        const viewBtn = document.getElementById('viewToggleBtn');
+        if (viewBtn) {
+            const sync = () => { viewBtn.textContent = this.viewMode === 'cards' ? '☰ Lista' : '▦ Cards'; };
+            sync();
+            viewBtn.addEventListener('click', () => {
+                this.viewMode = this.viewMode === 'cards' ? 'list' : 'cards';
+                sync();
+                // Cards: layout limpio (data-view) + sidebar colapsado por defecto
+                // (el toggle del topbar lo reabre). Lista: sidebar abierto.
+                shell.dataset.view = this.viewMode;
+                shell.dataset.sidebar = this.viewMode === 'cards' ? 'hidden' : 'open';
+                this.renderTasks();
+            });
+        }
 
         // Botón "Deshacer" del page-head (undo de un nivel).
         const undoBtn = document.getElementById('undoBtn');
@@ -1219,7 +1244,8 @@ class TaskManager {
 
     handleMarkTaskAsDone(e) {
         const button = e.currentTarget;
-        const element = button.closest('.grocery-item');
+        // [data-id] cubre filas (.grocery-item) y tarjetas (.task-card).
+        const element = button.closest('[data-id]');
         const id = element.dataset.id;
         const isDone = element.dataset.done !== "true";
 
@@ -1236,7 +1262,7 @@ class TaskManager {
     }
 
     async handleDeleteItem(e) {
-        const element = e.currentTarget.closest('.grocery-item');
+        const element = e.currentTarget.closest('[data-id]');
         const id = element.dataset.id;
         const task = this.store.tasks.find(t => t.id === id);
         const isParent = task && task.parentId === null;
@@ -1272,7 +1298,7 @@ class TaskManager {
     }
 
     handleEditItem(e) {
-        const element = e.currentTarget.closest('.grocery-item');
+        const element = e.currentTarget.closest('[data-id]');
         this._enterEditMode(element);
     }
 
@@ -2056,9 +2082,17 @@ class TaskManager {
             for (const sub of this.store.subsOf(parent.id)) pageItems.push(sub);
         }
 
-        this._renderList(pageItems);
-        this._renderPagination(totalPages);
-        this._renderListFooter(filteredParents.length);
+        if (this.viewMode === 'cards') {
+            // Cards: sin paginación (todas las tareas) ni footer.
+            this._renderCards(filteredParents);
+            this._visibleParentIds = filteredParents.map(p => p.id);
+            DOM.paginationNav.hidden = true;
+            if (DOM.listFooter) DOM.listFooter.hidden = true;
+        } else {
+            this._renderList(pageItems);
+            this._renderPagination(totalPages);
+            this._renderListFooter(filteredParents.length);
+        }
         this.updateTaskCount(filteredParents.length);
         this._updateBulkCollapseVisibility();
         this._updateSearchVisibility();
@@ -2066,6 +2100,13 @@ class TaskManager {
         this._updateBulkActions();
         this._updateUndoButton();
         this._updateElapsed();
+        // Refresca el panel de detalle si está abierto (o lo cierra si la
+        // tarea fue eliminada).
+        if (this._detailId) {
+            const exists = this.store.tasks.some(t => t.id === this._detailId && t.parentId === null);
+            if (exists) this._renderDetail(this._detailId);
+            else this._closeDetail();
+        }
     }
 
     /**
@@ -2360,6 +2401,372 @@ class TaskManager {
             });
         }
         return parents;
+    }
+
+    /**
+     * Vista de tarjetas (debug/experimental): una card por tarea PADRE en
+     * una grilla responsive, mostrando todo (nombre, tiempo, prioridad,
+     * etiquetas, fecha, progreso de subtareas). Reusa los handlers de fila
+     * (generalizados a [data-id]).
+     */
+    _renderCards(parents) {
+        DOM.list.innerHTML = '';
+        if (parents.length === 0) {
+            const totalParents = this.store.tasks.filter(t => t.parentId === null).length;
+            if (totalParents === 0) { DOM.container.classList.remove('show-container'); return; }
+            const empty = document.createElement('div');
+            empty.className = 'empty-state';
+            empty.textContent = this._emptyStateMessage();
+            DOM.list.appendChild(empty);
+            DOM.container.classList.add('show-container');
+            return;
+        }
+        const grid = document.createElement('div');
+        grid.className = 'card-grid';
+        for (const task of parents) grid.appendChild(this._buildCard(task));
+        DOM.list.appendChild(grid);
+        DOM.container.classList.add('show-container');
+    }
+
+    // ----- Panel de detalle (vista cards) ----------------------------------
+
+    _setupDetail() {
+        if (DOM.detailClose && !DOM.detailClose.firstChild) {
+            DOM.detailClose.appendChild(createIcon('x', { size: 18 }));
+        }
+        DOM.detailClose?.addEventListener('click', () => this._closeDetail());
+        DOM.detailBackdrop?.addEventListener('click', () => this._closeDetail());
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && DOM.detailPanel && !DOM.detailPanel.hidden) this._closeDetail();
+        });
+    }
+
+    _openDetail(id) {
+        const task = this.store.tasks.find(t => t.id === id && t.parentId === null);
+        if (!task || !DOM.detailPanel) return;
+        this._detailId = id;
+        this._renderDetail(id);
+        DOM.detailBackdrop.hidden = false;
+        DOM.detailPanel.hidden = false;
+        requestAnimationFrame(() => DOM.detailPanel.classList.add('is-open'));
+    }
+
+    _closeDetail() {
+        this._detailId = null;
+        if (!DOM.detailPanel) return;
+        DOM.detailPanel.classList.remove('is-open');
+        DOM.detailBackdrop.hidden = true;
+        setTimeout(() => { if (!this._detailId) DOM.detailPanel.hidden = true; }, 200);
+    }
+
+    _renderDetail(id) {
+        const body = DOM.detailBody;
+        const task = this.store.tasks.find(t => t.id === id && t.parentId === null);
+        if (!body || !task) return;
+        body.innerHTML = '';
+        const done = task.done;
+
+        // ── Cabecera: toggle + título (editable) + prioridad ──
+        const head = document.createElement('div');
+        head.className = 'detail__head';
+        const toggle = document.createElement('button');
+        toggle.type = 'button';
+        toggle.className = 'toggle-check';
+        toggle.setAttribute('aria-pressed', String(!!done));
+        toggle.setAttribute('aria-label', done ? 'Marcar como pendiente' : 'Marcar como hecha');
+        toggle.appendChild(createIcon('check', { size: 14 }));
+        toggle.addEventListener('click', () => {
+            this._pushUndo('Marcar tarea');
+            this.store.toggle(id, !done);
+            this.renderTasks();
+        });
+
+        const title = document.createElement('h2');
+        title.className = 'detail__title';
+        if (done) title.classList.add('is-done');
+        title.textContent = task.value;
+        // Editar título inline al hacer clic.
+        title.title = 'Clic para editar';
+        title.addEventListener('click', () => {
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'detail__title-input field';
+            input.value = task.value;
+            title.replaceWith(input);
+            input.focus(); input.select();
+            let done2 = false;
+            const finish = (save) => {
+                if (done2) return; done2 = true;
+                const v = input.value.trim();
+                if (save && v && v !== task.value) {
+                    this._pushUndo('Editar tarea');
+                    this.store.update(id, v);
+                }
+                this.renderTasks();
+            };
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') { e.preventDefault(); finish(true); }
+                else if (e.key === 'Escape') { e.preventDefault(); finish(false); }
+            });
+            input.addEventListener('blur', () => finish(true));
+        });
+
+        const star = document.createElement('button');
+        star.type = 'button';
+        star.className = 'priority-btn btn-icon';
+        if (task.priority) star.classList.add('is-priority');
+        star.setAttribute('aria-label', task.priority ? 'Quitar prioridad' : 'Marcar prioridad');
+        star.appendChild(createIcon('star'));
+        star.addEventListener('click', () => {
+            this._pushUndo('Cambiar prioridad');
+            this.store.togglePriority(id);
+            this.renderTasks();
+        });
+        head.append(toggle, title, star);
+
+        // ── Meta: estado · creado · fecha · etiquetas ──
+        const meta = document.createElement('div');
+        meta.className = 'detail__meta';
+        const created = createdISO(task);
+        const estado = done ? 'Hecha' : 'Pendiente';
+        const metaInfo = document.createElement('p');
+        metaInfo.className = 'detail__metaline';
+        metaInfo.innerHTML = `Estado: <strong>${estado}</strong> · Creada: ${created || '—'} · ${formatElapsed(elapsedComponents(parseInt(id)))}`;
+        meta.appendChild(metaInfo);
+
+        // Fecha límite (botón para editar).
+        const dueRow = document.createElement('div');
+        dueRow.className = 'detail__row';
+        const dueBtn = document.createElement('button');
+        dueBtn.type = 'button';
+        dueBtn.className = 'btn btn--secondary btn--sm';
+        dueBtn.appendChild(createIcon('calendar', { size: 14 }));
+        dueBtn.appendChild(document.createTextNode(task.dueDate ? ` ${task.dueDate}` : ' Asignar fecha'));
+        dueBtn.addEventListener('click', () => this._editDueDate(id));
+        dueRow.appendChild(dueBtn);
+        meta.appendChild(dueRow);
+
+        // Etiquetas (chips + botón editar → modal).
+        const tagsRow = document.createElement('div');
+        tagsRow.className = 'detail__row detail__tags';
+        if (Array.isArray(task.tags) && task.tags.length) {
+            for (const tg of task.tags) {
+                const chip = document.createElement('span');
+                chip.className = 'task__tag-chip';
+                chip.textContent = tg;
+                chip.style.setProperty('--tag-color', this._tagColor(tg));
+                tagsRow.appendChild(chip);
+            }
+        }
+        const tagBtn = document.createElement('button');
+        tagBtn.type = 'button';
+        tagBtn.className = 'btn btn--ghost btn--sm';
+        tagBtn.appendChild(createIcon('tag', { size: 14 }));
+        tagBtn.appendChild(document.createTextNode(' Etiquetas'));
+        tagBtn.addEventListener('click', () => this._editTags(id));
+        tagsRow.appendChild(tagBtn);
+        meta.appendChild(tagsRow);
+
+        // ── Subtareas ──
+        const subs = this.store.subsOf(id);
+        const subsSection = document.createElement('div');
+        subsSection.className = 'detail__subs';
+        const subsHead = document.createElement('h3');
+        subsHead.className = 'detail__subs-title';
+        subsHead.textContent = `Subtareas (${subs.filter(s => s.done).length}/${subs.length})`;
+        subsSection.appendChild(subsHead);
+
+        for (const sub of subs) {
+            const row = document.createElement('div');
+            row.className = 'detail__sub' + (sub.done ? ' is-done' : '');
+            const st = document.createElement('button');
+            st.type = 'button';
+            st.className = 'toggle-check';
+            st.setAttribute('aria-pressed', String(sub.done));
+            st.setAttribute('aria-label', sub.done ? 'Marcar pendiente' : 'Marcar hecha');
+            st.appendChild(createIcon('check', { size: 12 }));
+            st.addEventListener('click', () => {
+                this._pushUndo('Marcar subtarea');
+                this.store.toggle(sub.id, !sub.done);
+                this.renderTasks();
+            });
+            const stext = document.createElement('span');
+            stext.className = 'detail__sub-text';
+            stext.textContent = sub.value;
+            const sdel = document.createElement('button');
+            sdel.type = 'button';
+            sdel.className = 'btn-icon btn-icon--sm btn-icon--danger';
+            sdel.setAttribute('aria-label', 'Eliminar subtarea');
+            sdel.appendChild(createIcon('trash'));
+            sdel.addEventListener('click', () => {
+                this._pushUndo('Eliminar subtarea');
+                this.store.remove(sub.id);
+                this.renderTasks();
+            });
+            row.append(st, stext, sdel);
+            subsSection.appendChild(row);
+        }
+
+        const addForm = document.createElement('form');
+        addForm.className = 'detail__sub-add';
+        const addInput = document.createElement('input');
+        addInput.type = 'text';
+        addInput.className = 'field';
+        addInput.placeholder = '+ Agregar subtarea';
+        addInput.setAttribute('aria-label', 'Agregar subtarea');
+        addForm.appendChild(addInput);
+        addForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const v = addInput.value.trim();
+            if (!v) return;
+            this._pushUndo('Agregar subtarea');
+            this.store.addSubtask(id, v);
+            this.renderTasks();
+            // Re-foco en el input del form recién re-renderizado.
+            requestAnimationFrame(() => {
+                const inp = DOM.detailBody.querySelector('.detail__sub-add .field');
+                inp?.focus();
+            });
+        });
+        subsSection.appendChild(addForm);
+
+        // ── Eliminar tarea ──
+        const danger = document.createElement('div');
+        danger.className = 'detail__danger';
+        const delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.className = 'btn btn--danger btn--sm';
+        delBtn.appendChild(createIcon('trash', { size: 14 }));
+        delBtn.appendChild(document.createTextNode(' Eliminar tarea'));
+        delBtn.addEventListener('click', async () => {
+            const n = subs.length;
+            const msg = n > 0
+                ? `Esta tarea tiene ${n} subtarea${n === 1 ? '' : 's'}. ¿Borrarla${n === 1 ? '' : 's'} también?`
+                : '¿Eliminar esta tarea?';
+            const ok = await confirmDialog(msg);
+            if (!ok) return;
+            this._pushUndo('Eliminar tarea');
+            if (this.collapsedParents.has(id)) { this.collapsedParents.delete(id); saveCollapsed(this.collapsedParents); }
+            this.store.remove(id);
+            this._closeDetail();
+            this.renderTasks();
+            this._notify('Tarea eliminada', 'danger', { detail: `"${task.value}"`, undo: true });
+        });
+        danger.appendChild(delBtn);
+
+        body.append(head, meta, subsSection, danger);
+    }
+
+    _buildCard(task) {
+        const { id, value, done } = task;
+        const card = document.createElement('article');
+        card.className = 'task-card';
+        card.dataset.id = id;
+        card.dataset.done = String(done);
+        if (done) card.classList.add('is-done');
+        if (task.priority) card.classList.add('is-priority');
+        const today = todayISO();
+        if (task.dueDate === today) card.classList.add('is-due-today');
+        else if (task.dueDate && task.dueDate < today) card.classList.add('is-overdue');
+
+        // Cabecera: toggle hecho + estrella prioridad + (eliminar en hover).
+        const head = document.createElement('div');
+        head.className = 'task-card__head';
+        const toggle = document.createElement('button');
+        toggle.type = 'button';
+        toggle.className = 'toggle-check';
+        toggle.setAttribute('aria-pressed', String(!!done));
+        toggle.setAttribute('aria-label', done ? 'Marcar como pendiente' : 'Marcar como hecha');
+        toggle.appendChild(createIcon('check', { size: 14 }));
+        toggle.addEventListener('click', this.handleMarkTaskAsDone.bind(this));
+
+        const star = document.createElement('button');
+        star.type = 'button';
+        star.className = 'priority-btn btn-icon btn-icon--sm';
+        if (task.priority) star.classList.add('is-priority');
+        star.setAttribute('aria-label', task.priority ? 'Quitar prioridad' : 'Marcar prioridad');
+        star.appendChild(createIcon('star'));
+        star.addEventListener('click', () => {
+            this._pushUndo('Cambiar prioridad');
+            this.store.togglePriority(id);
+            this.renderTasks();
+        });
+
+        // Acciones (aparecen en hover): etiquetas, fecha, editar, eliminar.
+        const actions = document.createElement('div');
+        actions.className = 'task-card__actions';
+        const mkAction = (icon, label, onClick, extraClass) => {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'btn-icon btn-icon--sm' + (extraClass ? ' ' + extraClass : '');
+            b.setAttribute('aria-label', label);
+            b.title = label;
+            b.appendChild(createIcon(icon));
+            b.addEventListener('click', onClick);
+            return b;
+        };
+        const tagBtn = mkAction('tag', 'Etiquetas', () => this._editTags(id));
+        const dueBtn = mkAction('calendar', task.dueDate ? `Fecha: ${task.dueDate}` : 'Asignar fecha',
+            () => this._editDueDate(id));
+        if (task.dueDate) dueBtn.classList.add('is-due');
+        const delBtn = mkAction('trash', 'Eliminar', this.handleDeleteItem.bind(this), 'btn-icon--danger');
+        actions.append(tagBtn, dueBtn, delBtn);
+
+        const spacer = document.createElement('span');
+        spacer.className = 'task-card__spacer';
+        head.append(toggle, spacer, star, actions);
+
+        // Título + contador de subtareas. (La edición se hace en el panel de
+        // detalle que se abre al hacer clic en la card.)
+        const title = document.createElement('p');
+        title.className = 'task-card__title';
+        title.textContent = value;
+        const subs = this.store.subsOf(id);
+        if (subs.length > 0) {
+            const counter = document.createElement('span');
+            counter.className = 'task__counter';
+            counter.textContent = ` (${subs.filter(s => s.done).length}/${subs.length})`;
+            title.appendChild(counter);
+        }
+
+        // Etiquetas (chips de color).
+        let tagsWrap = null;
+        if (Array.isArray(task.tags) && task.tags.length) {
+            tagsWrap = document.createElement('div');
+            tagsWrap.className = 'task__tags';
+            for (const tg of task.tags) {
+                const chip = document.createElement('span');
+                chip.className = 'task__tag-chip';
+                chip.textContent = tg;
+                chip.style.setProperty('--tag-color', this._tagColor(tg));
+                tagsWrap.appendChild(chip);
+            }
+        }
+
+        // Pie: tiempo transcurrido + fecha (si tiene).
+        const foot = document.createElement('div');
+        foot.className = 'task-card__foot';
+        const elapsed = document.createElement('span');
+        elapsed.className = 'task-days-old';
+        elapsed.textContent = formatElapsed(elapsedComponents(parseInt(id)));
+        foot.appendChild(elapsed);
+        if (task.dueDate) {
+            const due = document.createElement('span');
+            due.className = 'task__due-badge';
+            due.textContent = task.dueDate;
+            foot.appendChild(due);
+        }
+
+        card.append(head, title);
+        if (tagsWrap) card.appendChild(tagsWrap);
+        card.appendChild(foot);
+
+        // Clic en la card (fuera de los botones) abre el panel de detalle.
+        card.addEventListener('click', (e) => {
+            if (e.target.closest('button')) return;
+            this._openDetail(id);
+        });
+        return card;
     }
 
     _renderList(items) {

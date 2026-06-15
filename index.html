@@ -74,6 +74,9 @@
         <div class="app-topbar__spacer"></div>
         <!-- Dock (extremo derecho): estado + acciones globales. -->
         <div class="dock">
+          <!-- DEBUG TEMPORAL: alterna Lista ⇄ Cards. Eliminar luego con su listener. -->
+          <button type="button" class="btn btn--secondary btn--sm" id="viewToggleBtn" data-debug="view">▦ Cards</button>
+          <span class="dock__sep"></span>
           <!-- Honesto: la app es 100% local (sin backend), no "en línea". -->
           <span class="badge badge--accent badge--dot" title="Tus datos se guardan en este navegador">Local</span>
           <span class="dock__sep"></span>
@@ -432,6 +435,16 @@
             </div>
         </div>
     </div>
+
+    <!-- Panel de detalle (vista cards): ocupa ~60% a la derecha. Se hidrata
+         en _renderDetail(). -->
+    <div class="detail-backdrop" id="detailBackdrop" hidden></div>
+    <aside class="detail-panel" id="detailPanel" hidden role="dialog" aria-modal="false" aria-label="Detalle de la tarea">
+        <div class="detail-panel__bar">
+            <button type="button" class="btn-icon detail-panel__close" id="detailClose" aria-label="Cerrar detalle"></button>
+        </div>
+        <div class="detail-panel__body" id="detailBody"></div>
+    </aside>
 
     <div class="app-toast-container" id="toastContainer" aria-live="polite" aria-atomic="false"></div>
 
