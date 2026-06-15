@@ -2076,6 +2076,7 @@ mobile (≤480) y desktop legacy (481–1023) quedan EXACTAMENTE igual.
   /* Dock de acciones globales (extremo derecho del topbar). */
   .dock { display: flex; align-items: center; gap: var(--sp-2); flex: none; }
   .dock .btn-icon .icon { display: block; }
+  .dock__sep { width: 1px; height: 22px; background: var(--border-subtle); }
 
   /* "Filtros" ↔ toggle: mutuamente excluyentes según el estado del sidebar. */
   .app-topbar__filters { display: none; }

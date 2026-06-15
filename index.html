@@ -95,8 +95,11 @@
         <div class="app-topbar__search" id="topbarSearchSlot"></div>
         <div class="app-topbar__spacer"></div>
         <div class="app-topbar__stats" id="topbarStats"></div>
-        <!-- Dock (extremo derecho): acciones globales. -->
+        <!-- Dock (extremo derecho): estado + acciones globales. -->
         <div class="dock">
+          <!-- Honesto: la app es 100% local (sin backend), no "en línea". -->
+          <span class="badge badge--accent badge--dot" title="Tus datos se guardan en este navegador">Local</span>
+          <span class="dock__sep"></span>
           <button type="button" class="btn-icon" id="settingsBtn" aria-label="Ajustes" title="Ajustes"></button>
         </div>
       </header>
