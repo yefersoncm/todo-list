@@ -61,22 +61,6 @@
         <!-- Poblado dinámicamente por _renderSidebarTags() desde store.allTags(). -->
         <div class="nav-group nav-group--tags" id="sidebarTags" role="list" aria-label="Etiquetas"></div>
       </nav>
-      <div class="app-sidebar__footer">
-        <div class="sidebar-pref">
-          <span class="sidebar-pref__label">Tema</span>
-          <div class="seg" data-theme-seg role="group" aria-label="Tema">
-            <button type="button" class="seg__btn" data-theme="light" aria-label="Tema claro" title="Claro"></button>
-            <button type="button" class="seg__btn" data-theme="dark" aria-label="Tema oscuro" title="Oscuro"></button>
-          </div>
-        </div>
-        <div class="sidebar-pref">
-          <span class="sidebar-pref__label">Densidad</span>
-          <div class="seg" data-density-seg role="group" aria-label="Densidad">
-            <button type="button" class="seg__btn" data-density="comfy" aria-label="Densidad cómoda" title="Cómoda"></button>
-            <button type="button" class="seg__btn" data-density="compact" aria-label="Densidad compacta" title="Compacta"></button>
-          </div>
-        </div>
-      </div>
     </aside>
 
     <!-- ─── Columna principal ─── -->
@@ -84,12 +68,6 @@
       <!-- Topbar (solo desktop ≥1024) -->
       <header class="app-topbar">
         <button type="button" class="btn-icon app-topbar__toggle" id="sidebarToggle" aria-label="Mostrar u ocultar panel"></button>
-        <!-- "Filtros": solo visible cuando el sidebar está colapsado; lo reabre.
-             No coexiste con el toggle (mutuamente excluyentes). -->
-        <button type="button" class="btn btn--secondary btn--sm app-topbar__filters" id="topbarFilters" aria-label="Mostrar filtros y vistas">
-            <span class="filters-icon" aria-hidden="true"></span>
-            <span>Filtros</span>
-        </button>
         <div class="app-topbar__title" id="topbarTitle">Tareas</div>
         <!-- Slot donde se monta la búsqueda en desktop (el searchBox se mueve aquí). -->
         <div class="app-topbar__search" id="topbarSearchSlot"></div>
@@ -426,6 +404,22 @@
     <div class="settings-modal modal-backdrop" id="settingsModal" hidden>
         <div class="settings-modal__dialog modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
             <h3 class="modal__title" id="settingsTitle">Ajustes</h3>
+            <!-- Preferencias: tema y densidad (antes en el pie del sidebar). -->
+            <div class="settings-modal__row">
+                <span class="settings-modal__label">Tema</span>
+                <div class="seg" data-theme-seg role="group" aria-label="Tema">
+                    <button type="button" class="seg__btn" data-theme="light" aria-label="Tema claro" title="Claro"></button>
+                    <button type="button" class="seg__btn" data-theme="dark" aria-label="Tema oscuro" title="Oscuro"></button>
+                </div>
+            </div>
+            <div class="settings-modal__row">
+                <span class="settings-modal__label">Densidad</span>
+                <div class="seg" data-density-seg role="group" aria-label="Densidad">
+                    <button type="button" class="seg__btn" data-density="comfy" aria-label="Densidad cómoda" title="Cómoda"></button>
+                    <button type="button" class="seg__btn" data-density="compact" aria-label="Densidad compacta" title="Compacta"></button>
+                </div>
+            </div>
+            <hr class="settings-modal__divider">
             <p class="settings-modal__hint">Tus tareas se guardan en este navegador (localStorage).</p>
             <div class="settings-modal__actions">
                 <button type="button" class="btn btn--secondary" id="exportBtn">Exportar datos (.json)</button>

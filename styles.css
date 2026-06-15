@@ -690,6 +690,24 @@ Paginación
 
 /* Modal de Ajustes (reusa .modal-backdrop/.modal). */
 .settings-modal[hidden] { display: none; }
+.settings-modal__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-3);
+    margin-bottom: var(--sp-3);
+}
+.settings-modal__label {
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-medium);
+    color: var(--fg-default);
+}
+.settings-modal .seg__btn .icon { display: block; }
+.settings-modal__divider {
+    border: none;
+    border-top: 1px solid var(--border-subtle);
+    margin: var(--sp-4) 0;
+}
 .settings-modal__hint {
     font-size: var(--fs-sm);
     color: var(--fg-muted);
@@ -2027,27 +2045,6 @@ mobile (≤480) y desktop legacy (481–1023) quedan EXACTAMENTE igual.
     color: var(--fg-subtle);
   }
 
-  .app-sidebar__footer {
-    margin-top: auto;
-    display: flex;
-    flex-direction: column;
-    gap: var(--sp-2);
-  }
-  .sidebar-pref {
-    display: flex;
-    align-items: center;
-    gap: var(--sp-2);
-    padding: 0 var(--sp-3);
-  }
-  .sidebar-pref__label {
-    font-family: var(--ff-mono);
-    font-size: 10px;
-    color: var(--fg-subtle);
-    text-transform: uppercase;
-    letter-spacing: var(--tracking-caps);
-    margin-right: auto;
-  }
-  .app-sidebar .seg__btn .icon { display: block; }
 
   /* ─── Topbar ─── */
   .app-topbar {
@@ -2077,13 +2074,6 @@ mobile (≤480) y desktop legacy (481–1023) quedan EXACTAMENTE igual.
   .dock { display: flex; align-items: center; gap: var(--sp-2); flex: none; }
   .dock .btn-icon .icon { display: block; }
   .dock__sep { width: 1px; height: 22px; background: var(--border-subtle); }
-
-  /* "Filtros" ↔ toggle: mutuamente excluyentes según el estado del sidebar. */
-  .app-topbar__filters { display: none; }
-  .app-topbar__filters .filters-icon { display: inline-flex; align-items: center; }
-  .app-topbar__filters .filters-icon .icon { display: block; }
-  .app-shell[data-sidebar="hidden"] .app-topbar__filters { display: inline-flex; }
-  .app-shell[data-sidebar="hidden"] .app-topbar__toggle { display: none; }
 
   /* ─── Área de contenido ─── */
   /* La sección deja de ser un "card": pasa a ser el cuerpo sobre bg-app. */

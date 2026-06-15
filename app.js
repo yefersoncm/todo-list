@@ -774,14 +774,6 @@ class TaskManager {
             shell.dataset.sidebar = shell.dataset.sidebar === 'hidden' ? 'open' : 'hidden';
         });
 
-        // "Filtros" (visible solo con el sidebar colapsado) lo reabre.
-        const filtersBtn = document.getElementById('topbarFilters');
-        if (filtersBtn) {
-            const slot = filtersBtn.querySelector('.filters-icon');
-            if (slot && !slot.firstChild) slot.appendChild(createIcon('filter', { size: 14 }));
-            filtersBtn.addEventListener('click', () => { shell.dataset.sidebar = 'open'; });
-        }
-
         // Botón "Deshacer" del page-head (undo de un nivel).
         const undoBtn = document.getElementById('undoBtn');
         if (undoBtn) {
