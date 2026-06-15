@@ -4,6 +4,23 @@ Todos los cambios notables de este proyecto se documentan aquí.
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.0.0/)
 y versionado según [SemVer](https://semver.org/lang/es/).
 
+## [1.2.0] - 2026-06-15
+
+### Added
+- **Búsqueda en el topbar** (desktop): el buscador se reubica al topbar (siempre
+  visible) reutilizando el mismo input; en mobile vuelve al contenido. Atajo
+  **Ctrl/Cmd+K** para enfocarlo.
+- **Menú ⚙ Ajustes** en el topbar: **Exportar** datos (.json), **Importar**
+  (con confirmación y undo) y **Borrar todos los datos** (tareas + etiquetas +
+  preferencias). Tema y densidad también viven ahora aquí.
+- Badge **"Local"** en el dock (indica almacenamiento local; reemplaza un
+  "en línea" que no aplica sin backend).
+
+### Changed
+- **Tema y densidad** se movieron del pie del sidebar al modal de Ajustes.
+- Se quitó del topbar el contador "N pendientes · N hechas" (ya estaba en el
+  page-head y el sidebar).
+
 ## [1.1.1] - 2026-06-15
 
 ### Added
@@ -63,6 +80,7 @@ y versionado según [SemVer](https://semver.org/lang/es/).
   transcurrido, modal de confirmación y refactor responsive mobile-first.
 - Integración del sistema de diseño (tokens + componentes, tema claro/oscuro).
 
+[1.2.0]: https://github.com/yefersoncm/todo-list/releases/tag/v1.2.0
 [1.1.1]: https://github.com/yefersoncm/todo-list/releases/tag/v1.1.1
 [1.1.0]: https://github.com/yefersoncm/todo-list/releases/tag/v1.1.0
 [1.0.0]: https://github.com/yefersoncm/todo-list/releases/tag/v1.0.0
