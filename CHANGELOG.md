@@ -4,6 +4,12 @@ Todos los cambios notables de este proyecto se documentan aquí.
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.0.0/)
 y versionado según [SemVer](https://semver.org/lang/es/).
 
+## [1.2.2] - 2026-06-15
+
+### Fixed
+- La búsqueda (Ctrl/Cmd+K) ahora también matchea por **etiquetas**, no solo
+  por el texto de la tarea y sus subtareas.
+
 ## [1.2.1] - 2026-06-15
 
 ### Changed
@@ -87,6 +93,7 @@ y versionado según [SemVer](https://semver.org/lang/es/).
   transcurrido, modal de confirmación y refactor responsive mobile-first.
 - Integración del sistema de diseño (tokens + componentes, tema claro/oscuro).
 
+[1.2.2]: https://github.com/yefersoncm/todo-list/releases/tag/v1.2.2
 [1.2.1]: https://github.com/yefersoncm/todo-list/releases/tag/v1.2.1
 [1.2.0]: https://github.com/yefersoncm/todo-list/releases/tag/v1.2.0
 [1.1.1]: https://github.com/yefersoncm/todo-list/releases/tag/v1.1.1
