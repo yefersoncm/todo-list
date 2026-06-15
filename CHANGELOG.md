@@ -4,6 +4,19 @@ Todos los cambios notables de este proyecto se documentan aquí.
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.0.0/)
 y versionado según [SemVer](https://semver.org/lang/es/).
 
+## [1.1.1] - 2026-06-15
+
+### Added
+- **Indicador de versión** en ejecución, arriba a la izquierda (brand del
+  sidebar); se hidrata desde `package.json`.
+
+### Changed
+- El checkbox de selección múltiple pasa de flotar en el margen a ser una
+  **columna real** de cada tarea padre (siempre visible, integrada al cuerpo);
+  el contenido se corre a la derecha y el árbol de subtareas se reajusta para
+  seguir alineado bajo el chevron del padre.
+- El check "seleccionar todo" se alinea en esa misma columna.
+
 ## [1.1.0] - 2026-06-15
 
 ### Added
@@ -50,5 +63,6 @@ y versionado según [SemVer](https://semver.org/lang/es/).
   transcurrido, modal de confirmación y refactor responsive mobile-first.
 - Integración del sistema de diseño (tokens + componentes, tema claro/oscuro).
 
+[1.1.1]: https://github.com/yefersoncm/todo-list/releases/tag/v1.1.1
 [1.1.0]: https://github.com/yefersoncm/todo-list/releases/tag/v1.1.0
 [1.0.0]: https://github.com/yefersoncm/todo-list/releases/tag/v1.0.0
