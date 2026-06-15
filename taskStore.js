@@ -48,6 +48,18 @@ export function normalizeTags(arr) {
     return out;
 }
 
+/**
+ * Devuelve una copia de la tarea con `done` actualizado y la marca temporal
+ * `completedAt` gestionada: se sella al completar (false→true) y se borra al
+ * reabrir. Si ya estaba hecha y sigue hecha, conserva el completedAt original.
+ */
+function stampDone(t, done, now) {
+    const n = { ...t, done, updatedAt: now };
+    if (done && !t.done) n.completedAt = now;
+    else if (!done) delete n.completedAt;
+    return n;
+}
+
 export const SORT_MODES = [
     'created-desc',
     'created-asc',
@@ -224,13 +236,12 @@ export class TaskStore {
         if (task.parentId === null) {
             // Es padre: propagar el done a TODAS sus subs.
             this.tasks = this.tasks.map(t => {
-                if (t.id === id) return { ...t, done, updatedAt: now };
-                if (t.parentId === id) return { ...t, done, updatedAt: now };
+                if (t.id === id || t.parentId === id) return stampDone(t, done, now);
                 return t;
             });
         } else {
             // Es sub: cambiar y re-evaluar el padre.
-            this.tasks = this.tasks.map(t => t.id === id ? { ...t, done, updatedAt: now } : t);
+            this.tasks = this.tasks.map(t => t.id === id ? stampDone(t, done, now) : t);
             this._reevaluateParent(task.parentId, now);
         }
         this.save();
@@ -250,7 +261,7 @@ export class TaskStore {
         const allDone = subs.every(s => s.done);
         if (parent.done !== allDone) {
             this.tasks = this.tasks.map(t =>
-                t.id === parentId ? { ...t, done: allDone, updatedAt: now } : t
+                t.id === parentId ? stampDone(t, allDone, now) : t
             );
         }
     }

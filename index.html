@@ -28,6 +28,12 @@
         <span class="brand-version" id="brandVersion" title="Versión en ejecución"></span>
       </div>
       <nav class="app-sidebar__nav">
+        <!-- Panel/Resumen: no es un filtro; abre el dashboard de estado global. -->
+        <div class="nav-group">
+          <button type="button" class="nav-item" id="dashboardNav" aria-pressed="false">
+            <span class="nav-item__icon"></span><span class="nav-item__label">Resumen</span>
+          </button>
+        </div>
         <span class="nav-group__title">Vistas</span>
         <!-- data-filter-tabs: el JS engancha estos botones a _setFilterTab
              automáticamente (mismo mecanismo que footer/pills). -->
@@ -77,8 +83,11 @@
         <div class="app-topbar__spacer"></div>
         <!-- Dock (extremo derecho): estado + acciones globales. -->
         <div class="dock">
-          <!-- DEBUG TEMPORAL: alterna Lista ⇄ Cards. Eliminar luego con su listener. -->
-          <button type="button" class="btn btn--secondary btn--sm" id="viewToggleBtn" data-debug="view">▦ Cards</button>
+          <!-- Toggle rápido de vista (Lista ⇄ Tarjetas); en sync con ⚙ Ajustes → Vista. -->
+          <button type="button" class="btn btn--secondary btn--sm view-toggle" id="viewToggleBtn" title="Cambiar vista" aria-label="Cambiar vista">
+            <span class="view-toggle__icon" aria-hidden="true"></span>
+            <span class="view-toggle__label">Cards</span>
+          </button>
           <!-- Solo visible en vista cards: alterna scroll vertical ⇄ horizontal. -->
           <button type="button" class="btn btn--secondary btn--sm" id="cardsScrollBtn" title="Cambiar dirección de scroll">↕ Vertical</button>
           <span class="dock__sep"></span>
@@ -159,6 +168,9 @@
                 </button>
             </div>
         </form>
+
+        <!-- Dashboard de estado global (se monta vía _renderDashboard). -->
+        <section class="dashboard" id="dashboard" aria-label="Resumen de tareas" hidden></section>
 
         <div class="grocery-container">
             <div class="search-row" id="searchRow" hidden>

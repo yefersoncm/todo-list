@@ -657,3 +657,38 @@ describe('TaskStore — tags', () => {
         assert.equal('tags' in s, false);
     });
 });
+
+describe('TaskStore — completedAt', () => {
+    test('completar una tarea sella completedAt; reabrir lo borra', () => {
+        const store = newStore();
+        store.add('x', () => '100');
+        store.toggle('100', true, 5000);
+        let t = store.tasks.find(x => x.id === '100');
+        assert.equal(t.done, true);
+        assert.equal(t.completedAt, 5000);
+        store.toggle('100', false, 6000);
+        t = store.tasks.find(x => x.id === '100');
+        assert.equal(t.done, false);
+        assert.equal('completedAt' in t, false);
+    });
+
+    test('re-togglear a done conserva el completedAt si ya estaba hecha (no se re-sella vía subs)', () => {
+        const store = newStore();
+        store.add('p', () => '1');
+        store.addSubtask('1', 'a', () => '2', 1000);
+        store.addSubtask('1', 'b', () => '3', 1000);
+        // Completa ambas subs → el padre se auto-completa y sella completedAt.
+        store.toggle('2', true, 7000);
+        store.toggle('3', true, 8000);
+        const p = store.tasks.find(t => t.id === '1');
+        assert.equal(p.done, true);
+        assert.equal(p.completedAt, 8000);
+    });
+
+    test('load preserva completedAt existente', () => {
+        const store = newStore([
+            { id: '1', value: 'x', done: true, updatedAt: 10, parentId: null, completedAt: 9 },
+        ]);
+        assert.equal(store.tasks[0].completedAt, 9);
+    });
+});

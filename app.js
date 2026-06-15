@@ -42,6 +42,245 @@ function loadCardDesign() {
 function saveCardDesign(n) {
     localStorage.setItem(CARD_DESIGN_KEY, String(n));
 }
+// Plantilla HTML del dashboard "Panorama". Los valores se enlazan en runtime
+// (_bindDashboard) vía data-stat / data-dash / .dash-ring.
+const DASHBOARD_TEMPLATE = `<section class="dashboard" aria-label="Resumen de tareas">
+
+  <!-- ── Cabecera: título + pulso de 7 días ─────────────────────────── -->
+  <header class="dash-head">
+    <div class="dash-head__titles">
+      <h1 class="dash-head__title">Resumen</h1>
+      <p class="dash-head__sub">Estado global de tus tareas y dónde se concentra tu trabajo</p>
+    </div>
+    <div class="dash-head__pulse" title="Actividad de los últimos 7 días">
+      <span class="dash-pulse">
+        <span class="dash-pulse__num" data-stat="createdLast7">9</span>
+        <span class="dash-pulse__lbl">creadas</span>
+      </span>
+      <span class="dash-pulse__sep" aria-hidden="true"></span>
+      <span class="dash-pulse">
+        <span class="dash-pulse__num dash-pulse__num--ok" data-stat="completedLast7">7</span>
+        <span class="dash-pulse__lbl">hechas</span>
+      </span>
+      <span class="dash-pulse__tag">7 días</span>
+    </div>
+  </header>
+
+  <!-- ── Fila de KPIs (patrón F: lo primero que se lee) ─────────────── -->
+  <div class="dash-kpis" role="list">
+
+    <article class="kpi kpi--accent" role="listitem">
+      <span class="kpi__ico" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 9h8M8 13h6"/></svg>
+      </span>
+      <span class="kpi__label">Total</span>
+      <span class="kpi__value" data-stat="total">24</span>
+      <span class="kpi__foot">tareas de nivel superior</span>
+    </article>
+
+    <article class="kpi" role="listitem">
+      <span class="kpi__ico" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+      </span>
+      <span class="kpi__label">Pendientes</span>
+      <span class="kpi__value" data-stat="pending">14</span>
+      <span class="kpi__foot">en curso</span>
+    </article>
+
+    <article class="kpi kpi--success" role="listitem">
+      <span class="kpi__ico" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+      </span>
+      <span class="kpi__label">Hechas</span>
+      <span class="kpi__value" data-stat="done">10</span>
+      <span class="kpi__foot">completadas</span>
+    </article>
+
+    <article class="kpi kpi--danger" role="listitem">
+      <span class="kpi__ico" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 2 18a2 2 0 0 0 1.7 3h16.6A2 2 0 0 0 22 18L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>
+      </span>
+      <span class="kpi__label">Vencidas</span>
+      <span class="kpi__value" data-stat="overdue">3</span>
+      <span class="kpi__foot">requieren atención</span>
+    </article>
+
+    <article class="kpi kpi--warning" role="listitem">
+      <span class="kpi__ico" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
+      </span>
+      <span class="kpi__label">Hoy</span>
+      <span class="kpi__value" data-stat="today">5</span>
+      <span class="kpi__foot">vencen / creadas hoy</span>
+    </article>
+
+    <article class="kpi kpi--star" role="listitem">
+      <span class="kpi__ico" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 2.7 5.5 6 .9-4.4 4.2 1 6L12 17l-5.4 2.8 1-6L4.3 9.4l6-.9Z"/></svg>
+      </span>
+      <span class="kpi__label">Prioritarias</span>
+      <span class="kpi__value" data-stat="priority">4</span>
+      <span class="kpi__foot">marcadas favoritas</span>
+    </article>
+
+  </div>
+
+  <!-- ── Cuerpo: estado global (izq) + etiquetas (der) ──────────────── -->
+  <div class="dash-body">
+
+    <!-- IZQUIERDA — Estado global: anillo + barra + mini-métricas -->
+    <section class="dash-card dash-card--progress" aria-labelledby="dash-prog-h">
+      <header class="dash-card__head">
+        <h2 class="dash-card__title" id="dash-prog-h">Progreso global</h2>
+        <span class="dash-card__hint">hechas / pendientes / vencidas</span>
+      </header>
+
+      <div class="dash-progress">
+        <div class="dash-ring" style="--value:42" role="img" aria-label="42% completado">
+          <div class="dash-ring__hole">
+            <span class="dash-ring__pct" data-stat="completionRate">42%</span>
+            <span class="dash-ring__cap">completado</span>
+          </div>
+        </div>
+
+        <ul class="dash-legend">
+          <li class="dash-legend__row">
+            <span class="dash-legend__swatch dash-legend__swatch--done"></span>
+            <span class="dash-legend__name">Hechas</span>
+            <span class="dash-legend__val" data-stat="done">10</span>
+          </li>
+          <li class="dash-legend__row">
+            <span class="dash-legend__swatch dash-legend__swatch--pending"></span>
+            <span class="dash-legend__name">Pendientes</span>
+            <span class="dash-legend__val" data-stat="pending">14</span>
+          </li>
+          <li class="dash-legend__row">
+            <span class="dash-legend__swatch dash-legend__swatch--overdue"></span>
+            <span class="dash-legend__name">Vencidas</span>
+            <span class="dash-legend__val" data-stat="overdue">3</span>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Barra de estado apilada -->
+      <div class="dash-status" data-dash="status" style="--done:42%;--pending:46%;--overdue:12%" role="img" aria-label="Distribución de estado">
+        <span class="seg seg--done"></span>
+        <span class="seg seg--pending"></span>
+        <span class="seg seg--overdue"></span>
+      </div>
+
+      <!-- Mini-métricas de soporte -->
+      <div class="dash-mini">
+        <div class="dash-mini__row">
+          <div class="dash-mini__head">
+            <span class="dash-mini__k">Subtareas</span>
+            <span class="dash-mini__v"><b data-stat="subtasksDone">11</b><span class="dash-slash">/</span><span data-stat="subtasksTotal">18</span></span>
+          </div>
+          <div class="dash-mini__bar"><i style="width:61%"></i></div>
+        </div>
+        <div class="dash-mini__split">
+          <div class="dash-mini__cell">
+            <span class="dash-mini__k">Con fecha</span>
+            <span class="dash-mini__v"><b data-stat="withDue">16</b></span>
+          </div>
+          <div class="dash-mini__cell">
+            <span class="dash-mini__k">Sin fecha</span>
+            <span class="dash-mini__v"><b data-stat="noDue">8</b></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- DERECHA — Ranking de etiquetas (única zona con color de marca) -->
+    <section class="dash-card dash-card--tags" aria-labelledby="dash-tags-h">
+      <header class="dash-card__head">
+        <h2 class="dash-card__title" id="dash-tags-h">Por etiqueta</h2>
+        <span class="dash-card__hint">avance · hechas / total</span>
+      </header>
+
+      <div class="dash-tags" data-dash="tags">
+        <div class="dash-tag" style="--c:oklch(54% 0.180 245);--pct:67%">
+          <span class="dash-tag__dot"></span>
+          <span class="dash-tag__name">trabajo</span>
+          <span class="dash-tag__bar"><i></i></span>
+          <span class="dash-tag__count">8/12</span>
+        </div>
+        <div class="dash-tag" style="--c:oklch(62% 0.150 150);--pct:80%">
+          <span class="dash-tag__dot"></span>
+          <span class="dash-tag__name">personal</span>
+          <span class="dash-tag__bar"><i></i></span>
+          <span class="dash-tag__count">4/5</span>
+        </div>
+        <div class="dash-tag" style="--c:oklch(64% 0.150 85);--pct:33%">
+          <span class="dash-tag__dot"></span>
+          <span class="dash-tag__name">casa</span>
+          <span class="dash-tag__bar"><i></i></span>
+          <span class="dash-tag__count">2/6</span>
+        </div>
+        <div class="dash-tag" style="--c:oklch(60% 0.180 25);--pct:0%">
+          <span class="dash-tag__dot"></span>
+          <span class="dash-tag__name">urgente</span>
+          <span class="dash-tag__bar"><i></i></span>
+          <span class="dash-tag__count">0/3</span>
+        </div>
+        <div class="dash-tag" style="--c:oklch(58% 0.165 300);--pct:100%">
+          <span class="dash-tag__dot"></span>
+          <span class="dash-tag__name">compras</span>
+          <span class="dash-tag__bar"><i></i></span>
+          <span class="dash-tag__count">4/4</span>
+        </div>
+        <div class="dash-tag" style="--c:oklch(60% 0.120 200);--pct:50%">
+          <span class="dash-tag__dot"></span>
+          <span class="dash-tag__name">salud</span>
+          <span class="dash-tag__bar"><i></i></span>
+          <span class="dash-tag__count">1/2</span>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- ── Próximos vencimientos (ancho completo, cierre del patrón F) ── -->
+  <section class="dash-card dash-card--upcoming" aria-labelledby="dash-up-h">
+    <header class="dash-card__head">
+      <h2 class="dash-card__title" id="dash-up-h">Próximos vencimientos</h2>
+      <span class="dash-card__hint">pendientes, por fecha</span>
+    </header>
+
+    <!-- Banner de vencidas (el JS lo oculta con [hidden] cuando overdue === 0) -->
+    <div class="dash-alert" data-dash="overdue-alert">
+      <span class="dash-alert__ico" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 2 18a2 2 0 0 0 1.7 3h16.6A2 2 0 0 0 22 18L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>
+      </span>
+      <span class="dash-alert__num" data-stat="overdue">3</span>
+      <span class="dash-alert__txt">vencidas necesitan atención</span>
+    </div>
+
+    <div class="dash-ups" data-dash="upcoming">
+      <div class="dash-up dash-up--danger">
+        <span class="dash-up__name">Enviar informe trimestral</span>
+        <span class="dash-up__due">vencida</span>
+      </div>
+      <div class="dash-up dash-up--soon">
+        <span class="dash-up__name">Llamar al dentista</span>
+        <span class="dash-up__due">hoy</span>
+      </div>
+      <div class="dash-up dash-up--soon">
+        <span class="dash-up__name">Revisar pull request #214</span>
+        <span class="dash-up__due">mañana</span>
+      </div>
+      <div class="dash-up">
+        <span class="dash-up__name">Renovar dominio del blog</span>
+        <span class="dash-up__due">en 4 días</span>
+      </div>
+      <div class="dash-up">
+        <span class="dash-up__name">Preparar presentación de equipo</span>
+        <span class="dash-up__due">en 6 días</span>
+      </div>
+    </div>
+  </section>
+
+</section>`;
 // Dirección de scroll en vista cards: 'vertical' (default) | 'horizontal'.
 const CARDS_SCROLL_KEY = 'todo-list:cardsScroll';
 function loadCardsScroll() {
@@ -81,6 +320,8 @@ const DOM = {
     submitLabel: document.querySelector('.submit-label'),
     container: document.querySelector('.grocery-container'),
     list: document.querySelector('.grocery-list'),
+    dashboard: document.getElementById('dashboard'),
+    dashboardNav: document.getElementById('dashboardNav'),
     clearBtn: document.querySelector('.clear-btn'),
     taskFilterRoot: document.getElementById('taskFilter'),
     sortByRoot: document.getElementById('sortBy'),
@@ -303,6 +544,7 @@ class TaskManager {
         this.viewMode = loadView();         // 'list' | 'cards' (persistida en Ajustes)
         this.cardsScroll = loadCardsScroll(); // 'vertical' | 'horizontal' (solo cards)
         this.cardDesign = loadCardDesign(); // 1..10 (skin de card activo, debug)
+        this.showDashboard = false;         // panel de resumen (no es un filtro)
         this._detailId = null;              // tarea abierta en el panel de detalle
         this._undo = null;                  // snapshot de un nivel para "Deshacer"
         // Set transitorio (no persistido) de IDs de padres con el form
@@ -820,6 +1062,13 @@ class TaskManager {
             shell.dataset.sidebar = shell.dataset.sidebar === 'hidden' ? 'open' : 'hidden';
         });
 
+        // Nav "Resumen": abre el dashboard de estado global (no es un filtro).
+        if (DOM.dashboardNav) {
+            const slot = DOM.dashboardNav.querySelector('.nav-item__icon');
+            if (slot && !slot.firstChild) slot.appendChild(createIcon('chart', { size: 16 }));
+            DOM.dashboardNav.addEventListener('click', () => this._showDashboard());
+        }
+
         // Dirección de scroll en vista cards (vertical ⇄ horizontal). El atributo
         // en el shell dispara los overrides CSS; no requiere re-render.
         shell.dataset.cardsScroll = this.cardsScroll;
@@ -853,8 +1102,8 @@ class TaskManager {
             sbBackdrop.addEventListener('click', () => { shell.dataset.sidebar = 'hidden'; });
         }
 
-        // DEBUG TEMPORAL: alterna vista Lista ⇄ Cards. Eliminar luego junto con
-        // el <button id="viewToggleBtn"> de index.html.
+        // Toggle rápido de vista (Lista ⇄ Tarjetas) en el topbar. Comparte
+        // estado con ⚙ Ajustes → Vista vía _setView/_syncViewControls.
         const viewBtn = document.getElementById('viewToggleBtn');
         if (viewBtn) {
             viewBtn.addEventListener('click', () => {
@@ -890,7 +1139,11 @@ class TaskManager {
      */
     _setView(mode) {
         const next = mode === 'cards' ? 'cards' : 'list';
-        if (this.viewMode === next) return;
+        // Cambiar de vista (Lista/Cards) implica querer ver tareas → sale del
+        // dashboard si estaba abierto.
+        const wasDashboard = this.showDashboard;
+        if (wasDashboard) this._exitDashboard();
+        if (this.viewMode === next && !wasDashboard) return;
         this.viewMode = next;
         saveView(next);
         const shell = this._shell || document.getElementById('appShell');
@@ -906,8 +1159,17 @@ class TaskManager {
 
     /** Sincroniza el botón debug y el segmento de Ajustes con this.viewMode. */
     _syncViewControls() {
+        // El toggle del topbar muestra la vista a la que cambia (icono + label).
         const viewBtn = document.getElementById('viewToggleBtn');
-        if (viewBtn) viewBtn.textContent = this.viewMode === 'cards' ? '☰ Lista' : '▦ Cards';
+        if (viewBtn) {
+            const toCards = this.viewMode !== 'cards';
+            const iconSlot = viewBtn.querySelector('.view-toggle__icon');
+            const labelSlot = viewBtn.querySelector('.view-toggle__label');
+            if (iconSlot) iconSlot.replaceChildren(createIcon(toCards ? 'grid' : 'list', { size: 15 }));
+            if (labelSlot) labelSlot.textContent = toCards ? 'Cards' : 'Lista';
+            else viewBtn.textContent = toCards ? 'Cards' : 'Lista';
+            viewBtn.setAttribute('aria-pressed', String(this.viewMode === 'cards'));
+        }
         document.querySelectorAll('[data-view-seg] .seg__btn').forEach(b =>
             b.classList.toggle('is-active', b.dataset.viewMode === this.viewMode));
     }
@@ -1260,14 +1522,16 @@ class TaskManager {
 
     _setFilterTab(value) {
         if (!['all', 'done', 'pending', 'overdue', 'today', 'week', 'month', 'priority'].includes(value)) return;
-        // Elegir una Vista/Estado limpia el filtro por etiqueta (selección
-        // mutuamente excluyente en el sidebar, como el mockup).
+        // Elegir una Vista/Estado sale del dashboard y limpia el filtro por
+        // etiqueta (selección mutuamente excluyente en el sidebar).
+        const wasDashboard = this.showDashboard;
+        if (wasDashboard) this._exitDashboard();
         const hadTag = this.activeTag !== null;
         if (hadTag) {
             this.activeTag = null;
             saveActiveTag(null);
         }
-        if (this.filterMode === value && !hadTag) return;
+        if (this.filterMode === value && !hadTag && !wasDashboard) return;
         this.filterMode = value;
         this.currentPage = 1;
         // Actualiza aria-selected y .is-active en TODOS los sets de tabs
@@ -1286,6 +1550,7 @@ class TaskManager {
      * etiqueta ya activa la des-selecciona (vuelve a 'all').
      */
     _setActiveTag(tag) {
+        if (this.showDashboard) this._exitDashboard();
         const next = this.activeTag === tag ? null : tag;
         this.activeTag = next;
         saveActiveTag(next);
@@ -2197,6 +2462,17 @@ class TaskManager {
                 this.selectedIds.delete(id);
             }
         }
+        // Panel de Resumen: reemplaza la lista por el dashboard. El sidebar
+        // (contadores + etiquetas) y el topbar siguen vivos.
+        if (this.showDashboard) {
+            this._renderDashboard();
+            this.updateTaskCount(this.store.tasks.filter(t => t.parentId === null).length);
+            this._renderSidebarTags();
+            const topbarTitle = document.getElementById('topbarTitle');
+            if (topbarTitle) topbarTitle.textContent = 'Resumen';
+            return;
+        }
+
         // La paginación cuenta sólo PADRES; cada padre arrastra a sus subs.
         const filteredParents = this._filteredParents();
         const totalPages = Math.max(1, Math.ceil(filteredParents.length / this.pageSize));
@@ -2238,6 +2514,336 @@ class TaskManager {
             if (exists) this._renderDetail(this._detailId);
             else this._closeDetail();
         }
+    }
+
+    // ===== Dashboard / Resumen ==============================================
+
+    /** Abre el panel de Resumen (dashboard de estado global). */
+    _showDashboard() {
+        if (this.showDashboard) return;
+        this.showDashboard = true;
+        if (DOM.dashboardNav) {
+            DOM.dashboardNav.classList.add('is-active');
+            DOM.dashboardNav.setAttribute('aria-pressed', 'true');
+        }
+        const shell = this._shell || document.getElementById('appShell');
+        if (shell) shell.dataset.panel = 'dashboard';
+        // El dashboard no usa los filtros: des-resalta los filter-tabs.
+        document.querySelectorAll('[data-filter-tabs] .filter-tab').forEach(t => {
+            t.classList.remove('is-active');
+            t.setAttribute('aria-selected', 'false');
+        });
+        this.renderTasks();
+    }
+
+    /** Sale del panel de Resumen (vuelve a la lista/cards). */
+    _exitDashboard() {
+        this.showDashboard = false;
+        if (DOM.dashboardNav) {
+            DOM.dashboardNav.classList.remove('is-active');
+            DOM.dashboardNav.setAttribute('aria-pressed', 'false');
+        }
+        if (DOM.dashboard) DOM.dashboard.hidden = true;
+        const shell = this._shell || document.getElementById('appShell');
+        if (shell && shell.dataset.panel === 'dashboard') delete shell.dataset.panel;
+    }
+
+    /** Calcula todas las métricas globales para el dashboard. */
+    _computeStats() {
+        const parents = this.store.tasks.filter(t => t.parentId === null);
+        const subs = this.store.tasks.filter(t => t.parentId !== null);
+        const total = parents.length;
+        const done = parents.filter(p => p.done).length;
+        const pending = total - done;
+        const overdue = parents.filter(p => this._isOverdue(p)).length;
+        const today = parents.filter(p => this._isToday(p)).length;
+        const week = parents.filter(p => this._isThisWeek(p)).length;
+        const priority = parents.filter(p => !!p.priority).length;
+        const completionRate = total ? Math.round((done / total) * 100) : 0;
+        const subtasksTotal = subs.length;
+        const subtasksDone = subs.filter(s => s.done).length;
+        const withDue = parents.filter(p => !!p.dueDate).length;
+        const noDue = total - withDue;
+
+        const weekAgoISO = shiftISO(-7);
+        const weekAgoMs = Date.now() - 7 * 86400000;
+        const createdLast7 = parents.filter(p => createdISO(p) >= weekAgoISO).length;
+        const completedLast7 = parents.filter(p => p.done && p.updatedAt >= weekAgoMs).length;
+
+        const today0 = todayISO();
+        const tags = this.store.allTags().map(({ tag, count }) => {
+            const key = tag.toLowerCase();
+            const withTag = parents.filter(p =>
+                Array.isArray(p.tags) && p.tags.some(t => t.toLowerCase() === key));
+            const tdone = withTag.filter(p => p.done).length;
+            return { tag, count, done: tdone, pending: count - tdone, color: this._tagColor(tag) };
+        }).sort((a, b) => b.count - a.count);
+
+        const dayMs = 86400000;
+        const upcoming = parents
+            .filter(p => !p.done && p.dueDate)        // incluye vencidas (más urgentes primero)
+            .sort((a, b) => a.dueDate.localeCompare(b.dueDate))
+            .slice(0, 6)
+            .map(p => {
+                const [y, m, d] = p.dueDate.split('-').map(Number);
+                const due = new Date(y, m - 1, d).getTime();
+                const [ty, tm, td] = today0.split('-').map(Number);
+                const t0 = new Date(ty, tm - 1, td).getTime();
+                const daysLeft = Math.round((due - t0) / dayMs);
+                return { value: p.value, dueDate: p.dueDate, daysLeft };
+            });
+
+        // Tendencia 8 semanas: creadas (por id) vs completadas (completedAt ?? updatedAt).
+        const nowMs = Date.now();
+        const weekMs = 7 * dayMs;
+        const WEEKS = 8;
+        const trend = [];
+        for (let w = WEEKS - 1; w >= 0; w--) {
+            const end = nowMs - w * weekMs;
+            trend.push({ start: end - weekMs, end, created: 0, completed: 0 });
+        }
+        for (const p of parents) {
+            const cAt = parseInt(p.id);
+            const b1 = trend.find(b => cAt > b.start && cAt <= b.end);
+            if (b1) b1.created++;
+            if (p.done) {
+                const compAt = p.completedAt || p.updatedAt;
+                const b2 = trend.find(b => compAt > b.start && compAt <= b.end);
+                if (b2) b2.completed++;
+            }
+        }
+
+        // Carga próxima: nº de pendientes que vencen cada uno de los próximos 14 días.
+        const DAYS = 14;
+        const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+        const load = [];
+        for (let d = 0; d < DAYS; d++) {
+            const iso = shiftISO(d);
+            const [, , dd] = iso.split('-').map(Number);
+            load.push({ iso, dayNum: dd, count: 0 });
+        }
+        for (const p of parents) {
+            if (p.done || !p.dueDate) continue;
+            const slot = load.find(x => x.iso === p.dueDate);
+            if (slot) slot.count++;
+        }
+
+        // Antigüedad de pendientes: histograma por edad desde creación.
+        const ageBuckets = [
+            { label: '< 1 sem', max: 7, count: 0 },
+            { label: '1–4 sem', max: 28, count: 0 },
+            { label: '1–3 meses', max: 90, count: 0 },
+            { label: '> 3 meses', max: Infinity, count: 0 },
+        ];
+        for (const p of parents) {
+            if (p.done) continue;
+            const ageDays = (nowMs - parseInt(p.id)) / dayMs;
+            const b = ageBuckets.find(x => ageDays < x.max) || ageBuckets[ageBuckets.length - 1];
+            b.count++;
+        }
+
+        return {
+            total, pending, done, overdue, today, week, priority, completionRate,
+            subtasksTotal, subtasksDone, withDue, noDue, createdLast7, completedLast7,
+            tags, upcoming, trend, load, ageBuckets,
+        };
+    }
+
+    /** Renderiza el dashboard: inyecta la plantilla y enlaza los datos. */
+    _renderDashboard() {
+        if (!DOM.dashboard) return;
+        const stats = this._computeStats();
+        DOM.dashboard.hidden = false;
+        DOM.dashboard.innerHTML = this._dashboardTemplate(stats);
+        this._insertDashboardCharts(DOM.dashboard);
+        this._bindDashboard(DOM.dashboard, stats);
+    }
+
+    /** Inserta la fila de gráficos extra tras el grid principal del dashboard. */
+    _insertDashboardCharts(root) {
+        if (root.querySelector('.dash-grid--charts')) return;
+        const grid = document.createElement('div');
+        grid.className = 'dash-grid dash-grid--charts';
+        grid.innerHTML = `
+          <section class="dash-card dash-card--wide">
+            <header class="dash-card__head"><h2 class="dash-card__title">Tendencia · 8 semanas</h2><span class="dash-card__hint">creadas vs completadas</span></header>
+            <div class="dash-trend" data-dash="trend"></div>
+          </section>
+          <section class="dash-card">
+            <header class="dash-card__head"><h2 class="dash-card__title">Reparto por etiqueta</h2></header>
+            <div class="dash-share" data-dash="tagshare"></div>
+          </section>
+          <section class="dash-card">
+            <header class="dash-card__head"><h2 class="dash-card__title">Antigüedad de pendientes</h2></header>
+            <div class="dash-age" data-dash="age"></div>
+          </section>
+          <section class="dash-card dash-card--wide">
+            <header class="dash-card__head"><h2 class="dash-card__title">Carga próxima · 14 días</h2><span class="dash-card__hint">vencimientos por día</span></header>
+            <div class="dash-load" data-dash="load"></div>
+          </section>`;
+        const firstGrid = root.querySelector('.dash-grid:not(.dash-grid--charts)');
+        const upcoming = root.querySelector('.dash-card--upcoming');
+        if (firstGrid && firstGrid.parentNode) firstGrid.parentNode.insertBefore(grid, firstGrid.nextSibling);
+        else if (upcoming && upcoming.parentNode) upcoming.parentNode.insertBefore(grid, upcoming);
+        else root.appendChild(grid);
+    }
+
+    /** Enlaza los data-hooks de la plantilla con las métricas calculadas. */
+    _bindDashboard(root, stats) {
+        // Valores numéricos.
+        root.querySelectorAll('[data-stat]').forEach(el => {
+            const k = el.dataset.stat;
+            if (!(k in stats)) return;
+            el.textContent = k === 'completionRate' ? `${stats[k]}%` : String(stats[k]);
+        });
+        // Anillo de progreso global.
+        root.querySelectorAll('.dash-ring').forEach(r => {
+            r.style.setProperty('--value', String(stats.completionRate));
+        });
+        // Barra de estado apilada: el CSS usa --done/--pending/--overdue (%).
+        const statusEl = root.querySelector('[data-dash="status"]');
+        if (statusEl && stats.total > 0) {
+            const pct = n => `${(n / stats.total) * 100}%`;
+            const pendingNotOverdue = Math.max(0, stats.pending - stats.overdue);
+            statusEl.style.setProperty('--done', pct(stats.done));
+            statusEl.style.setProperty('--pending', pct(pendingNotOverdue));
+            statusEl.style.setProperty('--overdue', pct(stats.overdue));
+        }
+        // Banner de vencidas: visible solo si hay vencidas.
+        const alertEl = root.querySelector('[data-dash="overdue-alert"]');
+        if (alertEl) alertEl.hidden = stats.overdue === 0;
+        // Etiquetas.
+        const tagsEl = root.querySelector('[data-dash="tags"]');
+        if (tagsEl) {
+            tagsEl.innerHTML = '';
+            if (!stats.tags.length) {
+                tagsEl.innerHTML = '<p class="dash-empty">Aún no hay etiquetas.</p>';
+            }
+            for (const t of stats.tags) {
+                const pct = t.count ? Math.round((t.done / t.count) * 100) : 0;
+                const row = document.createElement('div');
+                row.className = 'dash-tag';
+                row.style.setProperty('--c', t.color);
+                row.style.setProperty('--pct', pct + '%');
+                row.innerHTML =
+                    '<span class="dash-tag__dot"></span>' +
+                    `<span class="dash-tag__name">${this._esc(t.tag)}</span>` +
+                    '<span class="dash-tag__bar"><i></i></span>' +
+                    `<span class="dash-tag__count">${t.done}/${t.count}</span>`;
+                tagsEl.appendChild(row);
+            }
+        }
+        // Próximos vencimientos.
+        const upEl = root.querySelector('[data-dash="upcoming"]');
+        if (upEl) {
+            upEl.innerHTML = '';
+            if (!stats.upcoming.length) {
+                upEl.innerHTML = '<p class="dash-empty">Sin vencimientos próximos.</p>';
+            }
+            for (const u of stats.upcoming) {
+                let cls = 'dash-up', when;
+                if (u.daysLeft < 0) { cls += ' dash-up--danger'; when = 'vencida'; }
+                else if (u.daysLeft === 0) { cls += ' dash-up--soon'; when = 'hoy'; }
+                else if (u.daysLeft === 1) { cls += ' dash-up--soon'; when = 'mañana'; }
+                else when = `en ${u.daysLeft} días`;
+                const row = document.createElement('div');
+                row.className = cls;
+                row.innerHTML =
+                    `<span class="dash-up__name">${this._esc(u.value)}</span>` +
+                    `<span class="dash-up__due">${when}</span>`;
+                upEl.appendChild(row);
+            }
+        }
+        // Gráficos extra.
+        const trendEl = root.querySelector('[data-dash="trend"]');
+        if (trendEl) this._buildTrend(trendEl, stats.trend);
+        const shareEl = root.querySelector('[data-dash="tagshare"]');
+        if (shareEl) this._buildTagShare(shareEl, stats.tags);
+        const loadEl = root.querySelector('[data-dash="load"]');
+        if (loadEl) this._buildLoad(loadEl, stats.load);
+        const ageEl = root.querySelector('[data-dash="age"]');
+        if (ageEl) this._buildAge(ageEl, stats.ageBuckets);
+    }
+
+    /** Tendencia: área (completadas) + dos líneas (creadas/completadas) en SVG. */
+    _buildTrend(el, trend) {
+        const W = 320, H = 120, pad = 10;
+        const n = trend.length;
+        const maxV = Math.max(1, ...trend.map(b => Math.max(b.created, b.completed)));
+        const x = i => pad + (i * (W - 2 * pad)) / Math.max(1, n - 1);
+        const y = v => H - pad - (v / maxV) * (H - 2 * pad);
+        const path = key => trend.map((b, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(b[key]).toFixed(1)}`).join(' ');
+        const area = `M${x(0).toFixed(1)} ${(H - pad).toFixed(1)} ` +
+            trend.map((b, i) => `L${x(i).toFixed(1)} ${y(b.completed).toFixed(1)}`).join(' ') +
+            ` L${x(n - 1).toFixed(1)} ${(H - pad).toFixed(1)} Z`;
+        const dots = key => trend.map((b, i) =>
+            `<circle cx="${x(i).toFixed(1)}" cy="${y(b[key]).toFixed(1)}" r="2.4" class="dash-trend__pt dash-trend__pt--${key}"><title>${b[key]} ${key === 'created' ? 'creadas' : 'completadas'}</title></circle>`).join('');
+        el.innerHTML =
+            `<svg viewBox="0 0 ${W} ${H}" class="dash-trend__svg" preserveAspectRatio="none" role="img" aria-label="Tendencia de 8 semanas">` +
+            `<path class="dash-trend__area" d="${area}"/>` +
+            `<path class="dash-trend__line dash-trend__line--completed" d="${path('completed')}"/>` +
+            `<path class="dash-trend__line dash-trend__line--created" d="${path('created')}"/>` +
+            dots('completed') + dots('created') +
+            `</svg>` +
+            `<div class="dash-trend__legend"><span><i class="dot dot--created"></i>Creadas</span><span><i class="dot dot--completed"></i>Completadas</span><span class="dash-trend__axis">← 8 sem · hoy →</span></div>`;
+    }
+
+    /** Reparto por etiqueta: donut (conic-gradient) + leyenda con %. */
+    _buildTagShare(el, tags) {
+        const totalCount = tags.reduce((s, t) => s + t.count, 0);
+        if (!totalCount) { el.innerHTML = '<p class="dash-empty">Aún no hay etiquetas.</p>'; return; }
+        let acc = 0;
+        const stops = tags.map(t => {
+            const a = (acc / totalCount) * 100;
+            acc += t.count;
+            const b = (acc / totalCount) * 100;
+            return `${t.color} ${a.toFixed(2)}% ${b.toFixed(2)}%`;
+        }).join(', ');
+        const top = tags.slice(0, 6);
+        const legend = top.map(t => {
+            const pct = Math.round((t.count / totalCount) * 100);
+            return `<div class="dash-share__row"><span class="dash-share__dot" style="background:${t.color}"></span>` +
+                `<span class="dash-share__name">${this._esc(t.tag)}</span><span class="dash-share__pct">${pct}%</span></div>`;
+        }).join('');
+        const restN = tags.length - top.length;
+        const rest = restN > 0 ? `<div class="dash-share__row dash-share__row--rest"><span class="dash-share__dot" style="background:var(--border-strong)"></span><span class="dash-share__name">+${restN} más</span></div>` : '';
+        el.innerHTML =
+            `<div class="dash-donut" style="background:conic-gradient(${stops})" role="img" aria-label="Reparto por etiqueta"></div>` +
+            `<div class="dash-share__legend">${legend}${rest}</div>`;
+    }
+
+    /** Carga próxima: barras verticales por día (14 días). */
+    _buildLoad(el, load) {
+        const maxC = Math.max(1, ...load.map(d => d.count));
+        el.innerHTML = load.map((d, i) => {
+            const h = Math.round((d.count / maxC) * 100);
+            const cls = 'dash-load__col' + (d.count === 0 ? ' is-empty' : '') + (i === 0 ? ' is-today' : '');
+            return `<div class="${cls}" title="${d.count} vence${d.count === 1 ? '' : 'n'} el día ${d.dayNum}">` +
+                `<span class="dash-load__track"><span class="dash-load__bar" style="height:${h}%"></span></span>` +
+                `<span class="dash-load__lbl">${d.dayNum}</span></div>`;
+        }).join('');
+    }
+
+    /** Antigüedad de pendientes: histograma horizontal (más viejo = más cálido). */
+    _buildAge(el, buckets) {
+        const maxA = Math.max(1, ...buckets.map(b => b.count));
+        const tones = ['var(--accent)', 'var(--accent)', 'var(--warning)', 'var(--danger)'];
+        el.innerHTML = buckets.map((b, i) => {
+            const pct = Math.round((b.count / maxA) * 100);
+            return `<div class="dash-age__row" style="--tone:${tones[i] || 'var(--accent)'}">` +
+                `<span class="dash-age__lbl">${b.label}</span>` +
+                `<span class="dash-age__bar"><i style="width:${pct}%"></i></span>` +
+                `<span class="dash-age__n">${b.count}</span></div>`;
+        }).join('');
+    }
+
+    _esc(s) {
+        return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    }
+
+    /** Plantilla HTML del dashboard (diseño "Panorama", del workflow). */
+    _dashboardTemplate() {
+        return DASHBOARD_TEMPLATE;
     }
 
     /**
@@ -2545,10 +3151,10 @@ class TaskManager {
     }
 
     /**
-     * Vista de tarjetas (debug/experimental): una card por tarea PADRE en
-     * una grilla responsive, mostrando todo (nombre, tiempo, prioridad,
-     * etiquetas, fecha, progreso de subtareas). Reusa los handlers de fila
-     * (generalizados a [data-id]).
+     * Vista de tarjetas: una card por tarea PADRE en una grilla responsive,
+     * mostrando todo (nombre, tiempo, prioridad, etiquetas, fecha, progreso de
+     * subtareas). El aspecto lo da el skin activo (1..10). Reusa los handlers
+     * de fila (generalizados a [data-id]).
      */
     _renderCards(parents) {
         DOM.list.innerHTML = '';
