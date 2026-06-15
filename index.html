@@ -85,6 +85,8 @@
       <header class="app-topbar">
         <button type="button" class="btn-icon app-topbar__toggle" id="sidebarToggle" aria-label="Mostrar u ocultar panel"></button>
         <div class="app-topbar__title" id="topbarTitle">Tareas</div>
+        <!-- Slot donde se monta la búsqueda en desktop (el searchBox se mueve aquí). -->
+        <div class="app-topbar__search" id="topbarSearchSlot"></div>
         <div class="app-topbar__spacer"></div>
         <div class="app-topbar__stats" id="topbarStats"></div>
       </header>
@@ -162,7 +164,12 @@
 
         <div class="grocery-container">
             <div class="search-row" id="searchRow" hidden>
-                <input type="search" id="searchInput" class="search-input field" placeholder="Buscar tareas…" aria-label="Buscar tareas por texto" autocomplete="off">
+                <!-- searchBox: contenedor único de la búsqueda. En ≥1024 el JS
+                     lo mueve al topbar; en mobile vuelve aquí (sin duplicar). -->
+                <div class="search" id="searchBox">
+                    <input type="search" id="searchInput" class="search-input field" placeholder="Buscar tareas…" aria-label="Buscar tareas por texto" autocomplete="off">
+                    <span class="kbd" aria-hidden="true">Ctrl K</span>
+                </div>
             </div>
             <!-- Pills mobile: copia del filter-tabs del footer, visible solo
                  en mobile via CSS. El JS sincroniza ambos sets via data-filter-tabs. -->

@@ -619,6 +619,10 @@ con mayor especificidad y haría invisibles nuestras notificaciones.
 .search-row {
     margin-bottom: 0.75rem;
 }
+.search-row .search { width: 100%; }
+/* El chip de atajo (Ctrl K) solo tiene sentido en el topbar desktop; por
+   defecto (search en el contenido / mobile) se oculta. */
+.search .kbd { display: none; }
 /* .search-input ahora hereda todos los estilos de .field (components.css). */
 /* Cabecera del listado: contador a la izquierda, controles a la derecha. */
 .task-count-row {
@@ -2050,6 +2054,10 @@ mobile (≤480) y desktop legacy (481–1023) quedan EXACTAMENTE igual.
     color: var(--fg-default);
   }
   .app-topbar__spacer { flex: 1; }
+  /* Búsqueda montada en el topbar (el searchBox se mueve aquí en ≥1024). */
+  .app-topbar__search { flex: 1; max-width: 420px; }
+  .app-topbar__search .search { width: 100%; }
+  .app-topbar__search .kbd { display: inline-flex; }
   .app-topbar__stats {
     font-size: var(--fs-sm);
     color: var(--fg-muted);

@@ -63,6 +63,8 @@ const DOM = {
     promoteZone: document.getElementById('promoteZone'),
     searchInput: document.getElementById('searchInput'),
     searchRow: document.getElementById('searchRow'),
+    searchBox: document.getElementById('searchBox'),
+    topbarSearchSlot: document.getElementById('topbarSearchSlot'),
     paginationNav: document.querySelector('.pagination'),
     listFooter: document.getElementById('listFooter'),
     listFooterInfo: document.getElementById('listFooterInfo'),
@@ -302,6 +304,7 @@ class TaskManager {
         this._safeRun('setupChromeToggles', () => this._setupChromeToggles());
         this._safeRun('setupSidebar', () => this._setupSidebar());
         this._safeRun('setupVersion', () => this._setupVersion());
+        this._safeRun('setupSearchPlacement', () => this._setupSearchPlacement());
         this._safeRun('setupFooterHeightTracker', () => this._setupFooterHeightTracker());
         this._safeRun('setupMobileDrawer', () => this._setupMobileDrawer());
         this._safeRun('setupMobileFab', () => this._setupMobileFab());
@@ -782,6 +785,43 @@ class TaskManager {
                 if (chip) this._setFilterTab(chip.dataset.filter);
             });
         }
+    }
+
+    /**
+     * Reubica el ÚNICO searchBox: en ≥1024 vive en el topbar (siempre
+     * visible); en <1024 vuelve al search-row del contenido. Además monta el
+     * icono de búsqueda y el atajo Ctrl/Cmd+K para enfocarlo. No duplica el
+     * input ni su estado.
+     */
+    _setupSearchPlacement() {
+        const box = DOM.searchBox;
+        if (!box) return;
+        // Icono de lupa como primer hijo (.search > .icon de components.css).
+        if (!box.querySelector('.icon')) {
+            box.insertBefore(createIcon('search', { size: 18 }), box.firstChild);
+        }
+        const mql = window.matchMedia('(min-width: 1024px)');
+        const place = () => {
+            if (mql.matches) {
+                if (DOM.topbarSearchSlot && box.parentElement !== DOM.topbarSearchSlot) {
+                    DOM.topbarSearchSlot.appendChild(box);
+                }
+            } else if (DOM.searchRow && box.parentElement !== DOM.searchRow) {
+                DOM.searchRow.appendChild(box);
+            }
+            this._updateSearchVisibility();
+        };
+        place();
+        mql.addEventListener('change', place);
+
+        // Atajo Ctrl/Cmd+K → enfoca el buscador.
+        document.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
+                e.preventDefault();
+                DOM.searchInput?.focus();
+                DOM.searchInput?.select();
+            }
+        });
     }
 
     /**
@@ -2125,6 +2165,12 @@ class TaskManager {
 
     _updateSearchVisibility() {
         if (!DOM.searchRow) return;
+        // En desktop la búsqueda vive en el topbar (siempre visible). El
+        // search-row del contenido queda vacío/oculto y no se aplica el umbral.
+        if (window.matchMedia('(min-width: 1024px)').matches) {
+            DOM.searchRow.hidden = true;
+            return;
+        }
         const totalParents = this.store.tasks.filter(t => t.parentId === null).length;
         const shouldShow = totalParents > SEARCH_VISIBILITY_THRESHOLD;
         DOM.searchRow.hidden = !shouldShow;
