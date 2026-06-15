@@ -27,6 +27,21 @@ function loadView() {
 function saveView(v) {
     localStorage.setItem(VIEW_KEY, v === 'cards' ? 'cards' : 'list');
 }
+// Diseño de card activo (selector debug): 1..CARD_DESIGN_COUNT.
+const CARD_DESIGN_KEY = 'todo-list:cardDesign';
+const CARD_DESIGN_COUNT = 10;
+// Nombres de los 10 diseños (orden = id). Mostrados en el selector de debug.
+const CARD_DESIGN_NAMES = [
+    'Sereno', 'Riel Centinela', 'Ficha tablero', 'Cinta Dorada', 'Lomo Editorial',
+    'Amable Táctil', 'Denso', 'Progreso', 'Glow Acento', 'Disco Estado',
+];
+function loadCardDesign() {
+    const n = parseInt(localStorage.getItem(CARD_DESIGN_KEY), 10);
+    return (n >= 1 && n <= CARD_DESIGN_COUNT) ? n : 1;
+}
+function saveCardDesign(n) {
+    localStorage.setItem(CARD_DESIGN_KEY, String(n));
+}
 // Dirección de scroll en vista cards: 'vertical' (default) | 'horizontal'.
 const CARDS_SCROLL_KEY = 'todo-list:cardsScroll';
 function loadCardsScroll() {
@@ -287,6 +302,7 @@ class TaskManager {
         this.selectedIds = new Set();       // selección múltiple (desktop) para acciones masivas
         this.viewMode = loadView();         // 'list' | 'cards' (persistida en Ajustes)
         this.cardsScroll = loadCardsScroll(); // 'vertical' | 'horizontal' (solo cards)
+        this.cardDesign = loadCardDesign(); // 1..10 (skin de card activo, debug)
         this._detailId = null;              // tarea abierta en el panel de detalle
         this._undo = null;                  // snapshot de un nivel para "Deshacer"
         // Set transitorio (no persistido) de IDs de padres con el form
@@ -927,6 +943,32 @@ class TaskManager {
             });
         });
         this._syncViewControls();
+
+        // Diseño de tarjeta (10 skins): usa el Combobox del sistema (mismo
+        // componente que Ordenar/Por página) para coherencia visual y teclado.
+        const designRoot = document.getElementById('cardDesignCombo');
+        const designList = designRoot?.querySelector('.combo-listbox');
+        if (designRoot && designList && !designList.children.length) {
+            CARD_DESIGN_NAMES.forEach((name, i) => {
+                const n = i + 1;
+                const li = document.createElement('li');
+                li.setAttribute('role', 'option');
+                li.dataset.value = String(n);
+                li.id = `opt-cd-${n}`;
+                li.setAttribute('aria-selected', String(n === this.cardDesign));
+                li.textContent = `${n}. ${name}`;
+                designList.appendChild(li);
+            });
+            this.cardDesignCombo = new Combobox(designRoot, {
+                onChange: (value) => {
+                    const n = parseInt(value, 10) || 1;
+                    this.cardDesign = n;
+                    saveCardDesign(n);
+                    this.renderTasks();
+                },
+            });
+            this.cardDesignCombo.setValue(String(this.cardDesign));
+        }
 
         // Exportar: descarga un JSON con tareas + colores de etiquetas.
         DOM.exportBtn?.addEventListener('click', () => {
@@ -2522,6 +2564,7 @@ class TaskManager {
         }
         const grid = document.createElement('div');
         grid.className = 'card-grid';
+        grid.dataset.cardDesign = this.cardDesign;   // skin activo (1..10)
         for (const task of parents) grid.appendChild(this._buildCard(task));
         DOM.list.appendChild(grid);
         DOM.container.classList.add('show-container');
@@ -2778,34 +2821,68 @@ class TaskManager {
         body.append(head, meta, subsSection, danger);
     }
 
+    /** Fecha límite humanizada y corta para las cards: "15 jun". */
+    _dueShort(iso) {
+        const m = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+        const [y, mo, d] = String(iso).split('-').map(Number);
+        if (!y || !mo || !d) return iso;
+        return `${d} ${m[mo - 1]}`;
+    }
+
+    /**
+     * Construye UNA card con el DOM canónico (ganchos tc-*). El aspecto lo
+     * decide el "skin" activo vía .card-grid[data-card-design="N"] (10 diseños
+     * intercambiables desde el selector de debug). Los handlers se enlazan
+     * directo; el clic en la card (fuera de botones) abre el panel de detalle.
+     */
     _buildCard(task) {
         const { id, value, done } = task;
+        const today = todayISO();
+
         const card = document.createElement('article');
         card.className = 'task-card';
         card.dataset.id = id;
         card.dataset.done = String(done);
         if (done) card.classList.add('is-done');
         if (task.priority) card.classList.add('is-priority');
-        const today = todayISO();
         if (task.dueDate === today) card.classList.add('is-due-today');
-        else if (task.dueDate && task.dueDate < today) card.classList.add('is-overdue');
+        else if (task.dueDate && task.dueDate < today && !done) card.classList.add('is-overdue');
 
-        // Cabecera: toggle hecho + estrella prioridad + (eliminar en hover).
+        // Riel/acento decorativo (CSS-only).
+        const rail = document.createElement('span');
+        rail.className = 'tc-rail';
+        rail.setAttribute('aria-hidden', 'true');
+
+        // ── Cabecera: check + título + estrella + acciones ──
         const head = document.createElement('div');
-        head.className = 'task-card__head';
-        const toggle = document.createElement('button');
-        toggle.type = 'button';
-        toggle.className = 'toggle-check';
-        toggle.setAttribute('aria-pressed', String(!!done));
-        toggle.setAttribute('aria-label', done ? 'Marcar como pendiente' : 'Marcar como hecha');
-        toggle.appendChild(createIcon('check', { size: 14 }));
-        toggle.addEventListener('click', this.handleMarkTaskAsDone.bind(this));
+        head.className = 'tc-head';
+
+        const check = document.createElement('button');
+        check.type = 'button';
+        check.className = 'tc-check';
+        check.setAttribute('aria-pressed', String(!!done));
+        check.setAttribute('aria-label', done ? 'Marcar como pendiente' : 'Marcar como hecha');
+        check.appendChild(createIcon('check', { size: 14 }));
+        check.addEventListener('click', this.handleMarkTaskAsDone.bind(this));
+
+        const title = document.createElement('p');
+        title.className = 'tc-title';
+        title.textContent = value;
+        const subs = this.store.subsOf(id);
+        const doneSubs = subs.filter(s => s.done).length;
+        if (subs.length > 0) {
+            const counter = document.createElement('span');
+            counter.className = 'tc-counter';
+            counter.textContent = `${doneSubs}/${subs.length}`;
+            title.append(' ', counter);
+        }
 
         const star = document.createElement('button');
         star.type = 'button';
-        star.className = 'priority-btn btn-icon btn-icon--sm';
+        star.className = 'tc-star';
         if (task.priority) star.classList.add('is-priority');
-        star.setAttribute('aria-label', task.priority ? 'Quitar prioridad' : 'Marcar prioridad');
+        star.setAttribute('aria-pressed', String(!!task.priority));
+        star.setAttribute('aria-label', task.priority ? 'Quitar de favoritos' : 'Marcar favorito');
         star.appendChild(createIcon('star'));
         star.addEventListener('click', () => {
             this._pushUndo('Cambiar prioridad');
@@ -2813,73 +2890,79 @@ class TaskManager {
             this.renderTasks();
         });
 
-        // Acciones (aparecen en hover): etiquetas, fecha, editar, eliminar.
         const actions = document.createElement('div');
-        actions.className = 'task-card__actions';
-        const mkAction = (icon, label, onClick, extraClass) => {
+        actions.className = 'tc-actions';
+        const mkAct = (icon, label, act, onClick, danger) => {
             const b = document.createElement('button');
             b.type = 'button';
-            b.className = 'btn-icon btn-icon--sm' + (extraClass ? ' ' + extraClass : '');
+            b.className = 'tc-act' + (danger ? ' tc-act--danger' : '');
+            b.dataset.act = act;
             b.setAttribute('aria-label', label);
             b.title = label;
             b.appendChild(createIcon(icon));
             b.addEventListener('click', onClick);
             return b;
         };
-        const tagBtn = mkAction('tag', 'Etiquetas', () => this._editTags(id));
-        const dueBtn = mkAction('calendar', task.dueDate ? `Fecha: ${task.dueDate}` : 'Asignar fecha',
-            () => this._editDueDate(id));
+        const tagBtn = mkAct('tag', 'Etiquetas', 'tags', () => this._editTags(id), false);
+        const dueBtn = mkAct('calendar', task.dueDate ? `Fecha: ${task.dueDate}` : 'Asignar fecha',
+            'due', () => this._editDueDate(id), false);
         if (task.dueDate) dueBtn.classList.add('is-due');
-        const delBtn = mkAction('trash', 'Eliminar', this.handleDeleteItem.bind(this), 'btn-icon--danger');
+        const delBtn = mkAct('trash', 'Eliminar', 'del', this.handleDeleteItem.bind(this), true);
         actions.append(tagBtn, dueBtn, delBtn);
 
-        const spacer = document.createElement('span');
-        spacer.className = 'task-card__spacer';
-        head.append(toggle, spacer, star, actions);
+        head.append(check, title, star, actions);
 
-        // Título + contador de subtareas. (La edición se hace en el panel de
-        // detalle que se abre al hacer clic en la card.)
-        const title = document.createElement('p');
-        title.className = 'task-card__title';
-        title.textContent = value;
-        const subs = this.store.subsOf(id);
-        if (subs.length > 0) {
-            const counter = document.createElement('span');
-            counter.className = 'task__counter';
-            counter.textContent = ` (${subs.filter(s => s.done).length}/${subs.length})`;
-            title.appendChild(counter);
-        }
-
-        // Etiquetas (chips de color).
-        let tagsWrap = null;
+        // ── Etiquetas (chips de color) ──
+        let tags = null;
         if (Array.isArray(task.tags) && task.tags.length) {
-            tagsWrap = document.createElement('div');
-            tagsWrap.className = 'task__tags';
+            tags = document.createElement('div');
+            tags.className = 'tc-tags';
             for (const tg of task.tags) {
                 const chip = document.createElement('span');
-                chip.className = 'task__tag-chip';
+                chip.className = 'tc-chip';
                 chip.textContent = tg;
                 chip.style.setProperty('--tag-color', this._tagColor(tg));
-                tagsWrap.appendChild(chip);
+                tags.appendChild(chip);
             }
         }
 
-        // Pie: tiempo transcurrido + fecha (si tiene).
+        // ── Progreso de subtareas (--p = % hechas) ──
+        let progress = null;
+        if (subs.length > 0) {
+            progress = document.createElement('div');
+            progress.className = 'tc-progress';
+            const pct = Math.round((doneSubs / subs.length) * 100);
+            progress.style.setProperty('--p', pct + '%');
+            progress.setAttribute('role', 'progressbar');
+            progress.setAttribute('aria-valuenow', String(pct));
+            progress.setAttribute('aria-valuemin', '0');
+            progress.setAttribute('aria-valuemax', '100');
+            const fill = document.createElement('i');
+            fill.className = 'tc-progress__fill';
+            progress.appendChild(fill);
+        }
+
+        // ── Pie: tiempo transcurrido + fecha límite (si tiene) ──
         const foot = document.createElement('div');
-        foot.className = 'task-card__foot';
+        foot.className = 'tc-foot';
         const elapsed = document.createElement('span');
-        elapsed.className = 'task-days-old';
+        // task-days-old: lo refresca el ticker de tiempo (_updateElapsed).
+        elapsed.className = 'tc-elapsed task-days-old';
         elapsed.textContent = formatElapsed(elapsedComponents(parseInt(id)));
         foot.appendChild(elapsed);
         if (task.dueDate) {
             const due = document.createElement('span');
-            due.className = 'task__due-badge';
-            due.textContent = task.dueDate;
+            due.className = 'tc-due';
+            if (task.dueDate === today) due.classList.add('is-today');
+            else if (task.dueDate < today && !done) due.classList.add('is-overdue');
+            due.textContent = this._dueShort(task.dueDate);
+            due.title = `Vence: ${task.dueDate}`;
             foot.appendChild(due);
         }
 
-        card.append(head, title);
-        if (tagsWrap) card.appendChild(tagsWrap);
+        card.append(rail, head);
+        if (tags) card.appendChild(tags);
+        if (progress) card.appendChild(progress);
         card.appendChild(foot);
 
         // Clic en la card (fuera de los botones) abre el panel de detalle.
