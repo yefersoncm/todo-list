@@ -679,6 +679,7 @@ Paginación
 .list-footer__info { display: none; }
 /* Selección múltiple: checkbox por fila solo en el shell desktop (≥1024). */
 .select-box { display: none; }
+.select-all { display: none; }
 .bulk-select-bar[hidden] { display: none; }
 .bulk-select-bar .bulk-btn-icon { display: inline-flex; align-items: center; }
 .bulk-select-bar .bulk-btn-icon .icon { display: block; }
@@ -2220,6 +2221,32 @@ mobile (≤480) y desktop legacy (481–1023) quedan EXACTAMENTE igual.
     color: var(--accent-fg);
   }
   .app-main .grocery-item.is-selected { background: var(--accent-soft); }
+
+  /* Check "seleccionar todo" en el toolbar (mismo look que el select-box). */
+  .app-main .select-all {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    flex: none;
+    border: 1.5px solid var(--border-strong);
+    border-radius: var(--r-sm);
+    background: var(--bg-surface);
+    color: transparent;
+    cursor: pointer;
+    transition: background-color var(--dur-fast) var(--ease-out),
+                border-color var(--dur-fast) var(--ease-out);
+  }
+  .app-main .select-all .icon { display: block; }
+  .app-main .select-all:hover { border-color: var(--accent); }
+  .app-main .select-all.is-checked,
+  .app-main .select-all.is-indeterminate {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-fg);
+  }
+  .app-main .select-all:disabled { opacity: 0.4; cursor: not-allowed; }
 
   /* Barra de acción masiva (aparece con ≥1 seleccionada). */
   .bulk-select-bar {

@@ -180,6 +180,9 @@
                 <button type="button" class="btn btn--sm btn--ghost m-toolbar__expand-all" id="mExpandAll" aria-label="Expandir todo"></button>
             </div>
             <div class="task-count-row">
+                <!-- Seleccionar todas las tareas visibles de la página actual
+                     (solo desktop). Refleja estado all/none/indeterminado. -->
+                <button type="button" class="select-all" id="selectAll" role="checkbox" aria-checked="false" aria-label="Seleccionar todas las tareas visibles" title="Seleccionar todo"></button>
                 <p class="task-count"></p>
                 <!-- Filter-tabs inline del toolbar (estilo desktop.html). Solo
                      visibles en ≥1024px; sincronizadas vía data-filter-tabs. -->

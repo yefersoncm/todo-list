@@ -55,6 +55,7 @@ const DOM = {
     bulkCollapseRoot: document.getElementById('bulkCollapse'),
     bulkCollapseAllBtn: document.querySelector('.bulk-collapse-all'),
     bulkExpandAllBtn: document.querySelector('.bulk-expand-all'),
+    selectAll: document.getElementById('selectAll'),
     bulkSelectBar: document.getElementById('bulkSelectBar'),
     bulkSelectCount: document.getElementById('bulkSelectCount'),
     bulkDeleteBtn: document.getElementById('bulkDeleteBtn'),
@@ -804,6 +805,9 @@ class TaskManager {
         if (DOM.bulkDeselectBtn) {
             DOM.bulkDeselectBtn.addEventListener('click', () => this._clearSelection());
         }
+        if (DOM.selectAll) {
+            DOM.selectAll.addEventListener('click', this.handleSelectAll.bind(this));
+        }
         if (DOM.promoteZone) {
             DOM.promoteZone.addEventListener('dragover', this.handlePromoteDragOver.bind(this));
             DOM.promoteZone.addEventListener('dragleave', this.handlePromoteDragLeave.bind(this));
@@ -890,12 +894,41 @@ class TaskManager {
     _renderBulkBar() {
         if (DOM.list) DOM.list.classList.toggle('has-selection', this.selectedIds.size > 0);
         const bar = DOM.bulkSelectBar;
-        if (!bar) return;
-        const n = this.selectedIds.size;
-        bar.hidden = n === 0;
-        if (DOM.bulkSelectCount) {
-            DOM.bulkSelectCount.textContent = `${n} seleccionada${n === 1 ? '' : 's'}`;
+        if (bar) {
+            const n = this.selectedIds.size;
+            bar.hidden = n === 0;
+            if (DOM.bulkSelectCount) {
+                DOM.bulkSelectCount.textContent = `${n} seleccionada${n === 1 ? '' : 's'}`;
+            }
         }
+        this._updateSelectAll();
+    }
+
+    /**
+     * "Seleccionar todo": alterna entre seleccionar/deseleccionar TODOS los
+     * padres visibles de la página actual.
+     */
+    handleSelectAll() {
+        const visible = this._visibleParentIds || [];
+        if (visible.length === 0) return;
+        const allSelected = visible.every(id => this.selectedIds.has(id));
+        visible.forEach(id => allSelected ? this.selectedIds.delete(id) : this.selectedIds.add(id));
+        this.renderTasks();
+    }
+
+    /** Refleja el estado del check "seleccionar todo": all / none / mixed. */
+    _updateSelectAll() {
+        const el = DOM.selectAll;
+        if (!el) return;
+        const visible = this._visibleParentIds || [];
+        const selectedVisible = visible.filter(id => this.selectedIds.has(id)).length;
+        const all = visible.length > 0 && selectedVisible === visible.length;
+        const some = selectedVisible > 0 && !all;
+        el.disabled = visible.length === 0;
+        el.classList.toggle('is-checked', all);
+        el.classList.toggle('is-indeterminate', some);
+        el.setAttribute('aria-checked', all ? 'true' : (some ? 'mixed' : 'false'));
+        el.replaceChildren(createIcon(some ? 'minus' : 'check', { size: 12 }));
     }
 
     _clearSelection() {
@@ -1873,6 +1906,8 @@ class TaskManager {
         if (this.currentPage > totalPages) this.currentPage = totalPages;
         const start = (this.currentPage - 1) * this.pageSize;
         const pageParents = filteredParents.slice(start, start + this.pageSize);
+        // Ids de padres visibles en esta página — base del "seleccionar todo".
+        this._visibleParentIds = pageParents.map(p => p.id);
 
         // Expandimos cada padre con sus subs en orden.
         const pageItems = [];
