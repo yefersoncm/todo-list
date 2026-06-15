@@ -84,6 +84,12 @@
       <!-- Topbar (solo desktop ≥1024) -->
       <header class="app-topbar">
         <button type="button" class="btn-icon app-topbar__toggle" id="sidebarToggle" aria-label="Mostrar u ocultar panel"></button>
+        <!-- "Filtros": solo visible cuando el sidebar está colapsado; lo reabre.
+             No coexiste con el toggle (mutuamente excluyentes). -->
+        <button type="button" class="btn btn--secondary btn--sm app-topbar__filters" id="topbarFilters" aria-label="Mostrar filtros y vistas">
+            <span class="filters-icon" aria-hidden="true"></span>
+            <span>Filtros</span>
+        </button>
         <div class="app-topbar__title" id="topbarTitle">Tareas</div>
         <!-- Slot donde se monta la búsqueda en desktop (el searchBox se mueve aquí). -->
         <div class="app-topbar__search" id="topbarSearchSlot"></div>
