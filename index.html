@@ -89,6 +89,10 @@
         <div class="app-topbar__search" id="topbarSearchSlot"></div>
         <div class="app-topbar__spacer"></div>
         <div class="app-topbar__stats" id="topbarStats"></div>
+        <!-- Dock (extremo derecho): acciones globales. -->
+        <div class="dock">
+          <button type="button" class="btn-icon" id="settingsBtn" aria-label="Ajustes" title="Ajustes"></button>
+        </div>
       </header>
 
     <main class="app-scroll">
@@ -403,6 +407,24 @@
                 <div class="tags-modal__swatches" id="tagsModalSwatches" role="radiogroup" aria-label="Color de la etiqueta"></div>
             </form>
             <div class="tags-modal__suggest" id="tagsModalSuggest"></div>
+            <div class="modal__actions">
+                <button type="button" class="btn btn--primary" data-action="close">Listo</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal "Ajustes" — abierto por el botón ⚙ del topbar. Solo acciones
+         de datos (las prefs de tema/densidad viven en el sidebar). -->
+    <div class="settings-modal modal-backdrop" id="settingsModal" hidden>
+        <div class="settings-modal__dialog modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+            <h3 class="modal__title" id="settingsTitle">Ajustes</h3>
+            <p class="settings-modal__hint">Tus tareas se guardan en este navegador (localStorage).</p>
+            <div class="settings-modal__actions">
+                <button type="button" class="btn btn--secondary" id="exportBtn">Exportar datos (.json)</button>
+                <button type="button" class="btn btn--secondary" id="importBtn">Importar datos…</button>
+                <input type="file" id="importFile" accept="application/json,.json" hidden>
+            </div>
+            <button type="button" class="btn btn--danger-filled settings-modal__reset" id="resetBtn">Borrar todos los datos</button>
             <div class="modal__actions">
                 <button type="button" class="btn btn--primary" data-action="close">Listo</button>
             </div>

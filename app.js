@@ -60,6 +60,12 @@ const DOM = {
     selectAll: document.getElementById('selectAll'),
     bulkDeleteBtn: document.getElementById('bulkDeleteBtn'),
     bulkDeleteLabel: document.getElementById('bulkDeleteLabel'),
+    settingsBtn: document.getElementById('settingsBtn'),
+    settingsModal: document.getElementById('settingsModal'),
+    exportBtn: document.getElementById('exportBtn'),
+    importBtn: document.getElementById('importBtn'),
+    importFile: document.getElementById('importFile'),
+    resetBtn: document.getElementById('resetBtn'),
     promoteZone: document.getElementById('promoteZone'),
     searchInput: document.getElementById('searchInput'),
     searchRow: document.getElementById('searchRow'),
@@ -305,6 +311,7 @@ class TaskManager {
         this._safeRun('setupSidebar', () => this._setupSidebar());
         this._safeRun('setupVersion', () => this._setupVersion());
         this._safeRun('setupSearchPlacement', () => this._setupSearchPlacement());
+        this._safeRun('setupSettings', () => this._setupSettings());
         this._safeRun('setupFooterHeightTracker', () => this._setupFooterHeightTracker());
         this._safeRun('setupMobileDrawer', () => this._setupMobileDrawer());
         this._safeRun('setupMobileFab', () => this._setupMobileFab());
@@ -785,6 +792,84 @@ class TaskManager {
                 if (chip) this._setFilterTab(chip.dataset.filter);
             });
         }
+    }
+
+    /**
+     * Menú ⚙ Ajustes (topbar): exportar / importar / borrar datos. No
+     * duplica tema/densidad (que viven en el sidebar) ni "Limpiar lista"
+     * (que solo borra tareas; aquí "Borrar todos los datos" borra TODO).
+     */
+    _setupSettings() {
+        const btn = DOM.settingsBtn;
+        const modal = DOM.settingsModal;
+        if (!btn || !modal) return;
+        if (!btn.firstChild) btn.appendChild(createIcon('settings', { size: 18 }));
+
+        const close = () => { modal.hidden = true; };
+        btn.addEventListener('click', () => { modal.hidden = false; });
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal || e.target.closest('[data-action="close"]')) close();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !modal.hidden) close();
+        });
+
+        // Exportar: descarga un JSON con tareas + colores de etiquetas.
+        DOM.exportBtn?.addEventListener('click', () => {
+            const payload = {
+                app: 'todo-list',
+                version: APP_VERSION,
+                tasks: this.store.snapshot(),
+                tagColors: this.tagColors,
+            };
+            const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'todo-list-export.json';
+            a.click();
+            URL.revokeObjectURL(url);
+            this._notify('Datos exportados', 'success', { detail: `${this.store.tasks.length} ítems` });
+        });
+
+        // Importar: abre el file picker.
+        DOM.importBtn?.addEventListener('click', () => DOM.importFile?.click());
+        DOM.importFile?.addEventListener('change', async (e) => {
+            const file = e.target.files && e.target.files[0];
+            if (!file) return;
+            let data = null;
+            try { data = JSON.parse(await file.text()); } catch { data = null; }
+            if (!data || !Array.isArray(data.tasks)) {
+                this._notify('Archivo inválido', 'danger', { detail: 'No contiene tareas válidas' });
+                e.target.value = '';
+                return;
+            }
+            const ok = await confirmDialog('Importar reemplazará tus tareas actuales. ¿Continuar?');
+            if (!ok) { e.target.value = ''; return; }
+            this._pushUndo('Importar datos');
+            this.store.restore(data.tasks);
+            if (data.tagColors && typeof data.tagColors === 'object') {
+                this.tagColors = data.tagColors;
+                saveTagColors(this.tagColors);
+            }
+            this.currentPage = 1;
+            this.renderTasks();
+            const n = this.store.tasks.filter(t => t.parentId === null).length;
+            this._notify('Datos importados', 'success', { detail: `${n} tarea${n === 1 ? '' : 's'}`, undo: true });
+            e.target.value = '';
+            close();
+        });
+
+        // Borrar TODO: tareas + etiquetas/colores + preferencias.
+        DOM.resetBtn?.addEventListener('click', async () => {
+            const ok = await confirmDialog('Esto borrará TODAS tus tareas, etiquetas y preferencias de este navegador. ¿Seguro?');
+            if (!ok) return;
+            [
+                'list', PAGE_SIZE_KEY, SORT_BY_KEY, COLLAPSED_KEY,
+                THEME_KEY, DENSITY_KEY, ACTIVE_TAG_KEY, TAG_COLORS_KEY,
+            ].forEach(k => localStorage.removeItem(k));
+            location.reload();
+        });
     }
 
     /**

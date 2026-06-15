@@ -687,6 +687,21 @@ Paginación
 /* El botón "eliminar seleccionadas" es un .btn (display:inline-flex), así que
    necesita ocultarse explícitamente cuando lleva el atributo hidden. */
 .bulk-delete-sel[hidden] { display: none; }
+
+/* Modal de Ajustes (reusa .modal-backdrop/.modal). */
+.settings-modal[hidden] { display: none; }
+.settings-modal__hint {
+    font-size: var(--fs-sm);
+    color: var(--fg-muted);
+    margin-bottom: var(--sp-4);
+}
+.settings-modal__actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-2);
+    margin-bottom: var(--sp-3);
+}
+.settings-modal__reset { width: 100%; margin-bottom: var(--sp-2); }
 .page-list {
     display: flex;
     align-items: center;
@@ -2058,6 +2073,9 @@ mobile (≤480) y desktop legacy (481–1023) quedan EXACTAMENTE igual.
   .app-topbar__search { flex: 1; max-width: 420px; }
   .app-topbar__search .search { width: 100%; }
   .app-topbar__search .kbd { display: inline-flex; }
+  /* Dock de acciones globales (extremo derecho del topbar). */
+  .dock { display: flex; align-items: center; gap: var(--sp-2); flex: none; }
+  .dock .btn-icon .icon { display: block; }
   .app-topbar__stats {
     font-size: var(--fs-sm);
     color: var(--fg-muted);
