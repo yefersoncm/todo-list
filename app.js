@@ -19,6 +19,8 @@ const THEME_KEY = 'todo-list:theme';
 const DENSITY_KEY = 'todo-list:density';
 const ACTIVE_TAG_KEY = 'todo-list:activeTag';
 const TAG_COLORS_KEY = 'todo-list:tagColors';
+// Fallback de versión si no se puede leer package.json (mantener en sync).
+const APP_VERSION = '1.1.0';
 
 function loadTheme() {
     const v = localStorage.getItem(THEME_KEY);
@@ -56,10 +58,8 @@ const DOM = {
     bulkCollapseAllBtn: document.querySelector('.bulk-collapse-all'),
     bulkExpandAllBtn: document.querySelector('.bulk-expand-all'),
     selectAll: document.getElementById('selectAll'),
-    bulkSelectBar: document.getElementById('bulkSelectBar'),
-    bulkSelectCount: document.getElementById('bulkSelectCount'),
     bulkDeleteBtn: document.getElementById('bulkDeleteBtn'),
-    bulkDeselectBtn: document.getElementById('bulkDeselect'),
+    bulkDeleteLabel: document.getElementById('bulkDeleteLabel'),
     promoteZone: document.getElementById('promoteZone'),
     searchInput: document.getElementById('searchInput'),
     searchRow: document.getElementById('searchRow'),
@@ -301,6 +301,7 @@ class TaskManager {
         this._safeRun('mountStaticIcons', () => this._mountStaticIcons());
         this._safeRun('setupChromeToggles', () => this._setupChromeToggles());
         this._safeRun('setupSidebar', () => this._setupSidebar());
+        this._safeRun('setupVersion', () => this._setupVersion());
         this._safeRun('setupFooterHeightTracker', () => this._setupFooterHeightTracker());
         this._safeRun('setupMobileDrawer', () => this._setupMobileDrawer());
         this._safeRun('setupMobileFab', () => this._setupMobileFab());
@@ -783,6 +784,20 @@ class TaskManager {
         }
     }
 
+    /**
+     * Muestra la versión en ejecución (arriba a la izquierda, en el brand).
+     * Fuente de verdad: package.json (fetch). APP_VERSION es el fallback.
+     */
+    _setupVersion() {
+        const el = document.getElementById('brandVersion');
+        if (!el) return;
+        el.textContent = `v${APP_VERSION}`;
+        fetch('package.json', { cache: 'no-store' })
+            .then(r => (r.ok ? r.json() : null))
+            .then(d => { if (d && d.version) el.textContent = `v${d.version}`; })
+            .catch(() => { /* se queda con APP_VERSION */ });
+    }
+
     setupEventListeners() {
         DOM.form.addEventListener('submit', this.handleAddItem.bind(this));
         DOM.clearBtn.addEventListener('click', this.handleClearItems.bind(this));
@@ -801,9 +816,6 @@ class TaskManager {
         }
         if (DOM.bulkDeleteBtn) {
             DOM.bulkDeleteBtn.addEventListener('click', this.handleBulkDelete.bind(this));
-        }
-        if (DOM.bulkDeselectBtn) {
-            DOM.bulkDeselectBtn.addEventListener('click', () => this._clearSelection());
         }
         if (DOM.selectAll) {
             DOM.selectAll.addEventListener('click', this.handleSelectAll.bind(this));
@@ -887,19 +899,20 @@ class TaskManager {
         box.classList.toggle('is-checked', nowChecked);
         box.setAttribute('aria-checked', String(nowChecked));
         if (row) row.classList.toggle('is-selected', nowChecked);
-        this._renderBulkBar();
+        this._updateBulkActions();
     }
 
-    /** Muestra/oculta la barra de acción masiva y refleja el conteo. */
-    _renderBulkBar() {
-        if (DOM.list) DOM.list.classList.toggle('has-selection', this.selectedIds.size > 0);
-        const bar = DOM.bulkSelectBar;
-        if (bar) {
-            const n = this.selectedIds.size;
-            bar.hidden = n === 0;
-            if (DOM.bulkSelectCount) {
-                DOM.bulkSelectCount.textContent = `${n} seleccionada${n === 1 ? '' : 's'}`;
-            }
+    /**
+     * Refleja la selección en la UI: marca .has-selection en la lista y
+     * muestra/oculta el botón "Eliminar seleccionadas" (al lado de "Limpiar
+     * lista") con el conteo. Sin barra dedicada — el conteo va en el botón.
+     */
+    _updateBulkActions() {
+        const n = this.selectedIds.size;
+        if (DOM.list) DOM.list.classList.toggle('has-selection', n > 0);
+        if (DOM.bulkDeleteBtn) DOM.bulkDeleteBtn.hidden = n === 0;
+        if (DOM.bulkDeleteLabel) {
+            DOM.bulkDeleteLabel.textContent = `${n} ${n === 1 ? 'tarea' : 'tareas'} por eliminar`;
         }
         this._updateSelectAll();
     }
@@ -929,12 +942,6 @@ class TaskManager {
         el.classList.toggle('is-indeterminate', some);
         el.setAttribute('aria-checked', all ? 'true' : (some ? 'mixed' : 'false'));
         el.replaceChildren(createIcon(some ? 'minus' : 'check', { size: 12 }));
-    }
-
-    _clearSelection() {
-        if (this.selectedIds.size === 0) return;
-        this.selectedIds.clear();
-        this.renderTasks();
     }
 
     async handleBulkDelete() {
@@ -1923,7 +1930,7 @@ class TaskManager {
         this._updateBulkCollapseVisibility();
         this._updateSearchVisibility();
         this._renderSidebarTags();
-        this._renderBulkBar();
+        this._updateBulkActions();
         this._updateUndoButton();
         this._updateElapsed();
     }

@@ -680,9 +680,9 @@ Paginación
 /* Selección múltiple: checkbox por fila solo en el shell desktop (≥1024). */
 .select-box { display: none; }
 .select-all { display: none; }
-.bulk-select-bar[hidden] { display: none; }
-.bulk-select-bar .bulk-btn-icon { display: inline-flex; align-items: center; }
-.bulk-select-bar .bulk-btn-icon .icon { display: block; }
+/* El botón "eliminar seleccionadas" es un .btn (display:inline-flex), así que
+   necesita ocultarse explícitamente cuando lleva el atributo hidden. */
+.bulk-delete-sel[hidden] { display: none; }
 .page-list {
     display: flex;
     align-items: center;
@@ -1920,6 +1920,13 @@ mobile (≤480) y desktop legacy (481–1023) quedan EXACTAMENTE igual.
     color: var(--fg-default);
     white-space: nowrap;
   }
+  .brand-version {
+    margin-left: auto;
+    font-family: var(--ff-mono);
+    font-size: 10px;
+    color: var(--fg-subtle);
+    letter-spacing: var(--tracking-caps);
+  }
 
   .app-sidebar__nav {
     display: flex;
@@ -2188,33 +2195,26 @@ mobile (≤480) y desktop legacy (481–1023) quedan EXACTAMENTE igual.
   .grocery-list { padding: var(--sp-2) 0; }
 
   /* ── Selección múltiple (desktop) ──
-     Checkbox en el gutter izquierdo (padding de la sección), sin desplazar
-     el contenido. Aparece en hover de la fila, o si ya hay selección. */
-  .app-main .grocery-item:not(.is-subtask) { position: relative; }
+     Checkbox como PRIMERA COLUMNA REAL de cada tarea padre (en el flujo):
+     corre el contenido a la derecha y el árbol de subs se reajusta en
+     consecuencia (ver .m-subs más abajo). */
   .app-main .select-box {
     display: inline-flex;
-    position: absolute;
-    left: calc(-1 * var(--sp-5));
-    top: 50%;
-    transform: translateY(-50%);
-    width: 18px;
-    height: 18px;
+    flex: none;
     align-items: center;
     justify-content: center;
+    width: 18px;
+    height: 18px;
     border: 1.5px solid var(--border-strong);
     border-radius: var(--r-sm);
     background: var(--bg-surface);
     color: transparent;
     cursor: pointer;
-    opacity: 0;
-    transition: opacity var(--dur-fast) var(--ease-out),
-                background-color var(--dur-fast) var(--ease-out),
+    transition: background-color var(--dur-fast) var(--ease-out),
                 border-color var(--dur-fast) var(--ease-out);
   }
   .app-main .select-box .icon { display: block; }
-  .app-main .grocery-item:not(.is-subtask):hover .select-box,
-  .app-main .grocery-list.has-selection .select-box,
-  .app-main .select-box.is-checked { opacity: 1; }
+  .app-main .select-box:hover { border-color: var(--accent); }
   .app-main .select-box.is-checked {
     background: var(--accent);
     border-color: var(--accent);
@@ -2222,14 +2222,17 @@ mobile (≤480) y desktop legacy (481–1023) quedan EXACTAMENTE igual.
   }
   .app-main .grocery-item.is-selected { background: var(--accent-soft); }
 
-  /* Check "seleccionar todo" en el toolbar (mismo look que el select-box). */
+  /* Check "seleccionar todo": primer ítem del toolbar, en la MISMA columna
+     que los checks de fila. El toolbar gana padding-left = --row-px para que
+     el check coincida con el de las filas (que arranca tras el padding del item). */
+  .app-main .task-count-row { padding-left: var(--row-px); }
   .app-main .select-all {
     display: inline-flex;
+    flex: none;
     align-items: center;
     justify-content: center;
     width: 18px;
     height: 18px;
-    flex: none;
     border: 1.5px solid var(--border-strong);
     border-radius: var(--r-sm);
     background: var(--bg-surface);
@@ -2249,23 +2252,6 @@ mobile (≤480) y desktop legacy (481–1023) quedan EXACTAMENTE igual.
   .app-main .select-all:disabled { opacity: 0.4; cursor: not-allowed; }
 
   /* Barra de acción masiva (aparece con ≥1 seleccionada). */
-  .bulk-select-bar {
-    display: flex;
-    align-items: center;
-    gap: var(--sp-2);
-    margin-bottom: var(--sp-2);
-    padding: var(--sp-2) var(--sp-3);
-    background: var(--accent-soft);
-    border: 1px solid var(--accent);
-    border-radius: var(--r-md);
-  }
-  .bulk-select-bar__count {
-    font-size: var(--fs-sm);
-    font-weight: var(--fw-semibold);
-    color: var(--accent);
-  }
-  .bulk-select-bar__spacer { flex: 1; }
-
   /* Neutraliza el estilo legacy de .done (fondo azul sólido + título
      oscuro forzado) que chocaba con el sistema del design. En el shell
      las tareas hechas usan el patrón del design: tachado + texto atenuado. */
@@ -2291,7 +2277,9 @@ mobile (≤480) y desktop legacy (481–1023) quedan EXACTAMENTE igual.
      (.task.is-sub::before). */
   .app-main .m-subs {
     position: relative;
-    margin-left: var(--sp-5);
+    /* +18px (checkbox) +row-gap: compensa la nueva columna de selección del
+       padre, para que el "spine" del árbol siga cayendo bajo su chevron. */
+    margin-left: calc(var(--sp-5) + 18px + var(--row-gap));
     margin-bottom: var(--sp-2);
   }
   .app-main .m-subs .grocery-item.is-subtask {

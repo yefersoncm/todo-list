@@ -24,6 +24,8 @@
       <div class="app-sidebar__brand">
         <span class="brand-mark">T</span>
         <span class="brand-name">ToDo</span>
+        <!-- Versión en ejecución (se hidrata desde package.json). -->
+        <span class="brand-version" id="brandVersion" title="Versión en ejecución"></span>
       </div>
       <nav class="app-sidebar__nav">
         <span class="nav-group__title">Vistas</span>
@@ -202,6 +204,12 @@
                             <span class="bulk-btn-label">Expandir todo</span>
                         </button>
                     </div>
+                    <!-- Eliminar seleccionadas: a la izquierda de "Limpiar lista",
+                         mismo estilo. Solo visible con ≥1 seleccionada (JS). -->
+                    <button type="button" class="bulk-btn bulk-btn-danger bulk-delete-sel btn btn--danger btn--sm" id="bulkDeleteBtn" hidden aria-label="Eliminar tareas seleccionadas">
+                        <span class="bulk-btn-icon" aria-hidden="true"></span>
+                        <span class="bulk-btn-label" id="bulkDeleteLabel"></span>
+                    </button>
                     <button type="button" class="bulk-btn bulk-btn-danger clear-btn btn btn--danger btn--sm" aria-label="Limpiar toda la lista de tareas">
                         <span class="bulk-btn-icon" aria-hidden="true"></span>
                         <span class="bulk-btn-label">Limpiar lista</span>
@@ -268,17 +276,6 @@
                         </div>
                     </div>
                 </div>
-            </div>
-            <!-- Barra de acción masiva: aparece al seleccionar varias tareas
-                 (checkbox por fila, solo desktop). -->
-            <div class="bulk-select-bar" id="bulkSelectBar" hidden>
-                <span class="bulk-select-bar__count" id="bulkSelectCount"></span>
-                <span class="bulk-select-bar__spacer"></span>
-                <button type="button" class="btn btn--ghost btn--sm" id="bulkDeselect">Deseleccionar</button>
-                <button type="button" class="btn btn--danger btn--sm" id="bulkDeleteBtn">
-                    <span class="bulk-btn-icon" aria-hidden="true"></span>
-                    <span>Eliminar seleccionadas</span>
-                </button>
             </div>
             <div class="promote-zone" id="promoteZone" hidden aria-label="Zona de promoción">
                 <span class="promote-zone-label">Soltar aquí para convertir en tarea principal</span>
