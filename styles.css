@@ -2410,6 +2410,58 @@ mobile (≤480) y desktop legacy (481–1023) quedan EXACTAMENTE igual.
     color: var(--fg-subtle);
   }
 
+  /* ── Dirección de scroll en vista cards (vertical ⇄ horizontal) ── */
+  /* El botón solo tiene sentido en vista cards. */
+  #cardsScrollBtn { display: none; }
+  .app-shell[data-view="cards"] #cardsScrollBtn { display: inline-flex; }
+
+  /* Horizontal: la página deja de scrollear en vertical y las cards fluyen en
+     columnas (rellenan el alto disponible y desbordan a la derecha → scroll
+     lateral). Se construye una cadena flex con alto definido para que el grid
+     pueda calcular cuántas filas caben (grid-auto-flow: column + auto-fill). */
+  .app-shell[data-view="cards"][data-cards-scroll="horizontal"] main.app-scroll {
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .app-shell[data-view="cards"][data-cards-scroll="horizontal"] main.app-scroll > .section-center {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .app-shell[data-view="cards"][data-cards-scroll="horizontal"] .grocery-container {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .app-shell[data-view="cards"][data-cards-scroll="horizontal"] .grocery-list {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+  .app-shell[data-view="cards"][data-cards-scroll="horizontal"] .card-grid {
+    height: 100%;
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    /* Nº de filas calculado en JS (_applyCardRows) según el alto real de la
+       pantalla; el 1fr las estira para llenar TODO el alto → sin huecos.
+       El auto-fill de respaldo (--card-rows: 4) cubre el instante previo. */
+    grid-template-rows: repeat(var(--card-rows, 4), minmax(0, 1fr));
+    grid-auto-columns: minmax(260px, 300px);
+    align-content: stretch;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: var(--sp-2) 0;
+    scrollbar-gutter: stable;
+  }
+  /* En horizontal las cards llenan su fila (alto = track del grid). */
+  .app-shell[data-view="cards"][data-cards-scroll="horizontal"] .task-card {
+    height: auto;
+    min-height: 0;
+    overflow: hidden;
+  }
+
   /* ── Selección múltiple (desktop) ──
      Checkbox como PRIMERA COLUMNA REAL de cada tarea padre (en el flujo):
      corre el contenido a la derecha y el árbol de subs se reajusta en

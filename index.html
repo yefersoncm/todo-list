@@ -56,6 +56,9 @@
           <button type="button" class="nav-item filter-tab" role="tab" aria-selected="false" data-value="done">
             <span class="nav-item__icon"></span><span class="nav-item__label">Hechas</span><span class="nav-item__count" data-count="done"></span>
           </button>
+          <button type="button" class="nav-item filter-tab" role="tab" aria-selected="false" data-value="overdue">
+            <span class="nav-item__icon"></span><span class="nav-item__label">Vencidas</span><span class="nav-item__count" data-count="overdue"></span>
+          </button>
         </div>
         <span class="nav-group__title">Etiquetas</span>
         <!-- Poblado dinámicamente por _renderSidebarTags() desde store.allTags(). -->
@@ -76,6 +79,8 @@
         <div class="dock">
           <!-- DEBUG TEMPORAL: alterna Lista ⇄ Cards. Eliminar luego con su listener. -->
           <button type="button" class="btn btn--secondary btn--sm" id="viewToggleBtn" data-debug="view">▦ Cards</button>
+          <!-- Solo visible en vista cards: alterna scroll vertical ⇄ horizontal. -->
+          <button type="button" class="btn btn--secondary btn--sm" id="cardsScrollBtn" title="Cambiar dirección de scroll">↕ Vertical</button>
           <span class="dock__sep"></span>
           <!-- Honesto: la app es 100% local (sin backend), no "en línea". -->
           <span class="badge badge--accent badge--dot" title="Tus datos se guardan en este navegador">Local</span>
@@ -410,7 +415,14 @@
     <div class="settings-modal modal-backdrop" id="settingsModal" hidden>
         <div class="settings-modal__dialog modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
             <h3 class="modal__title" id="settingsTitle">Ajustes</h3>
-            <!-- Preferencias: tema y densidad (antes en el pie del sidebar). -->
+            <!-- Preferencias: vista por defecto, tema y densidad. -->
+            <div class="settings-modal__row">
+                <span class="settings-modal__label">Vista</span>
+                <div class="seg" data-view-seg role="group" aria-label="Vista por defecto">
+                    <button type="button" class="seg__btn" data-view-mode="list" aria-label="Vista lista" title="Lista"></button>
+                    <button type="button" class="seg__btn" data-view-mode="cards" aria-label="Vista tarjetas" title="Tarjetas"></button>
+                </div>
+            </div>
             <div class="settings-modal__row">
                 <span class="settings-modal__label">Tema</span>
                 <div class="seg" data-theme-seg role="group" aria-label="Tema">

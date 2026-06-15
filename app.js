@@ -19,6 +19,22 @@ const THEME_KEY = 'todo-list:theme';
 const DENSITY_KEY = 'todo-list:density';
 const ACTIVE_TAG_KEY = 'todo-list:activeTag';
 const TAG_COLORS_KEY = 'todo-list:tagColors';
+// Vista por defecto (persistida desde Ajustes): 'list' (default) | 'cards'.
+const VIEW_KEY = 'todo-list:view';
+function loadView() {
+    return localStorage.getItem(VIEW_KEY) === 'cards' ? 'cards' : 'list';
+}
+function saveView(v) {
+    localStorage.setItem(VIEW_KEY, v === 'cards' ? 'cards' : 'list');
+}
+// Dirección de scroll en vista cards: 'vertical' (default) | 'horizontal'.
+const CARDS_SCROLL_KEY = 'todo-list:cardsScroll';
+function loadCardsScroll() {
+    return localStorage.getItem(CARDS_SCROLL_KEY) === 'horizontal' ? 'horizontal' : 'vertical';
+}
+function saveCardsScroll(v) {
+    localStorage.setItem(CARDS_SCROLL_KEY, v === 'horizontal' ? 'horizontal' : 'vertical');
+}
 // Fallback de versión si no se puede leer package.json (mantener en sync).
 const APP_VERSION = '1.2.2';
 
@@ -269,7 +285,8 @@ class TaskManager {
         this.activeTag = loadActiveTag();   // filtro por etiqueta (sidebar Etiquetas)
         this.tagColors = loadTagColors();   // { tagLower: color } elegido en el picker
         this.selectedIds = new Set();       // selección múltiple (desktop) para acciones masivas
-        this.viewMode = 'list';             // 'list' | 'cards' (debug, runtime)
+        this.viewMode = loadView();         // 'list' | 'cards' (persistida en Ajustes)
+        this.cardsScroll = loadCardsScroll(); // 'vertical' | 'horizontal' (solo cards)
         this._detailId = null;              // tarea abierta en el panel de detalle
         this._undo = null;                  // snapshot de un nivel para "Deshacer"
         // Set transitorio (no persistido) de IDs de padres con el form
@@ -406,7 +423,7 @@ class TaskManager {
         // su data-value (vista/estado). Solo visibles en ≥1024px vía CSS.
         const navIconMap = {
             all: 'list', today: 'flag', week: 'calendar', month: 'calendar-days',
-            priority: 'star', pending: 'circle', done: 'circle-check',
+            priority: 'star', pending: 'circle', done: 'circle-check', overdue: 'alert',
         };
         document.querySelectorAll('.app-sidebar .nav-item[data-value]').forEach(item => {
             const slot = item.querySelector('.nav-item__icon');
@@ -777,9 +794,41 @@ class TaskManager {
         const shell = document.getElementById('appShell');
         const toggle = document.getElementById('sidebarToggle');
         if (!shell || !toggle) return;
+        this._shell = shell;
+        // Vista inicial (persistida en Ajustes). Se aplica ANTES del primer
+        // render para que el layout (data-view) y las cards salgan correctos.
+        shell.dataset.view = this.viewMode;
+        shell.dataset.sidebar = this.viewMode === 'cards' ? 'hidden' : 'open';
         if (!toggle.firstChild) toggle.appendChild(createIcon('panel-left', { size: 18 }));
         toggle.addEventListener('click', () => {
             shell.dataset.sidebar = shell.dataset.sidebar === 'hidden' ? 'open' : 'hidden';
+        });
+
+        // Dirección de scroll en vista cards (vertical ⇄ horizontal). El atributo
+        // en el shell dispara los overrides CSS; no requiere re-render.
+        shell.dataset.cardsScroll = this.cardsScroll;
+        const scrollBtn = document.getElementById('cardsScrollBtn');
+        if (scrollBtn) {
+            const syncScroll = () => {
+                scrollBtn.textContent = this.cardsScroll === 'horizontal' ? '↔ Horizontal' : '↕ Vertical';
+            };
+            syncScroll();
+            scrollBtn.addEventListener('click', () => {
+                this.cardsScroll = this.cardsScroll === 'horizontal' ? 'vertical' : 'horizontal';
+                shell.dataset.cardsScroll = this.cardsScroll;
+                saveCardsScroll(this.cardsScroll);
+                syncScroll();
+                // Al pasar a horizontal hay que calcular las filas según el alto.
+                this._applyCardRows();
+            });
+        }
+
+        // Recalcular el nº de filas del scroll horizontal al cambiar el tamaño
+        // de la ventana (debounce vía requestAnimationFrame).
+        let rowsRaf = 0;
+        window.addEventListener('resize', () => {
+            cancelAnimationFrame(rowsRaf);
+            rowsRaf = requestAnimationFrame(() => this._applyCardRows());
         });
 
         // Backdrop del sidebar-overlay en cards: clic cierra (colapsa) el sidebar.
@@ -792,18 +841,11 @@ class TaskManager {
         // el <button id="viewToggleBtn"> de index.html.
         const viewBtn = document.getElementById('viewToggleBtn');
         if (viewBtn) {
-            const sync = () => { viewBtn.textContent = this.viewMode === 'cards' ? '☰ Lista' : '▦ Cards'; };
-            sync();
             viewBtn.addEventListener('click', () => {
-                this.viewMode = this.viewMode === 'cards' ? 'list' : 'cards';
-                sync();
-                // Cards: layout limpio (data-view) + sidebar colapsado por defecto
-                // (el toggle del topbar lo reabre). Lista: sidebar abierto.
-                shell.dataset.view = this.viewMode;
-                shell.dataset.sidebar = this.viewMode === 'cards' ? 'hidden' : 'open';
-                this.renderTasks();
+                this._setView(this.viewMode === 'cards' ? 'list' : 'cards');
             });
         }
+        this._syncViewControls();
 
         // Botón "Deshacer" del page-head (undo de un nivel).
         const undoBtn = document.getElementById('undoBtn');
@@ -826,6 +868,35 @@ class TaskManager {
     }
 
     /**
+     * Cambia la vista (list ⇄ cards): persiste la preferencia, ajusta el
+     * layout del shell (data-view + sidebar colapsado en cards), sincroniza
+     * los controles (botón debug + segmento de Ajustes) y re-renderiza.
+     */
+    _setView(mode) {
+        const next = mode === 'cards' ? 'cards' : 'list';
+        if (this.viewMode === next) return;
+        this.viewMode = next;
+        saveView(next);
+        const shell = this._shell || document.getElementById('appShell');
+        if (shell) {
+            shell.dataset.view = next;
+            // Cards: sidebar colapsado por defecto (el toggle del topbar lo
+            // reabre como overlay). Lista: sidebar abierto.
+            shell.dataset.sidebar = next === 'cards' ? 'hidden' : 'open';
+        }
+        this._syncViewControls();
+        this.renderTasks();
+    }
+
+    /** Sincroniza el botón debug y el segmento de Ajustes con this.viewMode. */
+    _syncViewControls() {
+        const viewBtn = document.getElementById('viewToggleBtn');
+        if (viewBtn) viewBtn.textContent = this.viewMode === 'cards' ? '☰ Lista' : '▦ Cards';
+        document.querySelectorAll('[data-view-seg] .seg__btn').forEach(b =>
+            b.classList.toggle('is-active', b.dataset.viewMode === this.viewMode));
+    }
+
+    /**
      * Menú ⚙ Ajustes (topbar): exportar / importar / borrar datos. No
      * duplica tema/densidad (que viven en el sidebar) ni "Limpiar lista"
      * (que solo borra tareas; aquí "Borrar todos los datos" borra TODO).
@@ -844,6 +915,18 @@ class TaskManager {
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' && !modal.hidden) close();
         });
+
+        // Vista por defecto (Lista / Cards): persiste y aplica al instante.
+        document.querySelectorAll('[data-view-seg]').forEach(seg => {
+            seg.querySelector('[data-view-mode="list"]')?.appendChild(createIcon('list', { size: 14 }));
+            seg.querySelector('[data-view-mode="cards"]')?.appendChild(createIcon('grid', { size: 14 }));
+            seg.addEventListener('click', (e) => {
+                const b = e.target.closest('.seg__btn');
+                if (!b) return;
+                this._setView(b.dataset.viewMode);
+            });
+        });
+        this._syncViewControls();
 
         // Exportar: descarga un JSON con tareas + colores de etiquetas.
         DOM.exportBtn?.addEventListener('click', () => {
@@ -1134,7 +1217,7 @@ class TaskManager {
     }
 
     _setFilterTab(value) {
-        if (!['all', 'done', 'pending', 'today', 'week', 'month', 'priority'].includes(value)) return;
+        if (!['all', 'done', 'pending', 'overdue', 'today', 'week', 'month', 'priority'].includes(value)) return;
         // Elegir una Vista/Estado limpia el filtro por etiqueta (selección
         // mutuamente excluyente en el sidebar, como el mockup).
         const hadTag = this.activeTag !== null;
@@ -2350,6 +2433,14 @@ class TaskManager {
     }
 
     /**
+     * "Vencida": tiene fecha límite anterior a hoy y sigue pendiente. Las
+     * tareas hechas no se consideran vencidas (ya se completaron).
+     */
+    _isOverdue(task) {
+        return !!task.dueDate && !task.done && task.dueDate < todayISO();
+    }
+
+    /**
      * "Esta semana": vence en los próximos 7 días O fue creada en los
      * últimos 7 días (ventana que incluye hoy).
      */
@@ -2385,6 +2476,7 @@ class TaskManager {
         let parents = ordered.filter(t => t.parentId === null);
         if (this.filterMode === 'done') parents = parents.filter(t => t.done);
         else if (this.filterMode === 'pending') parents = parents.filter(t => !t.done);
+        else if (this.filterMode === 'overdue') parents = parents.filter(t => this._isOverdue(t));
         else if (this.filterMode === 'today') parents = parents.filter(t => this._isToday(t));
         else if (this.filterMode === 'week') parents = parents.filter(t => this._isThisWeek(t));
         else if (this.filterMode === 'month') parents = parents.filter(t => this._isThisMonth(t));
@@ -2433,6 +2525,28 @@ class TaskManager {
         for (const task of parents) grid.appendChild(this._buildCard(task));
         DOM.list.appendChild(grid);
         DOM.container.classList.add('show-container');
+        // En scroll horizontal el nº de filas se calcula según el alto real.
+        this._applyCardRows();
+    }
+
+    /**
+     * Calcula cuántas filas de cards caben en el alto disponible de la pantalla
+     * (solo en vista cards + scroll horizontal) y lo expone como --card-rows.
+     * Las filas son 1fr, así que se estiran para llenar el alto sin huecos.
+     * El alto objetivo por card decide cuántas filas: pantallas más altas →
+     * más filas. Se re-ejecuta en cada render y al redimensionar la ventana.
+     */
+    _applyCardRows() {
+        if (this.viewMode !== 'cards' || this.cardsScroll !== 'horizontal') return;
+        const grid = DOM.list && DOM.list.querySelector('.card-grid');
+        if (!grid) return;
+        const avail = grid.clientHeight;          // alto real del área de filas
+        if (avail <= 0) return;
+        const gap = parseFloat(getComputedStyle(grid).rowGap) || 0;
+        const IDEAL_ROW = 150;                    // alto objetivo por card (px)
+        // Redondeo: si "claramente cabe" otra fila (>½), se añade.
+        const rows = Math.max(1, Math.round((avail + gap) / (IDEAL_ROW + gap)));
+        grid.style.setProperty('--card-rows', rows);
     }
 
     // ----- Panel de detalle (vista cards) ----------------------------------
@@ -2911,6 +3025,7 @@ class TaskManager {
             case 'priority': return 'No hay tareas marcadas como prioritarias.';
             case 'done':     return 'No hay tareas hechas.';
             case 'pending':  return 'Todo terminado. No hay pendientes.';
+            case 'overdue':  return '¡Sin tareas vencidas! Vas al día.';
             default:
                 return this.searchQuery
                     ? 'Sin resultados para tu búsqueda.'
@@ -3336,6 +3451,7 @@ class TaskManager {
             let label = 'Total';
             if (this.filterMode === 'done') label = 'Completadas';
             else if (this.filterMode === 'pending') label = 'Pendientes';
+            else if (this.filterMode === 'overdue') label = 'Vencidas';
             else if (this.filterMode === 'today') label = 'Hoy';
             else if (this.filterMode === 'week') label = 'Esta semana';
             else if (this.filterMode === 'month') label = 'Este mes';
@@ -3355,9 +3471,10 @@ class TaskManager {
         const weekCount = allParents.filter(p => this._isThisWeek(p)).length;
         const monthCount = allParents.filter(p => this._isThisMonth(p)).length;
         const priorityCount = allParents.filter(p => !!p.priority).length;
+        const overdueCount = allParents.filter(p => this._isOverdue(p)).length;
 
         const viewTitles = {
-            all: 'Todas', pending: 'Pendientes', done: 'Hechas',
+            all: 'Todas', pending: 'Pendientes', done: 'Hechas', overdue: 'Vencidas',
             today: 'Hoy', week: 'Esta semana', month: 'Este mes', priority: 'Prioridad',
         };
 
@@ -3376,7 +3493,7 @@ class TaskManager {
         // ─── App-shell desktop (Fase Web) ───
         // Contadores por vista en el sidebar.
         const navCounts = {
-            all: totalCount, pending: pendingCount, done: doneCount,
+            all: totalCount, pending: pendingCount, done: doneCount, overdue: overdueCount,
             today: todayCount, week: weekCount, month: monthCount, priority: priorityCount,
         };
         document.querySelectorAll('[data-count]').forEach(el => {
@@ -3398,9 +3515,6 @@ class TaskManager {
         }
         // Titular contextual: refleja el estado real (vacío / vencidas /
         // al día / saludo según la hora).
-        const overdueCount = allParents.filter(
-            p => p.dueDate && p.dueDate < todayISO() && !p.done
-        ).length;
         const dueTodayCount = allParents.filter(
             p => !p.done && p.dueDate === todayISO()
         ).length;
