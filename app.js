@@ -2349,13 +2349,14 @@ class TaskManager {
             parents = parents.filter(p =>
                 Array.isArray(p.tags) && p.tags.some(t => t.toLowerCase() === key));
         }
-        // Búsqueda: substring case-insensitive en el value del padre o
-        // de cualquiera de sus subs. Match en sub también muestra al
-        // padre completo para preservar el contexto.
+        // Búsqueda: substring case-insensitive en el value del padre, en sus
+        // ETIQUETAS, o en el value de cualquiera de sus subs. Match en sub o
+        // etiqueta también muestra al padre completo para preservar el contexto.
         if (this.searchQuery) {
             const q = this.searchQuery;
             parents = parents.filter(p => {
                 if (p.value.toLowerCase().includes(q)) return true;
+                if (Array.isArray(p.tags) && p.tags.some(t => t.toLowerCase().includes(q))) return true;
                 return this.store.subsOf(p.id).some(s => s.value.toLowerCase().includes(q));
             });
         }
