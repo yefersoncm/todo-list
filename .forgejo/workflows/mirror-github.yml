@@ -7,7 +7,7 @@ jobs:
   mirror:
     runs-on: docker
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
       - name: Espejo a GitHub (sin force, sin prune)
@@ -17,11 +17,12 @@ jobs:
           REF_NAME: ${{ github.ref_name }}
         run: |
           set -eu
-          URL="https://x-access-token:${GH_TOKEN}@github.com/yefersoncm/todo-list.git"
+          URL="https://github.com/yefersoncm/todo-list.git"
+          AUTH="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
           if [ "$REF_TYPE" = "tag" ]; then
-            git push "$URL" "refs/tags/${REF_NAME}:refs/tags/${REF_NAME}"
+            git -c "http.https://github.com/.extraheader=${AUTH}" push "$URL" "refs/tags/${REF_NAME}:refs/tags/${REF_NAME}"
           elif [ "$REF_NAME" = "main" ]; then
-            git push "$URL" "${GITHUB_SHA}:refs/heads/main"
+            git -c "http.https://github.com/.extraheader=${AUTH}" push "$URL" "${GITHUB_SHA}:refs/heads/main"
           else
             echo "Ref no espejable: ${REF_TYPE} ${REF_NAME}"; exit 1
           fi
