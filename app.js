@@ -67,6 +67,9 @@ const DOM = {
     appTitleMain: document.getElementById('appTitleMain'),
     appHamburger: document.getElementById('appHamburger'),
     appDrawerBackdrop: document.getElementById('appDrawerBackdrop'),
+    sideThemeSeg: document.getElementById('sideThemeSeg'),
+    sideDensitySeg: document.getElementById('sideDensitySeg'),
+    appSidebar: document.querySelector('.app-sidebar'),
     taskCountRow: document.querySelector('.task-count-row'),
     appFab: document.getElementById('appFab'),
     newTaskModal: document.getElementById('newTaskModal'),
@@ -257,6 +260,17 @@ class TaskManager {
         // Hamburger icon (menu) — solo se ve en mobile vía CSS.
         if (DOM.appHamburger && !DOM.appHamburger.firstChild) {
             DOM.appHamburger.appendChild(createIcon('menu', { size: 22 }));
+        }
+        // Sidebar nav-items: hidratar iconos por data-nav-icon.
+        if (DOM.appSidebar) {
+            DOM.appSidebar.querySelectorAll('[data-nav-icon]').forEach(slot => {
+                if (slot.firstChild) return;
+                try {
+                    slot.appendChild(createIcon(slot.dataset.navIcon, { size: 16 }));
+                } catch (err) {
+                    console.error(`[sidebar nav icon ${slot.dataset.navIcon}]`, err);
+                }
+            });
         }
         // Mini-toolbar mobile (Fase F3): iconos collapse-all/expand-all.
         if (DOM.mCollapseAll && !DOM.mCollapseAll.firstChild) {
@@ -559,47 +573,50 @@ class TaskManager {
     _setupChromeToggles() {
         if (!DOM.themeSeg || !DOM.densitySeg) return;
 
-        // Estado inicial.
         const theme = loadTheme();
         const density = loadDensity();
         applyTheme(theme);
         applyDensity(density);
 
-        // Iconos en los botones del seg de tema.
-        const sunBtn = DOM.themeSeg.querySelector('[data-theme="light"]');
-        const moonBtn = DOM.themeSeg.querySelector('[data-theme="dark"]');
-        sunBtn?.appendChild(createIcon('sun', { size: 14 }));
-        moonBtn?.appendChild(createIcon('moon', { size: 14 }));
-
-        // Iconos en los botones del seg de densidad.
-        const rowsBtn = DOM.densitySeg.querySelector('[data-density="comfy"]');
-        const tightBtn = DOM.densitySeg.querySelector('[data-density="compact"]');
-        rowsBtn?.appendChild(createIcon('rows', { size: 14 }));
-        tightBtn?.appendChild(createIcon('align-justify', { size: 14 }));
-
-        const setActive = (seg, attr, value) => {
-            seg.querySelectorAll('.seg__btn').forEach(b => {
-                b.classList.toggle('is-active', b.dataset[attr] === value);
-            });
-        };
-        setActive(DOM.themeSeg, 'theme', theme);
-        setActive(DOM.densitySeg, 'density', density);
-
-        DOM.themeSeg.addEventListener('click', (e) => {
-            const btn = e.target.closest('.seg__btn');
-            if (!btn) return;
-            const v = btn.dataset.theme;
-            if (v !== 'light' && v !== 'dark') return;
-            applyTheme(v);
-            setActive(DOM.themeSeg, 'theme', v);
+        // Hidrata iconos en TODOS los segs (chrome mobile + sidebar desktop).
+        const themeSegs = [DOM.themeSeg, DOM.sideThemeSeg].filter(Boolean);
+        const densitySegs = [DOM.densitySeg, DOM.sideDensitySeg].filter(Boolean);
+        themeSegs.forEach(seg => {
+            seg.querySelector('[data-theme="light"]')?.appendChild(createIcon('sun', { size: 14 }));
+            seg.querySelector('[data-theme="dark"]')?.appendChild(createIcon('moon', { size: 14 }));
         });
-        DOM.densitySeg.addEventListener('click', (e) => {
-            const btn = e.target.closest('.seg__btn');
-            if (!btn) return;
-            const v = btn.dataset.density;
-            if (v !== 'comfy' && v !== 'compact') return;
-            applyDensity(v);
-            setActive(DOM.densitySeg, 'density', v);
+        densitySegs.forEach(seg => {
+            seg.querySelector('[data-density="comfy"]')?.appendChild(createIcon('rows', { size: 14 }));
+            seg.querySelector('[data-density="compact"]')?.appendChild(createIcon('align-justify', { size: 14 }));
+        });
+
+        const setActive = (segs, attr, value) => {
+            segs.forEach(seg => seg.querySelectorAll('.seg__btn').forEach(b => {
+                b.classList.toggle('is-active', b.dataset[attr] === value);
+            }));
+        };
+        setActive(themeSegs, 'theme', theme);
+        setActive(densitySegs, 'density', density);
+
+        themeSegs.forEach(seg => {
+            seg.addEventListener('click', (e) => {
+                const btn = e.target.closest('.seg__btn');
+                if (!btn) return;
+                const v = btn.dataset.theme;
+                if (v !== 'light' && v !== 'dark') return;
+                applyTheme(v);
+                setActive(themeSegs, 'theme', v);
+            });
+        });
+        densitySegs.forEach(seg => {
+            seg.addEventListener('click', (e) => {
+                const btn = e.target.closest('.seg__btn');
+                if (!btn) return;
+                const v = btn.dataset.density;
+                if (v !== 'comfy' && v !== 'compact') return;
+                applyDensity(v);
+                setActive(densitySegs, 'density', v);
+            });
         });
     }
 
@@ -1928,7 +1945,9 @@ class TaskManager {
             title.appendChild(starInline);
         }
 
-        titleBlock.append(title, daysSpan);
+        titleBlock.append(title);
+        // daysSpan se appende como SIBLING del title-block (no dentro),
+        // para que sea una columna propia alineable entre padre y sub.
 
         // Botón star (priority): solo padres. Toggle el flag.
         let priorityBtn = null;
@@ -2013,9 +2032,12 @@ class TaskManager {
         if (!isSubtask) {
             const hasSubs = this.store.subsOf(id).length > 0;
             const subSlot = hasSubs ? this._buildSubtaskCollapseBtn(id) : this._buildSubtaskCollapsePlaceholder();
-            element.append(subSlot, toggleBtn, titleBlock, meta);
+            element.append(subSlot, toggleBtn, titleBlock, daysSpan, meta);
         } else {
-            element.append(toggleBtn, titleBlock, meta);
+            // Sub: agrega un placeholder en col 1 (donde iría el chevron)
+            // para que las columnas del item alineen con las del padre.
+            const subPlaceholder = this._buildSubtaskCollapsePlaceholder();
+            element.append(subPlaceholder, toggleBtn, titleBlock, daysSpan, meta);
         }
 
         toggleBtn.addEventListener('click', this.handleMarkTaskAsDone.bind(this));

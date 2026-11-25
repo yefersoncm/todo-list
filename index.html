@@ -14,6 +14,59 @@
     <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+    <div class="app-shell">
+    <!-- Sidebar desktop con nav-items por filter + brand + bottom prefs.
+         Oculto en mobile via CSS. -->
+    <aside class="app-sidebar" aria-label="Navegación">
+        <div class="app-sidebar__brand">
+            <span class="app-sidebar__mark">T</span>
+            <span class="app-sidebar__name">ToDo</span>
+        </div>
+        <div class="app-sidebar__nav" data-filter-tabs role="tablist">
+            <span class="app-sidebar__group-title">Vistas</span>
+            <button type="button" class="nav-item filter-tab is-active" role="tab" aria-selected="true" data-value="all">
+                <span class="nav-item__icon" data-nav-icon="list"></span>
+                <span class="nav-item__label">Todas</span>
+            </button>
+            <button type="button" class="nav-item filter-tab" role="tab" aria-selected="false" data-value="today">
+                <span class="nav-item__icon" data-nav-icon="flag"></span>
+                <span class="nav-item__label">Hoy</span>
+            </button>
+            <button type="button" class="nav-item filter-tab" role="tab" aria-selected="false" data-value="week">
+                <span class="nav-item__icon" data-nav-icon="calendar"></span>
+                <span class="nav-item__label">Esta semana</span>
+            </button>
+            <button type="button" class="nav-item filter-tab" role="tab" aria-selected="false" data-value="priority">
+                <span class="nav-item__icon" data-nav-icon="star"></span>
+                <span class="nav-item__label">Prioritarias</span>
+            </button>
+            <span class="app-sidebar__group-title">Estado</span>
+            <button type="button" class="nav-item filter-tab" role="tab" aria-selected="false" data-value="pending">
+                <span class="nav-item__icon" data-nav-icon="circle"></span>
+                <span class="nav-item__label">Pendientes</span>
+            </button>
+            <button type="button" class="nav-item filter-tab" role="tab" aria-selected="false" data-value="done">
+                <span class="nav-item__icon" data-nav-icon="circle-check"></span>
+                <span class="nav-item__label">Hechas</span>
+            </button>
+        </div>
+        <div class="app-sidebar__bottom">
+            <div class="app-sidebar__pref-row">
+                <span class="app-sidebar__pref-label">Tema</span>
+                <div class="seg" id="sideThemeSeg" role="group" aria-label="Tema">
+                    <button type="button" class="seg__btn" data-theme="light" aria-label="Tema claro"></button>
+                    <button type="button" class="seg__btn" data-theme="dark" aria-label="Tema oscuro"></button>
+                </div>
+            </div>
+            <div class="app-sidebar__pref-row">
+                <span class="app-sidebar__pref-label">Densidad</span>
+                <div class="seg" id="sideDensitySeg" role="group" aria-label="Densidad">
+                    <button type="button" class="seg__btn" data-density="comfy" aria-label="Densidad cómoda"></button>
+                    <button type="button" class="seg__btn" data-density="compact" aria-label="Densidad compacta"></button>
+                </div>
+            </div>
+        </div>
+    </aside>
     <main class="app-scroll">
     <section class="section-center">
         <!-- App chrome: toggles de tema y densidad (Fase 7H). Iconos
@@ -151,6 +204,7 @@
 
     </section>
     </main>
+    </div>
 
     <!-- Footer fijo: filtro siempre visible al pie de la pantalla. -->
     <footer class="app-footer" role="contentinfo">

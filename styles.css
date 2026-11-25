@@ -67,14 +67,6 @@ Global Styles
   box-sizing: border-box;
 }
 body {
-  /* App shell: body ocupa el viewport entero, NO scrollea.
-     <main.app-scroll> es el único scroller, footer queda fuera.
-
-     100dvh (dynamic viewport height) en lugar de 100vh: en Chrome mobile
-     y otros, la barra de URL aparece/desaparece. 100vh se mide con el
-     viewport extendido, dejando el footer fuera de la vista visible.
-     100dvh se ajusta dinámicamente. Fallback a 100vh para browsers
-     anteriores a finales 2022 (Chrome <108, Safari <15.4). */
   background: var(--bg-app);
   color: var(--fg-default);
   line-height: 1.5;
@@ -83,6 +75,182 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+/* App shell: en desktop el .app-shell es grid sidebar + main. En mobile
+   el sidebar se oculta y el shell es flex column simple. */
+.app-shell {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+@media screen and (min-width: 1024px) {
+  .app-shell {
+    display: grid;
+    grid-template-columns: var(--sidebar-w) 1fr;
+  }
+}
+
+/* Sidebar desktop. */
+.app-sidebar {
+  display: none;
+  flex-direction: column;
+  background: var(--bg-surface);
+  border-right: 1px solid var(--border-subtle);
+  padding: var(--sp-5) var(--sp-3);
+  gap: var(--sp-5);
+  overflow-y: auto;
+}
+@media screen and (min-width: 1024px) {
+  .app-sidebar { display: flex; }
+}
+.app-sidebar__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 0 var(--sp-3);
+  margin-bottom: var(--sp-2);
+}
+.app-sidebar__mark {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--accent-fg);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--ff-mono);
+  font-weight: var(--fw-bold);
+  font-size: 14px;
+}
+.app-sidebar__name {
+  font-size: var(--fs-md);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--tracking-tight);
+  color: var(--fg-default);
+}
+.app-sidebar__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.app-sidebar__group-title {
+  font-family: var(--ff-mono);
+  font-size: 10px;
+  color: var(--fg-subtle);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+  padding: 0 var(--sp-3);
+  margin: var(--sp-3) 0 var(--sp-2);
+}
+.app-sidebar__group-title:first-child { margin-top: 0; }
+/* Nav items: estilo distinto a las pills mobile aunque comparten
+   data-filter-tabs. Usamos selectores específicos para desktop. */
+.app-sidebar .nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  height: 36px;
+  padding: 0 var(--sp-3);
+  border: none;
+  background: transparent;
+  border-radius: var(--r-sm);
+  color: var(--fg-muted);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: background-color var(--dur-fast) var(--ease-out),
+              color var(--dur-fast) var(--ease-out);
+}
+.app-sidebar .nav-item:hover { background: var(--bg-surface-2); color: var(--fg-default); }
+.app-sidebar .nav-item.is-active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.app-sidebar .nav-item__icon { display: inline-flex; flex: none; }
+.app-sidebar .nav-item__icon .icon { width: 16px; height: 16px; display: block; }
+.app-sidebar .nav-item__label { flex: 1; }
+.app-sidebar__bottom {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+.app-sidebar__pref-row {
+  display: flex;
+  align-items: center;
+  padding: 0 var(--sp-3);
+  gap: var(--sp-2);
+}
+.app-sidebar__pref-label {
+  font-family: var(--ff-mono);
+  font-size: 10px;
+  color: var(--fg-subtle);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+}
+.app-sidebar__pref-row .seg { margin-left: auto; }
+.app-sidebar__pref-row .seg__btn .icon { display: block; }
+
+/* Desktop overrides (>=1024): app-chrome se vuelve page-head + toggles
+   ocultos (están en sidebar) + footer oculto + group-titles visibles. */
+@media screen and (min-width: 1024px) {
+  .app-chrome {
+    margin-bottom: var(--sp-5);
+    padding: 0;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+  }
+  .app-chrome #themeSeg,
+  .app-chrome #densitySeg,
+  .app-chrome #appHamburger { display: none; }
+  .app-title { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+  .app-title__main {
+    font-size: var(--fs-3xl);
+    line-height: 1.05;
+    font-weight: var(--fw-semibold);
+    letter-spacing: -0.015em;
+    color: var(--fg-default);
+  }
+  .app-title__sub {
+    font-size: var(--fs-sm);
+    color: var(--fg-muted);
+    font-family: var(--ff-mono);
+    letter-spacing: 0;
+  }
+  /* Group titles también en desktop como divisores temporales. */
+  .group-title {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    font-family: var(--ff-mono);
+    font-size: 10px;
+    color: var(--fg-subtle);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-caps);
+    padding: var(--sp-4) var(--sp-2) var(--sp-2);
+  }
+  .group-title::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--border-subtle);
+  }
+  /* Footer (filter tabs) oculto en desktop — sidebar nav lo reemplaza. */
+  .app-footer { display: none; }
+  /* .section-center sin border + bg ya viene del wrapper section, pero
+     en desktop con sidebar queda como contenedor de contenido sin estilo
+     de card propio. */
+  .section-center {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    padding: var(--sp-5) var(--sp-5);
+  }
 }
 ul {
   list-style-type: none;
@@ -864,6 +1032,7 @@ Paginación
    container para que los toasts no aparezcan tapando el footer. */
 :root {
     --footer-h: 64px;
+    --sidebar-w: 240px;
 }
 @media (pointer: coarse) {
     :root { --footer-h: 76px; }
@@ -996,7 +1165,10 @@ Combobox custom (reemplaza al <select> nativo)
     letter-spacing: 0;
     text-align: right;
     white-space: nowrap;
-    min-width: 4ch;
+    /* 5ch cubre el string más largo posible: 'ahora' / '10sem' / '11mes'.
+       Con text-align: right, todos los strings cortos quedan alineados a
+       la derecha en el mismo ancho — columna uniforme entre rows. */
+    min-width: 5ch;
 }
 
 /*
@@ -1251,17 +1423,20 @@ solo se ajustan paddings y gaps que en mobile sienten apretados.
     padding: var(--sp-3);
     margin-bottom: var(--sp-2);
     display: grid;
-    grid-template-columns: auto 1fr auto;
+    /* Mismas 4 cols que el sub: chevron | toggle | title | elapsed
+       — para que padre y sub alineen pixel-perfect entre rows. */
+    grid-template-columns: auto auto 1fr auto;
     grid-template-areas:
-      "toggle title chevron"
-      "actions actions actions";
+      "chevron toggle title elapsed"
+      "actions actions actions actions";
     gap: var(--sp-2);
     align-items: center;
   }
   .grocery-item:not(.is-subtask) > .toggle-check { grid-area: toggle; }
   .grocery-item:not(.is-subtask) > .task__title-block { grid-area: title; }
+  .grocery-item:not(.is-subtask) > .task-days-old { grid-area: elapsed; }
   .grocery-item:not(.is-subtask) > .subtask-collapse-btn,
-  .grocery-item:not(.is-subtask) > .subtask-collapse-placeholder { grid-area: chevron; justify-self: end; }
+  .grocery-item:not(.is-subtask) > .subtask-collapse-placeholder { grid-area: chevron; }
   .grocery-item:not(.is-subtask) > .meta { grid-area: actions; }
   /* Sub-card: grid 3-col en UNA SOLA ROW (estilo .m-sub del mockup):
      toggle | title-block | meta. Sin row separada con border-top.
@@ -1276,11 +1451,21 @@ solo se ajustan paddings y gaps que en mobile sienten apretados.
     padding: var(--sp-2) var(--sp-3);
     margin-bottom: var(--sp-1);
     display: grid;
-    grid-template-columns: auto 1fr auto;
+    /* Mismas 4 cols del padre: chevron-placeholder | toggle | title | elapsed.
+       Como hay placeholder en col 1, padres y subs alinean perfecto. */
+    grid-template-columns: auto auto 1fr auto;
+    grid-template-areas:
+      "chevron toggle title elapsed"
+      "actions actions actions actions";
     gap: var(--sp-2);
     align-items: center;
     overflow: visible;
   }
+  .grocery-item.is-subtask > .subtask-collapse-placeholder { grid-area: chevron; justify-self: end; }
+  .grocery-item.is-subtask > .toggle-check { grid-area: toggle; }
+  .grocery-item.is-subtask > .task__title-block { grid-area: title; }
+  .grocery-item.is-subtask > .task-days-old { grid-area: elapsed; }
+  .grocery-item.is-subtask > .meta { grid-area: actions; }
   /* Sin border-top en .meta de sub — todo es una row. */
   .grocery-item.is-subtask > .meta {
     border-top: none;
