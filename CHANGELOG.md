@@ -4,6 +4,26 @@ Todos los cambios notables de este proyecto se documentan aquí.
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.0.0/)
 y versionado según [SemVer](https://semver.org/lang/es/).
 
+## [1.3.0] - 2026-11-25
+
+### Added
+- **Vista de tarjetas** (alternativa a la lista) con panel de detalle, ancho
+  completo y sidebar en overlay. Scroll horizontal opcional, con el nº de filas
+  calculado según el alto de la pantalla.
+- **10 diseños de tarjeta** seleccionables en ⚙ Ajustes → "Diseño de tarjeta"
+  (persistido).
+- **Panel "Resumen"** en el sidebar: KPIs (total / pendientes / hechas /
+  vencidas / hoy / favoritas), anillo de progreso, ranking por etiqueta y 4
+  gráficos en CSS/SVG (tendencia creadas vs completadas, reparto por etiqueta,
+  antigüedad de pendientes y carga de los próximos 14 días).
+- Filtro **"Vencidas"** en el sidebar (fecha pasada y aún pendiente).
+- **Vista por defecto** (Lista / Tarjetas) configurable en Ajustes, y toggle
+  de vista permanente en el topbar.
+- Campo `completedAt` en las tareas (se sella al completar y se borra al
+  reabrir) para que la tendencia sea exacta.
+- Dataset de prueba `seed/sample-1000.json` (importable desde Ajustes) y su
+  generador determinista `seed/generate.mjs`.
+
 ## [1.2.2] - 2026-06-15
 
 ### Fixed

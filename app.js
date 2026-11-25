@@ -290,7 +290,7 @@ function saveCardsScroll(v) {
     localStorage.setItem(CARDS_SCROLL_KEY, v === 'horizontal' ? 'horizontal' : 'vertical');
 }
 // Fallback de versión si no se puede leer package.json (mantener en sync).
-const APP_VERSION = '1.2.2';
+const APP_VERSION = '1.3.0';
 
 function loadTheme() {
     const v = localStorage.getItem(THEME_KEY);
